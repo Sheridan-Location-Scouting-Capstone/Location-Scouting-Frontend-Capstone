@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Versions
+- Node.Js: v25.0
+- NPM: v11.6.2
+- Next.Js: 15.5.6
+- TailwindCSS: v4.1
 
-## Getting Started
+## Running the server
 
 First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## References:
+- https://nextjs.org/docs
+- https://tailwindcss.com/docs
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## QoL Features (Future)
+### Implement these QoL pages using the docs.
+- https://nextjs.org/docs/app/api-reference/file-conventions
+### Fully Utilize Light and Dark Mode (currently only developing light)
+- using `@media (prefers-color-scheme: light) { }`
 
-## Learn More
+## Good Resource for Next.Js backend
+- https://nextjs.org/docs/app/guides/authentication#2-validate-form-fields-on-the-server
 
-To learn more about Next.js, take a look at the following resources:
+## React Resources:
+- lifecycle (useEffect): https://react.dev/learn/lifecycle-of-reactive-effects
+- states (useState): https://react.dev/learn/managing-state
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Note: schemas in Next/React.Js are equivalent to DOAs (Data Objects), and they are used as such, so data objects will reside in the schemas directory.
