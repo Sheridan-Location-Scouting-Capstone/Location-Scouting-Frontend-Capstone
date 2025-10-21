@@ -1,6 +1,7 @@
 'use client' // used on interactive components mainly - required for `useState`
 
 import { useState } from 'react';
+import { Button } from './button';
 
 /* Properties passed from sidebar (to page.tsx) */
 interface SideBarProps {
@@ -23,21 +24,21 @@ export function SideBar({selectedPage, setSelectedPage}:SideBarProps) {
             </div>
 
             {/* Buttons */}
-            <button onClick={()=>setSelectedPage("Project")}>
+            <Button onClick={()=>setSelectedPage("Project")}>
                 Projects
-            </button>
+            </Button>
 
-            <button onClick={()=>setSelectedPage("Scene")}>
+            <Button onClick={()=>setSelectedPage("Scene")}>
                 Scene
-            </button>
+            </Button>
 
-            <button onClick={()=>setSelectedPage("Location")}>
+            <Button onClick={()=>setSelectedPage("Location")}>
                 Locations
-            </button>
+            </Button>
 
-            <button onClick={()=>setSelectedPage("Photo")}>
+            <Button onClick={()=>setSelectedPage("Photo")}>
                 Photos
-            </button>
+            </Button>
 
         </div>
         

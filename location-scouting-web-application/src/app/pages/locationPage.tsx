@@ -1,5 +1,5 @@
 export function LocationPage() {
     return(
-        <div>Location Page</div>
+        <div className="">Location Page</div>
     )
 }

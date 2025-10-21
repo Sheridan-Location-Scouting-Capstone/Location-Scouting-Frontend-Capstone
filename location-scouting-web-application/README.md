@@ -31,4 +31,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - lifecycle (useEffect): https://react.dev/learn/lifecycle-of-reactive-effects
 - states (useState): https://react.dev/learn/managing-state
 
+## Optimized Fonts for Next.Js
+- https://fonts.google.com/variablefonts?vfquery=roboto
+
 Note: schemas in Next/React.Js are equivalent to DOAs (Data Objects), and they are used as such, so data objects will reside in the schemas directory.
