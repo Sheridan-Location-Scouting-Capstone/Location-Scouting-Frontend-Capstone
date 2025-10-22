@@ -17,7 +17,7 @@ export default function Home() {
   return (
     // grid-cols-[240px_1fr] creates 2 columns, 1 static column, followed by a dynamic one.
     // grid-rows-[240px_1fr] creates 2 rows, 1 static column, followed by a dynamic one.
-    <div className="grid min-h-screen grid-cols-[240px_1fr] grid-rows-[100px_1fr] gap-10 ">
+    <div className="grid h-screen grid-cols-[240px_1fr] grid-rows-[100px_1fr] gap-10 ">
       
       {/* col: 1 | row: 1,2 */}
       <div className="row-span-2 bg-[var(--sidebar)] ">
@@ -30,7 +30,7 @@ export default function Home() {
       </div>
 
       {/* col: 2: | row: 2 */}
-      <div className="row-span-1 ">
+      <div className="row-span-1 overflow-hidden">
         {selectedPage === "Project" && <ProjectPage />}
         {selectedPage === "Scene" && <ScenePage />}
         {selectedPage === "Location" && <LocationPage />}

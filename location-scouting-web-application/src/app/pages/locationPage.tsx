@@ -1,5 +1,112 @@
 export function LocationPage() {
-    return(
-        <div className="">Location Page</div>
-    )
+
+    const locations: LocationSchema[] = [
+  {
+    id: 1,
+    name: "Harbourfront Studios",
+    contact: "416-555-0123",
+    province: "Ontario",
+    city: "Toronto",
+    zipcode: "M5J 2N8",
+    address: "235 Queens Quay W, Toronto, ON",
+  },
+  {
+    id: 2,
+    name: "Maplewood Lodge",
+    contact: "705-555-0198",
+    province: "Ontario",
+    city: "Muskoka",
+    zipcode: "P1H 2B3",
+    address: "47 Pine Valley Rd, Muskoka, ON",
+  },
+  {
+    id: 3,
+    name: "Downtown Film Office",
+    contact: "613-555-0444",
+    province: "Ontario",
+    city: "Ottawa",
+    zipcode: "K1P 5J9",
+    address: "90 Elgin St, Ottawa, ON",
+  },
+  {
+    id: 4,
+    name: "Old Town Church",
+    contact: "905-555-0299",
+    province: "Ontario",
+    city: "Niagara-on-the-Lake",
+    zipcode: "L0S 1J0",
+    address: "12 Queen St, Niagara-on-the-Lake, ON",
+  },
+  {
+    id: 5,
+    name: "Skyline Rooftop",
+    contact: "416-555-1111",
+    province: "Ontario",
+    city: "Toronto",
+    zipcode: "M4P 1A6",
+    address: "101 Bloor St W, Toronto, ON",
+  },
+  {
+    id: 6,
+    name: "Hillside Farmhouse",
+    contact: "519-555-2234",
+    province: "Ontario",
+    city: "Guelph",
+    zipcode: "N1G 3V4",
+    address: "14 Country Rd 22, Guelph, ON",
+  },
+  {
+    id: 7,
+    name: "Silverlake Cabin",
+    contact: "807-555-7789",
+    province: "Ontario",
+    city: "Thunder Bay",
+    zipcode: "P7A 2X1",
+    address: "88 Silverlake Rd, Thunder Bay, ON",
+  },
+  {
+    id: 8,
+    name: "Metro Police HQ",
+    contact: "416-555-0999",
+    province: "Ontario",
+    city: "Toronto",
+    zipcode: "M5G 2J3",
+    address: "40 College St, Toronto, ON",
+  },
+  {
+    id: 9,
+    name: "Northview High School",
+    contact: "289-555-8872",
+    province: "Ontario",
+    city: "Hamilton",
+    zipcode: "L8S 4M3",
+    address: "201 King St W, Hamilton, ON",
+  },
+  {
+    id: 10,
+    name: "Cedar Grove Motel",
+    contact: "613-555-4420",
+    province: "Ontario",
+    city: "Kingston",
+    zipcode: "K7L 2Y2",
+    address: "59 Front Rd, Kingston, ON",
+  },
+];
+
+    const listItems = locations.map(location =>
+        <li key={location.id} className="p-10 bg-gray-800 mb-5">
+            <div>{location.name}</div>
+        </li>
+    );
+
+    return (
+        <div className="grid grid-rows-[50px_1fr] h-full">
+            <div className="text-2xl" col-span-1>
+                Locations
+            </div>
+            <div className="overflow-y-auto">
+                <ul>{listItems}</ul>
+            </div>
+        </div>
+    );
 }
