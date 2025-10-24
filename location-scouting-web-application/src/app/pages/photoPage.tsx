@@ -1,7 +1,7 @@
-export function PhotoPage() {
+export function PhotosPage() {
     return (
         <div className="grid grid-rows-[50px_1fr] h-full">
-            <div className="text-2xl" col-span-1>
+            <div className="text-2xl col-span-1" >
                 Locations
             </div>
             <div className="overflow-y-auto">

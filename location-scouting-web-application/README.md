@@ -1,7 +1,7 @@
 ## Versions
 - Node.Js: v25.0
 - NPM: v11.6.2
-- Next.Js: 15.5.6
+- Next.Js: 16.0
 - TailwindCSS: v4.1
 
 ## Running the server
@@ -35,3 +35,4 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - https://fonts.google.com/variablefonts?vfquery=roboto
 
 Note: schemas in Next/React.Js are equivalent to DOAs (Data Objects), and they are used as such, so data objects will reside in the schemas directory.
+

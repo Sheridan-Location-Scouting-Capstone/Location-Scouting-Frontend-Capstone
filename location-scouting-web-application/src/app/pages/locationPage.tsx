@@ -1,4 +1,6 @@
-export function LocationPage() {
+import { ProjectViewPage } from "./projectViewPage";
+
+export function LocationsPage() {
 
     const locations: LocationSchema[] = [
   {
@@ -94,14 +96,14 @@ export function LocationPage() {
 ];
 
     const listItems = locations.map(location =>
-        <li key={location.id} className="p-10 bg-gray-800 mb-5">
+        <li key={location.id} className="p-10 bg-gray-800 mb-5 ">
             <div>{location.name}</div>
         </li>
     );
 
     return (
         <div className="grid grid-rows-[50px_1fr] h-full">
-            <div className="text-2xl" col-span-1>
+            <div className="text-2xl col-span-1" >
                 Locations
             </div>
             <div className="overflow-y-auto">

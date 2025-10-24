@@ -1,4 +1,4 @@
-export function ScenePage() {
+export function ScenesPage() {
     const sceneslist: SceneSchema[] = [];
 
     const scenes: SceneSchema[] = [
@@ -30,7 +30,7 @@ export function ScenePage() {
     // do we need a scenes page?
     return (
         <div className="grid grid-rows-[50px_1fr] h-full">
-            <div className="text-2xl" col-span-1>
+            <div className="text-2xl col-span-1" >
                 Scenes
             </div>
             <div className="overflow-y-auto">

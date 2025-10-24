@@ -1,14 +1,22 @@
 // reference: https://react.dev/learn/rendering-lists
+'use client'
 
-export function ProjectPage() {
+import Link from "next/link";
+
+interface ProjectProps {
+    selectedPage: string;
+    setSelectedPage: (page: string) => void;
+}
+
+export function ProjectsPage({selectedPage, setSelectedPage}:ProjectProps){
     
-    const projects :ProjectSchema[] = [];
+    const projects: ProjectSchema[] = [];
 
     const project1: ProjectSchema = {
-        id: 0,
-        name: "The Dark Knight",
-        scenes: ['scene1,scene2,scene3'],
-        locations: ['Toronto', 'Oakville', 'Mississauga']
+    id: 0,
+    name: "The Dark Knight",
+    scenes: ['scene1,scene2,scene3'],
+    locations: ['Toronto', 'Oakville', 'Mississauga']
     }
 
     const project2: ProjectSchema = {
@@ -63,17 +71,26 @@ export function ProjectPage() {
     projects.push(project1, project2, project3, project4, project5, project6, project7, project8);
 
     const listItems = projects.map(project =>
-        <li key={project.id} className="p-10 bg-gray-800 mb-5">
-            <div>{project.name}</div>
+        <li key={project.id} onClick={()=>setSelectedPage("ProjectView")} className="p-10 bg-gray-800 mb-5">
+            <div >{project.name}</div>
         </li>
     );
     return (
         <div className="grid grid-rows-[50px_1fr] h-full">
-            <div className="text-2xl" col-span-1>
+            <div className="text-2xl col-span-1" >
                 Projects
             </div>
+            
             <div className="overflow-y-auto">
-                <ul>{listItems}</ul>
+                <ul>
+                    {projects.map(project => (
+                        <li key={project.id} className="p-10 bg-gray-800 mb-5">
+                            <Link href={`/projects/${project.id}`}>
+                                {project.name}
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
             </div>
         </div>
     );

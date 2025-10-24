@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import { SideBar } from "./components/sidebar";
-import { ProjectPage } from "./pages/projectPage";
-import { ScenePage } from "./pages/scenePage";
-import { LocationPage } from "./pages/locationPage";
-import { PhotoPage } from "./pages/photoPage";
+import { ProjectsPage } from "./pages/projectPage";
+import { ScenesPage } from "./pages/scenePage";
+import { LocationsPage } from "./pages/locationPage";
+import { PhotosPage } from "./pages/photoPage";
+// import { ProjectViewPage } from "./pages/projectViewPage";
 
 import { useState } from "react";
 
@@ -25,16 +26,17 @@ export default function Home() {
       </div>
       
       {/* col:2 | row: 1 */}
-      <div className="row-span-1 place-items-center bg-amber-900">
+      <div className="row-span-1 place-items-center">
         <div className="mt-4 text-2xl ">Location Scouting</div>
       </div>
 
       {/* col: 2: | row: 2 */}
       <div className="row-span-1 overflow-hidden">
-        {selectedPage === "Project" && <ProjectPage />}
-        {selectedPage === "Scene" && <ScenePage />}
-        {selectedPage === "Location" && <LocationPage />}
-        {selectedPage === "Photo" && <PhotoPage />}
+        {selectedPage === "Project" && <ProjectsPage selectedPage={selectedPage} setSelectedPage={setSelectedPage} />}
+        {/* {selectedPage === "ProjectView" && <ProjectViewPage />} */}
+        {selectedPage === "Scene" && <ScenesPage />}
+        {selectedPage === "Location" && <LocationsPage />}
+        {selectedPage === "Photo" && <PhotosPage />}
       </div>
       
     </div>
