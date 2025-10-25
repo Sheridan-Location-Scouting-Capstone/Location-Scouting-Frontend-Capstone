@@ -1,6 +1,6 @@
 interface SceneSchema {
     id: number;
-    scriptSection: string; // section of the script that relates to this scene
-    locationKeywords: string;
     sceneHeading: string;
+    scriptSection: string; // body (text) of the script inside this scene
+    locationKeywords: string;
 }

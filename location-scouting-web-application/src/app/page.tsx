@@ -2,17 +2,17 @@
 
 import Image from "next/image";
 import { SideBar } from "./components/sidebar";
-import { ProjectsPage } from "./pages/projectPage";
-import { ScenesPage } from "./pages/scenePage";
-import { LocationsPage } from "./pages/locationPage";
-import { PhotosPage } from "./pages/photoPage";
+import { ProjectsPage } from "./pages/projectsPage";
+import { ScenesPage } from "./pages/scenesPage";
+import { LocationsPage } from "./pages/locationsPage";
+import { PhotosPage } from "./pages/photosPage";
 // import { ProjectViewPage } from "./pages/projectViewPage";
 
 import { useState } from "react";
 
 export default function Home() {
 
-  // selectedPage is set and altered by Sidebar component
+  // selectedPage is set default and altered by Sidebar component
   const [selectedPage, setSelectedPage] = useState("Project"); 
 
   return (

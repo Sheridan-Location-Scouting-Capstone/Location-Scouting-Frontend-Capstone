@@ -32,6 +32,14 @@ div, Button {
   font-family:var(--font-roboto-mono); /* NOTE: this font is using the variable defined in layout.tsx NOT the one in @theme above */
 }
 
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
 
 Button:hover {
   background-color: #ededed;
