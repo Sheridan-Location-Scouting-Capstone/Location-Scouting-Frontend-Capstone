@@ -7,6 +7,7 @@ export const locations: LocationSchema[] = [
     city: "Toronto",
     zipcode: "M5J 2N8",
     address: "235 Queens Quay W, Toronto, ON",
+    locationKeywords: ['studio', 'green-screen', 'interior', 'simulated'],
   },
   {
     id: 2,
@@ -16,6 +17,7 @@ export const locations: LocationSchema[] = [
     city: "Muskoka",
     zipcode: "P1H 2B3",
     address: "47 Pine Valley Rd, Muskoka, ON",
+    locationKeywords: ['lodge', 'cabin', 'forest', 'natural-lighting'],
   },
   {
     id: 3,
@@ -25,6 +27,7 @@ export const locations: LocationSchema[] = [
     city: "Ottawa",
     zipcode: "K1P 5J9",
     address: "90 Elgin St, Ottawa, ON",
+    locationKeywords: ['office', 'green-screen', 'studio'],
   },
   {
     id: 4,
@@ -34,6 +37,7 @@ export const locations: LocationSchema[] = [
     city: "Niagara-on-the-Lake",
     zipcode: "L0S 1J0",
     address: "12 Queen St, Niagara-on-the-Lake, ON",
+    locationKeywords: ['church', 'city', 'lake'],
   },
   {
     id: 5,
@@ -43,6 +47,7 @@ export const locations: LocationSchema[] = [
     city: "Toronto",
     zipcode: "M4P 1A6",
     address: "101 Bloor St W, Toronto, ON",
+    locationKeywords: ['rooftop', 'skyscraper', 'building'],
   },
   {
     id: 6,
@@ -52,6 +57,7 @@ export const locations: LocationSchema[] = [
     city: "Guelph",
     zipcode: "N1G 3V4",
     address: "14 Country Rd 22, Guelph, ON",
+    locationKeywords: ['hills', 'mountain', 'natural-lighting'],
   },
   {
     id: 7,
@@ -61,6 +67,7 @@ export const locations: LocationSchema[] = [
     city: "Thunder Bay",
     zipcode: "P7A 2X1",
     address: "88 Silverlake Rd, Thunder Bay, ON",
+    locationKeywords: ['cabin', 'woods', 'natural-lightning'],
   },
   {
     id: 8,
@@ -70,6 +77,7 @@ export const locations: LocationSchema[] = [
     city: "Toronto",
     zipcode: "M5G 2J3",
     address: "40 College St, Toronto, ON",
+    locationKeywords: ['police-department', 'police', 'department'],
   },
   {
     id: 9,
@@ -79,6 +87,7 @@ export const locations: LocationSchema[] = [
     city: "Hamilton",
     zipcode: "L8S 4M3",
     address: "201 King St W, Hamilton, ON",
+    locationKeywords: ['highschool', 'interior', 'hallways'],
   },
   {
     id: 10,
@@ -88,6 +97,7 @@ export const locations: LocationSchema[] = [
     city: "Kingston",
     zipcode: "K7L 2Y2",
     address: "59 Front Rd, Kingston, ON",
+    locationKeywords: ['motel', 'hotel', 'room', 'interior'],
   },
 ];
 

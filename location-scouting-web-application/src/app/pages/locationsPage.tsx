@@ -1,10 +1,13 @@
 // import { ProjectViewPage } from "./projectViewPage";
 import { locations } from "../data/location";
 import Link from "next/link";
+import { photos } from "../data/photos";
 
 export function LocationsPage() {
 
     const listItems = [];
+    const id = 1;
+    const photo = photos.find(p => p.locationId ===  id);
 
     return (
         <div className="grid grid-rows-[50px_1fr] grid-cols-[1fr_1fr] h-full">

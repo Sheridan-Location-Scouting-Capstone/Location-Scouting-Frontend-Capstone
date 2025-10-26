@@ -6,4 +6,7 @@ interface LocationSchema {
     city: string;
     zipcode: string;
     address: string;
+    locationKeywords: string[]
 }
+
+// Note: that multiple locations can use the same photo

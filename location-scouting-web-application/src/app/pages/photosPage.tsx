@@ -9,7 +9,7 @@ export function PhotosPage() {
 
         <div className="grid grid-rows-[50px_1fr] h-full">
             <div className="text-2xl col-span-1" >
-                Location Photos
+                Location Photos [might get deleted!]
             </div>
             <div className="overflow-y-auto scrollbar-hide">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-4">

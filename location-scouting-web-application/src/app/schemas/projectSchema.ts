@@ -10,6 +10,4 @@
 interface ProjectSchema {
     id:         number;
     name:       string;
-    scenes:     SceneSchema[];
-    locations:  LocationSchema[];
 }
