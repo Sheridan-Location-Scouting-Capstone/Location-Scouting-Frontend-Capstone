@@ -20,25 +20,26 @@ export function SideBar({selectedPage, setSelectedPage}:SideBarProps) {
             
             {/* Logo */}
             <div> 
-                ▇ Logo Here
+                ▇ Location Scouting
             </div>
 
+            
             {/* Buttons */}
             <Button onClick={()=>setSelectedPage("Project")}>
                 Projects
             </Button>
 
-            <Button onClick={()=>setSelectedPage("Scene")}>
+            {/* <Button onClick={()=>setSelectedPage("Scene")}>
                 Scene
-            </Button>
+            </Button> */}
 
             <Button onClick={()=>setSelectedPage("Location")}>
                 Locations
             </Button>
 
-            <Button onClick={()=>setSelectedPage("Photo")}>
+            {/* <Button onClick={()=>setSelectedPage("Photo")}>
                 Photos
-            </Button>
+            </Button> */}
 
         </div>
         

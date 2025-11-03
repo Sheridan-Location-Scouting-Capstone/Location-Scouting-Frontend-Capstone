@@ -14,7 +14,7 @@ export function ProjectsPage({selectedPage, setSelectedPage}:ProjectProps){ // c
     
     return (
         <div className="grid grid-rows-[50px_1fr] h-full">
-            <div className="text-2xl col-span-1" >
+            <div className="text-2xl col-span-1 sm:justify-self-center lg:justify-self-start" >
                 Projects
             </div>
             
