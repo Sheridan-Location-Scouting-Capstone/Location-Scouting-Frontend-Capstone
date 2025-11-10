@@ -3,35 +3,19 @@ import { locations } from "./location";
 
 export const projects: ProjectSchema[] = [
     {
-        id: 0,
+        id: 1,
         name: "The Dark Knight",
+        street: "237 Bloor Street East",
+        city: "Toronto",
+        province: "Ontario",
+        postal: "M4W 1C8"
     },
     {
-        id:1,
+        id:2,
         name: "The Dark Knight 2",
+        street: "2236 A Bloor Street West",
+        city: "Toronto",
+        province: "Ontario",
+        postal: "M6S 1N6"
     },
-    {
-        id:3,
-        name: "The Dark Knight 2",
-    },
-    {
-        id:4,
-        name: "The Dark Knight 2",
-    },
-    {
-        id:5,
-        name: "The Dark Knight 2",
-    },
-    {
-        id:6,
-        name: "The Dark Knight 2",
-    },
-    {
-        id:7,
-        name: "The Dark Knight 2",
-    },
-    {
-        id:8,
-        name: "The Dark Knight 2",
-    }
 ];

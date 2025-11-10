@@ -57,7 +57,7 @@ export default function ProjectDetailsPage({ id }: {  id: string }) {
             <div >
                 <div className="text-2xl p-5 col-span-1">Project view page</div>
                 <div className="p-5">Name: {project.name}</div>
-                <div className="pl-7">Locations:</div>
+                {/* <div className="pl-7">Locations:</div>
                 <ul className="pl-9 pb-5">
                     {locations?.map(location=>
                         <li className="pt-2" key={location.id}>
@@ -67,12 +67,12 @@ export default function ProjectDetailsPage({ id }: {  id: string }) {
                             </Link>
                         </li>
                     )}
-                </ul>
-                <div className="pl-7">Scenes:</div> 
+                </ul> */}
+                <div className="pl-5">Scenes:</div> 
                 <ul className="pl-9 pb-5">
                     {scenes?.map(scene=> (
                     <li className="pt-2" key={scene.id}>
-                        <Link href={`/scenes/${scene.id}`} >
+                        <Link className="bg-amber-700 hover:bg-amber-400" href={`/scenes/${scene.id}`} >
                             Heading: {scene.sceneHeading}
                         </Link>
                     </li>))}

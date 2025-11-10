@@ -10,4 +10,8 @@
 interface ProjectSchema {
     id:         number;
     name:       string;
+    street:     string;
+    city:       string;
+    province:   string;
+    postal:     string;
 }
