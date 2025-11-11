@@ -18,6 +18,8 @@ const handleAddLocation = (id:number) => {
     console.log("Add location to a scene (Test):", id);
 }
 
+// add another return that mentions numbers of matches (maybe a struct)
+// struct contains:  listof(location, rank)
 export function getSuggestedLocations(
   sceneKeywords: string[],
   allLocations: LocationSchema[],
@@ -94,7 +96,7 @@ export function SceneDetailView({ scene }: { scene: SceneSchema }) {
                 <div className="p-1">
                     <div>Name: {location.name}</div>
                     <div>
-                    City: {location.city}, {location.province}
+                        City: {location.city}, {location.province}
                     </div>
                 </div>
                 </Link>
@@ -121,6 +123,9 @@ export function SceneDetailView({ scene }: { scene: SceneSchema }) {
                                 <div>
                                 Address: {location.address}, {location.city},{" "}
                                 {location.province}
+                                </div>
+                                <div>
+                                    Location Keywords: {scene.locationKeywords.join(", ")}
                                 </div>
                             </div>
                             </Link>

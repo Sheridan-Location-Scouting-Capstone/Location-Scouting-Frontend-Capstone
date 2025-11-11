@@ -27,7 +27,7 @@ export const locations: LocationSchema[] = [
     city: "Ottawa",
     zipcode: "K1P 5J9",
     address: "150 Elgin St, Ottawa, ON",
-    locationKeywords: ['office', 'green-screen', 'studio'],
+    locationKeywords: ['office'],
   },
   {
     id: 4,
@@ -98,6 +98,16 @@ export const locations: LocationSchema[] = [
     zipcode: "K7L 2Y2",
     address: "59 Front Rd, Kingston, ON",
     locationKeywords: ['motel', 'hotel', 'room', 'interior'],
+  },
+  {
+    id: 11,
+    name: "Hearn Industrial Services",
+    contact: "613-555-4420",
+    province: "Ontario",
+    city: "Oakville",
+    zipcode: "L6L 2X9",
+    address: "2189 Speers Rd, Oakville, ON",
+    locationKeywords: ['warehouse', 'industrial', 'cargo', 'shipping'],
   },
 ];
 

@@ -23,7 +23,7 @@ export function LocationDetailView(location: {location:LocationSchema}) {
                     Location Keywords: 
                 </div>
                 <div className="*:rounded-full *:border *:border-sky-100 *:bg-sky-50 *:px-2 *:py-0.5 dark:text-sky-300 dark:*:border-sky-500/15 dark:*:bg-sky-500/10">
-                    {location.location.locationKeywords.map(l => l+" ")}
+                    {location.location.locationKeywords.join(", ")}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-4 scrollbar-hide overflow-y-auto">
                     {photosL.map((photo) => (
