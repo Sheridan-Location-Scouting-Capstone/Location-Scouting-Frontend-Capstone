@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation"
 import Link from "next/link";
 import { sceneLocations } from "@/app/data/sceneLocations";
 import { locations } from "@/app/data/location";
+import { env } from "process";
+import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps';
 
 export function getLocationsForScene(sceneId: number): LocationSchema[] {
   const locationIdsForScene = sceneLocations
@@ -62,19 +64,20 @@ export function getSuggestedLocations(
 }
 
 export function SceneDetailView({ scene }: { scene: SceneSchema }) {
-  const router = useRouter();
+    const router = useRouter();
 
-  const sceneId = scene.id;
-  const sceneKeywords = scene.locationKeywords;
-  const locationsInScene = getLocationsForScene(sceneId);
+    const sceneId = scene.id;
+    const sceneKeywords = scene.locationKeywords;
+    const locationsInScene = getLocationsForScene(sceneId);
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
-  const suggestedLocations = getSuggestedLocations(
-    sceneKeywords,
-    locations, 
-    sceneId
-  );
+    const suggestedLocations = getSuggestedLocations(
+        sceneKeywords,
+        locations, 
+        sceneId
+    );
 
-  return (
+    return (
     <div className="grid grid-cols-[1fr_500px]">
         <div> {/*col1 */}
         <button onClick={() => router.back()} className="pb-5">
@@ -144,9 +147,13 @@ export function SceneDetailView({ scene }: { scene: SceneSchema }) {
                 </div>
             )}
         </div> {/*end col1 */}
-        <div className="bg-blue-600">
-            Map API Placeholder
+        <div className="">
+            <APIProvider apiKey={apiKey}>
+                <Map zoom={12} center={{ lat: 43.6532, lng: -79.3832 }} style={{ width: "100%", height: "100%" }}>
+                    <Marker position={{ lat: 43.6532, lng: -79.3832 }} />
+                </Map>
+            </APIProvider>
         </div>
     </div>
-  );
+    );
 }
