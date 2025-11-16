@@ -26,41 +26,49 @@ export function getSuggestedLocations(
   sceneKeywords: string[],
   allLocations: LocationSchema[],
   sceneId: number
-): LocationSchema[] {
-    const locationsInScene = getLocationsForScene(sceneId);
-    const excludedIds = new Set(locationsInScene.map(l => l.id));
+): { loc: LocationSchema; score: number; rank: number }[] {
 
-    const normalizedKeywords = sceneKeywords
-        .map(k => k.trim().toLowerCase())
-        .filter(Boolean);
+  const locationsInScene = getLocationsForScene(sceneId);
+  const excludedIds = new Set(locationsInScene.map(l => l.id));
 
-    if (normalizedKeywords.length === 0) return [];
+  const normalizedKeywords = sceneKeywords
+    .map(k => k.trim().toLowerCase())
+    .filter(Boolean);
 
-    const scored = allLocations
-        .filter(loc => !excludedIds.has(loc.id)) // exclude already-linked
-        .map(loc => {
-        const text = [
-            loc.name,
-            loc.city,
-            loc.address,
-            loc.province,
-            ...(loc.locationKeywords ?? []),
-        ]
+  if (normalizedKeywords.length === 0) return [];
+
+  const scored = allLocations
+    .filter(loc => !excludedIds.has(loc.id))
+    .map(loc => {
+      const text = [
+        loc.name,
+        loc.city,
+        loc.address,
+        loc.province,
+        ...(loc.locationKeywords ?? []),
+      ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
 
-        const score = normalizedKeywords.reduce(
-        (count, kw) => (text.includes(kw) ? count + 1 : count), 0);
+      const score = normalizedKeywords.reduce(
+        (count, kw) => (text.includes(kw) ? count + 1 : count), 
+        0
+      );
 
-        return { loc, score };
+      return { loc, score };
     });
 
+  // sort from best → worst
+  const sorted = scored
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score);
 
-    return scored
-        .filter(x => x.score > 0) 
-        .sort((a, b) => b.score - a.score)
-        .map(x => x.loc);
+  // assign rank (1 = best)
+  return sorted.map((item, index) => ({
+    ...item,
+    rank: index + 1,
+  }));
 }
 
 export function SceneDetailView({ scene }: { scene: SceneSchema }) {
@@ -117,15 +125,17 @@ export function SceneDetailView({ scene }: { scene: SceneSchema }) {
                     <ul className="pl-3 pb-5">
                     {suggestedLocations.map(location => (
                         <li
-                            key={location.id}
-                            className="pt-2 grid grid-cols-[1fr_100px] items-center gap-2"
+                            key={location.loc.id}
+                            className="pt-2 grid grid-cols-[50px_1fr_100px] items-center gap-2"
                         >
-                            <Link className="" href={`/locations/${location.id}`}>
+                            <div>{location.rank}</div>
+                            <Link className="" href={`/locations/${location.loc.id}`}>
                             <div className="p-1">
-                                <div>Name: {location.name}</div>
+                                
+                                <div>Name: {location.loc.name}</div>
                                 <div>
-                                Address: {location.address}, {location.city},{" "}
-                                {location.province}
+                                Address: {location.loc.address}, {location.loc.city},{" "}
+                                {location.loc.province}
                                 </div>
                                 <div>
                                     Location Keywords: {scene.locationKeywords.join(", ")}
@@ -137,7 +147,7 @@ export function SceneDetailView({ scene }: { scene: SceneSchema }) {
                             type="button"
                             className="px-2 py-1 bg-blue-600 rounded"
                             // hook this up to your add-to-scene handler:
-                            onClick={() => handleAddLocation(location.id)}
+                            onClick={() => handleAddLocation(location.loc.id)}
                             >
                             Add
                             </button>
