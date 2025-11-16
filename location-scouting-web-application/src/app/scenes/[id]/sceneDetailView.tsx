@@ -5,7 +5,8 @@ import Link from "next/link";
 import { sceneLocations } from "@/app/data/sceneLocations";
 import { locations } from "@/app/data/location";
 import { env } from "process";
-import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, Marker} from '@vis.gl/react-google-maps';
+import { Heatmap } from "@/app/components/heatmap";
 
 export function getLocationsForScene(sceneId: number): LocationSchema[] {
   const locationIdsForScene = sceneLocations
@@ -27,6 +28,8 @@ export function getSuggestedLocations(
   allLocations: LocationSchema[],
   sceneId: number
 ): { loc: LocationSchema; score: number; rank: number }[] {
+
+    
 
   const locationsInScene = getLocationsForScene(sceneId);
   const excludedIds = new Set(locationsInScene.map(l => l.id));
@@ -78,6 +81,15 @@ export function SceneDetailView({ scene }: { scene: SceneSchema }) {
     const sceneKeywords = scene.locationKeywords;
     const locationsInScene = getLocationsForScene(sceneId);
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+
+    type HeatPoint = { lat: number; lng: number; weight?: number };
+
+    const heatPoints: HeatPoint[] = [
+    { lat: 43.6532, lng: -79.3832, weight: 1 },
+    { lat: 43.66,   lng: -79.40,   weight: 0.7 },
+    // ...
+    ];
+
 
     const suggestedLocations = getSuggestedLocations(
         sceneKeywords,
@@ -160,7 +172,8 @@ export function SceneDetailView({ scene }: { scene: SceneSchema }) {
         <div className="">
             <APIProvider apiKey={apiKey}>
                 <Map zoom={12} center={{ lat: 43.6532, lng: -79.3832 }} style={{ width: "100%", height: "100%" }}>
-                    <Marker position={{ lat: 43.6532, lng: -79.3832 }} />
+                    <Heatmap points={heatPoints} />
+                    {/* <Marker position={{ lat: 43.6532, lng: -79.3832 }} /> */}
                 </Map>
             </APIProvider>
         </div>

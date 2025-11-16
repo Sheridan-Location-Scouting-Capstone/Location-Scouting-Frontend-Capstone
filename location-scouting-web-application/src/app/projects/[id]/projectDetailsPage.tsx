@@ -54,6 +54,11 @@ export default function ProjectDetailsPage({ id }: {  id: string }) {
             <button onClick={()=>router.back()}>
                 {"<-"} Go Back                 
             </button>
+            <div className="flex justify-end">
+                <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                    Upload Script
+                </button>
+            </div>
             <div >
                 <div className="text-2xl p-5 col-span-1">Project view page</div>
                 <div className="p-5">Name: {project.name}</div>
