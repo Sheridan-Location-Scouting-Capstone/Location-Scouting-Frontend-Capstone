@@ -12,26 +12,26 @@ import { useState } from "react";
 
 export default function Home() {
 
-  // selectedPage is set default and altered by Sidebar component
+
   const [selectedPage, setSelectedPage] = useState("Project"); 
 
   return (
-    // grid-cols-[240px_1fr] creates 2 columns, 1 static column, followed by a dynamic one.
-    // grid-rows-[240px_1fr] creates 2 rows, 1 static column, followed by a dynamic one.
-    <div className="grid h-screen lg:grid-cols-[270px_1fr] lg:grid-rows-[100px_1fr] gap-10 sm:grid-rows-[100px_1fr] sm:grid-cols-[1fr]">
+    <div className="h-screen flex flex-col lg:grid lg:grid-cols-[270px_1fr] lg:grid-rows-[100px_1fr] lg:gap-10">
       
-      {/* col: 1 | row: 1,2 */}
-      <div className="row-span-2 bg-[var(--sidebar)] sm:row-span-0">
+      <div className="hidden lg:block row-span-2 bg-[var(--sidebar)]">
         <SideBar selectedPage={selectedPage} setSelectedPage={setSelectedPage} />
       </div>
       
-      {/* col:2 | row: 1 */}
-      <div className="row-span-1 place-items-center lg:block sm:hidden md:hidden">
-        <div className="mt-4 text-2xl ">Location Scouting</div>
+      <div className="lg:hidden flex items-center justify-between p-4 bg-[var(--sidebar)] border-b border-[var(--sidebarfont)] border-opacity-20">
+        <SideBar selectedPage={selectedPage} setSelectedPage={setSelectedPage} />
+        <div className="text-2xl font-mono text-[var(--sidebarfont)]">Location Scouting</div>
+      </div>
+      
+      <div className="hidden lg:block row-span-1 place-items-center">
+        <div className="mt-4 text-2xl">Location Scouting</div>
       </div>
 
-      {/* col: 2: | row: 2 */}
-      <div className="row-span-1 overflow-hidden">
+      <div className="flex-1 lg:row-span-1 overflow-hidden p-4 lg:p-0">
         {selectedPage === "Project" && <ProjectsPage selectedPage={selectedPage} setSelectedPage={setSelectedPage} />}
         {/* {selectedPage === "ProjectView" && <ProjectViewPage />} */}
         {selectedPage === "Scene" && <ScenesPage />}
@@ -42,3 +42,4 @@ export default function Home() {
     </div>
   );
 }
+
