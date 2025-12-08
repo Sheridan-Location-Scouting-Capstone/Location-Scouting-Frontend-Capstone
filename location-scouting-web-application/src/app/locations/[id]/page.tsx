@@ -11,6 +11,10 @@ export default async function LocationDetailServer({ params }: { params: Promise
         return <div>Location not found</div>
     }
 
+    if (!location) {
+        return (<div>Location not found or loading...</div>);
+    }
+    
     return (
         <LocationDetailView location={location} />
     )
