@@ -4,7 +4,7 @@ import { locations } from "./location";
 export const projects: ProjectSchema[] = [
     {
         id: 1,
-        name: "The Dark Knight",
+        name: "Aladin",
         street: "237 Bloor Street East",
         city: "Toronto",
         province: "Ontario",
@@ -12,7 +12,7 @@ export const projects: ProjectSchema[] = [
     },
     {
         id:2,
-        name: "The Dark Knight 2",
+        name: "The Dark Knight",
         street: "2236 A Bloor Street West",
         city: "Toronto",
         province: "Ontario",
