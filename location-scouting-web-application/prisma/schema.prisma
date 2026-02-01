@@ -1,0 +1,174 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Location {
+  id         String @id @default(cuid()) // Primary-key, auto-generated
+  name       String
+  address    String
+  city       String
+  province   String
+  postalCode String
+  country    String @default("Canada")
+  latitude   Float?
+  longitude  Float?
+
+  contactName  String?
+  contactPhone String?
+  contactEmail String?
+
+  notes String?
+
+  keywords String[]
+
+  status LocationStatus @default(ACTIVE)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  photos    Photo[]
+
+  candidates  Candidate[]
+  photoGroups PhotoGroup[]
+}
+
+model Photo {
+  id   String  @id @default(cuid())
+  name String?
+  url  String
+
+  displayOrder Int @default(0)
+
+  keywords String[]
+
+  location        Location         @relation(fields: [locationId], references: [id])
+  locationId      String
+  candidatePhotos CandidatePhoto[]
+  photoGroup      PhotoGroup?      @relation(fields: [photoGroupId], references: [id])
+  photoGroupId    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PhotoGroup {
+  id   String @id @default(cuid())
+  name String
+
+  displayOrder Int @default(0)
+
+  location Location @relation(fields: [locationId], references: [id])
+  photos   Photo[]
+
+  locationId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id         String  @id @default(cuid())
+  name       String
+  address    String
+  city       String
+  province   String
+  postalCode String
+  country    String  @default("Canada")
+  latitude   Float?
+  longitude  Float?
+  scenes     Scene[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Scene {
+  id             String  @id @default(cuid())
+  sceneNumber    Int
+  intExt         IntExt?
+  sceneLocation  String
+  sceneTimeOfDay String?
+  scriptSection  String
+
+  projectDisplayOrder Int @default(0)
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  candidates Candidate[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Candidate {
+  id                   String                @id @default(cuid())
+  photos               CandidatePhoto[]
+  scene                Scene                 @relation(fields: [sceneId], references: [id])
+  location             Location              @relation(fields: [locationId], references: [id])
+  sceneId              String
+  locationId           String
+  candidatePhotoGroups CandidatePhotoGroup[]
+
+  selected Boolean
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CandidatePhoto {
+  id           String  @id @default(cuid())
+  name         String?
+  displayOrder Int     @default(0)
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  candidateId String
+
+  photo   Photo  @relation(fields: [photoId], references: [id])
+  photoId String
+
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  candidatePhotoGroup   CandidatePhotoGroup? @relation(fields: [candidatePhotoGroupId], references: [id])
+  candidatePhotoGroupId String?
+
+  @@unique([candidateId, photoId]) // Can't include same photo twice
+}
+
+model CandidatePhotoGroup {
+  id   String @id @default(cuid())
+  name String
+
+  displayOrder Int @default(0)
+
+  candidate       Candidate        @relation(fields: [candidateId], references: [id])
+  candidatePhotos CandidatePhoto[]
+
+  candidateId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum LocationStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum IntExt {
+  INT
+  EXT
+  INT_EXT
+}

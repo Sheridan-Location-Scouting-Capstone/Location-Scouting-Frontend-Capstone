@@ -12,10 +12,18 @@ export const projects: ProjectSchema[] = [
     },
     {
         id:2,
-        name: "The Dark Knight 2",
+        name: "The Dark Knight Rises",
         street: "2236 A Bloor Street West",
         city: "Toronto",
         province: "Ontario",
         postal: "M6S 1N6"
     },
+    {
+        id: 3,
+        name: "Shawshank Redemption",
+        street: "100 Yonge Street",
+        city: "Toronto",
+        province: "Ontario",
+        postal: "M5C 2W1"
+    }
 ];
