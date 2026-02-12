@@ -1,23 +1,16 @@
 export const scenes: SceneSchema[] = [
         {
             id: 1,
-            scriptSection: "Hero enters bar",
-            locationKeywords: ["downtown", "bar", "night"],
-            sceneHeading: "INT. DOWNTOWN BAR - NIGHT",
+            scriptSection: "int.int. of SULTAN's chamber.\nThe door bursts open, and PRINCE ACHMED storms in, missing the\nrear end of his pants.)\nPRINCE: I've never been so insulted!\nSULTAN: Oh, Prince Achmed.  You're not leaving so soon, are\nyou?\nPRINCE: Good luck marrying her off!\nSULTAN: Oh, Jasmine!  Jasmine!  Jasmine!  (The SULTAN goes\noff into the garden looking for his daughter.  He\nfinds her, but is interrupted by RAJAH, JASMINE's\npet tiger, who blocks him off.  RAJAH has a piece\nof the PRINCE's undershorts in his mouth.The SULTAN\ngrabs the cloth and yanks it out of RAJAH's mouth.)\nConfound it, Rajah!  So, this is why Prince Achmed\nstormed out!\nJASMINE:    Oh, father.  Rajah was just playing with him,\nweren't you Rajah.  (RAJAH comes over and allows\nJASMINE to pet and hug him.)  You were just playing\nwith that overdressed, self-absorbed Prince Achmed,\nweren't you?  (She cuddles with RAJAH, enjoying the\nmoment, until she looks up at her angry father. )\nAhem.\nSULTAN: Dearest, you've got to stop rejecting every suitor\nthat comes to call.  The law says you...\nBOTH:       ...must be married to a prince.\n(They walk over to a dove cage.)\nSULTAN: By your next birthday.\nJASMINE:    The law is wrong.\nSULTAN: You've only got three more days!\nJASMINE:    Father,  I hate being forced into this.  (She takes\na dove out of the cage and pets it.) If I do marry,\nI want it to be for love.\nSULTAN: Jasmine, it's not only this law.  (She hands him\nthe dove, and he puts it back in the cage.) I'm not\ngoing to be around forever, and I just want to make\nsure you're taken care of, provided for.\nJASMINE:    Try to understand.  I've never done a thing on my\nown. (She swirls her finger in the water of the\npond, petting the fish.)I've never had any real\nfriends. (RAJAH looks up at her and growls.)\nExcept you, Rajah.  (Satisfied, he goes back to\nsleep.)  I've never even been outside the palace\nwalls.\nSULTAN: But Jasmine, you're a princess.\nJASMINE:    Then maybe I don't want to be a princess.  (She\nsplashes the water.)\nSULTAN: Oooohhh!  Allah forbid you should have any\ndaughters!\n(RAJAH looks up and thinks for a second.  JASMINE goes to the dove\ncage and yanks open the door.  The birds fly off into freedom.\nShe watches them go.  Cut to ",
+            locationKeywords: ["chambers", "door", "garden", "palace"],
+            sceneHeading: "INT. of Sultan's Chamber",
             projectId:1
         },
         {
             id: 2,
-            scriptSection: "Villain confrontation",
-            locationKeywords: ["warehouse", "fight", "rain"],
-            sceneHeading: "EXT. ABANDONED WAREHOUSE - NIGHT",
+            scriptSection: "int.int. of SULTAN's chambers.)\nSULTAN: I don't know where she gets it from.  Her mother\nwasn't nearly so picky.  (A shadow falls over him.\nHe looks up startled and sees JAFAR.)  Ooh, oh.\nAh, Jafar--my most trusted advisor.  I am in\ndesperate need of your wisdom.\nJAFAR:  My life is but to serve you, my lord.  (He bows.)\nSULTAN: It's this suitor business.  Jasmine refuses to\nchoose a husband.  I'm at my wit's-end.\nIAGO:   (In the parrot voice) Awk!  Wit's-end.\nSULTAN: Oh, ha ha.  Have a cracker, pretty polly!  (He\npulls a cracker out from his pocket.  IAGO looks\nterrified.  Then the SULTAN stuffs it in IAGO's\nmouth.  IAGO grimaces as he tries to eat it.  JAFAR\nand the SULTAN both laugh.)\nJAFAR:  Your majesty certainly has a way with dumb animals.\n(IAGO glares at him.)  Now then, perhaps I can\ndivine a solution to this thorny problem.\nSULTAN: If anyone can help, it's you.\nJAFAR:  Ah, but it would require the use of the mystic blue\ndiamond.\nSULTAN: Uh, my ring?  But it's been in the family for\nyears.\nJAFAR:  It is necessary to find the princess a suitor.\n(JAFAR says the word 'princess' with the accent on\nthe second syllable, \"cess.\"  He turns his staff\nwith a cobra head towards the SULTAN.  The eyes of\nthe staff begin to glow. The room darkens, JAFAR's\nvoice slows down and deepens.  The SULTAN's eyes\nget a hypnotized look.)  Don't worry.  Everything\nwill be fine.\nSULTAN: Everything...will be...fine.\nJAFAR:  The diamond.\nSULTAN: Here, Jafar. Whatever you need will be fine.\n(The SULTAN removes his ring and hands it to JAFAR. The room returns\nto normal as JAFAR pulls back the staff.)\nJAFAR:  You are most gracious, my liege.  Now run along and\nplay with your little toys.\nSULTAN: (Still hypnotized)  Yes...that'll be...pretty good.\n(JAFAR and IAGO exit.  We follow them. When they're out of the room,\nthe parrot spits out the cracker.)\nIAGO:       I can't take it anymore!  If I gotta choke down on\none more of those moldy, disgusting crackers...bam!\nWhack!\n(JAFAR pulls a rope, which reveals a hidden entrance to his chambers.)\nJAFAR:  Calm yourself, Iago.\nIAGO:       Then I'd grab him around the head.  Whack! Whack!\nJAFAR:  (Speaking over IAGO.)  Soon, I will be sultan, not\nthat addlepated twit.\nIAGO:       And then I stuff the crackers down his throat!  Ha\nha!\n(The pair pass through a door and slam it shut.  Diss. to ",
+            locationKeywords: ["int", "chambers", "room", "hidden entrance", "door"],
+            sceneHeading: "INT. of SULTAN's chambers",
             projectId:1
-        },
-        {
-            id: 3,
-            scriptSection: "Morning after",
-            locationKeywords: ["apartment", "sunrise", "quiet"],
-            sceneHeading: "INT. APARTMENT BEDROOM - MORNING",
-            projectId:2
         },
     ];
