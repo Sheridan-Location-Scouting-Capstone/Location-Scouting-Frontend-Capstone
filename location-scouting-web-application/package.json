@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest",
+    "test:migrate": "dotenv -e .env -- npx prisma migrate deploy",
+    "test:db:push": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/location_scouting_test?schema=public npx prisma db push"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
