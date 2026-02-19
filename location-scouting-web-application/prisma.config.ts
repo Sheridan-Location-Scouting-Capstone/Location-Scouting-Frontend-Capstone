@@ -9,8 +9,4 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
   },
-  engine: "classic",
-  datasource: {
-    url: "postgresql://postgres:postgres@localhost:5432/location_scouting?schema=public"
-  },
 });
