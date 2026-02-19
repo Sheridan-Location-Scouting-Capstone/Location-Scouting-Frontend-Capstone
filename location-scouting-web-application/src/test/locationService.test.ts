@@ -1,6 +1,7 @@
-import {describe, it, expect, test} from 'vitest'
+import {describe, expect, it, test, vi} from 'vitest'
 import {createLocation} from "@/app/services/locationService";
-import { prisma } from '@/test/setup'
+import {prisma} from '@/test/setup'
+import {Geocoder} from "@/app/schemas/geocoder";
 
 describe('locationServiceTests', () =>{
     it('should save a location with minimum required fields and return it with an id', async () => {
@@ -18,11 +19,12 @@ describe('locationServiceTests', () =>{
 
         // Assert
         expect(result.id).toBeDefined()
+        expect(result.id).not.toBeNull()
         expect(result.name).toBe('Downtown Alley')
         expect(result.country).toBe('Canada') // Verify default value applied
         expect(result.status).toBe('ACTIVE')  // Verify default value applied
-        expect(result.createdAt).toBeDefined()
-        expect(result.updatedAt).toBeDefined()
+        expect(result.createdAt).not.toBeNull()
+        expect(result.updatedAt).not.toBeNull()
     })
 
     test.each([
@@ -61,6 +63,7 @@ describe('locationServiceTests', () =>{
 
         // Assert
         expect(result.contactPhone).toBeDefined()
+        expect(result.contactPhone).not.toBeNull()
     })
 
     test.each([
@@ -105,7 +108,7 @@ describe('locationServiceTests', () =>{
         const result = await createLocation(locationInput, prisma);
 
         // Assert
-        expect(result.contactName).toBeDefined()
+        expect(result.contactName).not.toBeNull()
         expect(result.contactName).toEqual(input)
     })
 
@@ -131,9 +134,97 @@ describe('locationServiceTests', () =>{
         await expect(result).rejects.toThrow();
     })
 
+    it('should geocode an address on location creation', async () => {
+        // Arrange
+        const mockGeocoder: Geocoder = async () => ({ lat: 43.6532, lng: -79.3832 })
+        const locationInput = {
+            name: 'Downtown Alley',
+            address: '123 Main St',
+            city: 'Toronto',
+            province: 'ON',
+            postalCode: 'M5V 1A1'
+        }
 
+        // Act
+        const result = await createLocation(locationInput, prisma, mockGeocoder);
+        expect(result.id).toBeDefined()
 
+        // Assert
+        await vi.waitFor(async () => {
+            const savedLocation = await prisma.location.findFirst({where: {id: result.id}});
+            expect(savedLocation!.latitude).not.toBeNull()
+            expect(savedLocation!.longitude).not.toBeNull()
+            console.log(savedLocation)
+        })
+    })
 
+    it.skip('INTEGRATION: should geocode a real address via Nominatim', async () => {
+        // Arrange
+        const locationInput = {
+            name: 'CN Tower',
+            address: '290 Bremner Blvd',
+            city: 'Toronto',
+            province: 'ON',
+            postalCode: 'M5V 3L9'
+        }
 
+        // Act
+        const result = await createLocation(locationInput, prisma)
 
+        // Assert
+        await vi.waitFor(async () => {
+            const savedLocation = await prisma.location.findFirst({ where: { id: result.id } })
+            expect(savedLocation!.latitude).not.toBeNull()
+            expect(savedLocation!.longitude).not.toBeNull()
+            console.log(savedLocation)
+        }, { timeout: 10000 }) // give it 10 seconds for the real network call
+    })
+
+    test('Location should save regardless of geocoding success or failure', async () => {
+        // Arrange
+        const mockGeocoder: Geocoder = async () => null
+        const locationInput = {
+            name: 'Downtown Alley',
+            address: '123 Main St',
+            city: 'Toronto',
+            province: 'ON',
+            postalCode: 'M5V 1A1'
+        }
+
+        // Act
+        const result = await createLocation(locationInput, prisma, mockGeocoder);
+        expect(result.id).toBeDefined()
+
+        // Assert
+        await vi.waitFor(async () => {
+            const savedLocation = await prisma.location.findFirst({where: {id: result.id}});
+            expect(savedLocation!.latitude).toBeNull()
+            expect(savedLocation!.longitude).toBeNull()
+            console.log(savedLocation)
+        }, { timeout: 10000})
+    })
+
+    test('Location should save regardless of geocoding error', async () => {
+        // Arrange
+        const mockGeocoder: Geocoder = async () => { throw new Error('Network error') }
+        const locationInput = {
+            name: 'Downtown Alley',
+            address: '123 Main St',
+            city: 'Toronto',
+            province: 'ON',
+            postalCode: 'M5V 1A1'
+        }
+
+        // Act
+        const result = await createLocation(locationInput, prisma, mockGeocoder);
+        expect(result.id).toBeDefined()
+
+        // Assert
+        await vi.waitFor(async () => {
+            const savedLocation = await prisma.location.findFirst({where: {id: result.id}});
+            expect(savedLocation!.latitude).toBeNull()
+            expect(savedLocation!.longitude).toBeNull()
+            console.log(savedLocation)
+        }, { timeout: 10000})
+    })
 })

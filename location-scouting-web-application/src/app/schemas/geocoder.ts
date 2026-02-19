@@ -1,0 +1,1 @@
+export type Geocoder = (address: string) => Promise<{ lat: number; lng: number } | null>
