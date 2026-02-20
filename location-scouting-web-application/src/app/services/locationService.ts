@@ -2,6 +2,7 @@ import { prisma as defaultPrisma} from '@/app/lib/prisma'
 import {Location, Prisma, PrismaClient } from "@prisma/client";
 import {CreateLocationScheme} from "@/app/schemas/locationSchema";
 import {Geocoder} from "@/app/schemas/geocoder";
+import {PhotoUploadInput} from "@/app/schemas/photoUploadInput";
 
 const defaultGeocoder: Geocoder = async (address: string) => {
     const encoded = encodeURIComponent(address)
@@ -17,9 +18,18 @@ const defaultGeocoder: Geocoder = async (address: string) => {
 
 export async function createLocation(
     input: Prisma.LocationCreateInput,
-    db: PrismaClient = defaultPrisma,
-    geocoder: Geocoder = defaultGeocoder
+    options?: {
+        db?: PrismaClient
+        geocoder?: Geocoder
+        photoInput?: PhotoUploadInput[]
+    }
 ) {
+    // Default settings
+    const db = options?.db ?? defaultPrisma
+    const geocoder = options?.geocoder ?? defaultGeocoder
+    const photoInput = options?.photoInput
+
+
     if (input.contactPhone) {
         input.contactPhone = input.contactPhone.replaceAll('-', '')
         input.contactPhone = input.contactPhone.replaceAll('(', '')
