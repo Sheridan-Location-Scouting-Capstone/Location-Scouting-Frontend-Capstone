@@ -1,7 +1,7 @@
 export type PhotoUploadInput = {
     locationId?: string
     buffer: Buffer
-    fileName: string
+    filename: string
     mimeType: string
     displayOrder?: number
 }

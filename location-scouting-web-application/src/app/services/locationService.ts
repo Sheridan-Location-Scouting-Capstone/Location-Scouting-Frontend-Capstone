@@ -3,6 +3,7 @@ import {Location, Prisma, PrismaClient } from "@prisma/client";
 import {CreateLocationScheme} from "@/app/schemas/locationSchema";
 import {Geocoder} from "@/app/schemas/geocoder";
 import {PhotoUploadInput} from "@/app/schemas/photoUploadInput";
+import { uploadPhotos, defaultBucket } from "@/app/services/photoService";
 
 const defaultGeocoder: Geocoder = async (address: string) => {
     const encoded = encodeURIComponent(address)
@@ -22,13 +23,18 @@ export async function createLocation(
         db?: PrismaClient
         geocoder?: Geocoder
         photoInput?: PhotoUploadInput[]
+        bucket?: string
     }
 ) {
     // Default settings
     const db = options?.db ?? defaultPrisma
     const geocoder = options?.geocoder ?? defaultGeocoder
     const photoInput = options?.photoInput
+    const bucket = options?.bucket ?? defaultBucket
 
+    if (options?.photoInput && options.photoInput.length > 500) {
+        throw new RangeError('Photo upload limit exceeded: maximum 500 photos per location')
+    }
 
     if (input.contactPhone) {
         input.contactPhone = input.contactPhone.replaceAll('-', '')
@@ -52,5 +58,27 @@ export async function createLocation(
         })
         .catch(() => {}) // swallow geocoding errors silently. Potentially add a queue system here to retry periodically or on a cron job
 
+    if(photoInput?.length) {
+        const uploadedPhotos = await uploadPhotos(photoInput, bucket)
+        await db.photo.createMany({
+            data: uploadedPhotos.map((result, index) => ({
+                name: photoInput[index].filename,
+                url: result.url,
+                locationId: location.id,
+                displayOrder: index
+            }))
+        })
+    }
+
     return location
+}
+
+
+
+export async function getLocationById(id: string, options?: { db?: PrismaClient }) {
+    const db = options?.db ?? defaultPrisma
+    return db.location.findUnique({
+        where: { id },
+        include: { photos: { orderBy: { displayOrder: 'asc' }}}
+    });
 }

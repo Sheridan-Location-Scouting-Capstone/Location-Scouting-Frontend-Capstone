@@ -1,15 +1,12 @@
 import * as Minio from 'minio'
+import { PhotoUploadInput} from "@/app/schemas/photoUploadInput";
 
-export type PhotoUploadInput = {
-    buffer: Buffer
-    filename: string
-    mimeType: string
-}
 
 export type PhotoUploadResult = {
     url: string
     key: string
 }
+
 
 const minioClient = new Minio.Client({
     endPoint: process.env.MINIO_ENDPOINT || 'localhost',
@@ -19,18 +16,27 @@ const minioClient = new Minio.Client({
     secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
 })
 
-const bucket = process.env.MINIO_BUCKET || 'location-photos'
+export const defaultBucket = process.env.MINIO_BUCKET || 'location-photos'
 
-export async function ensureBucketExists(bucketName = bucket) {
+export async function ensureBucketExists(bucketName = defaultBucket) {
     const exists = await minioClient.bucketExists(bucketName)
     if (!exists) {
         await minioClient.makeBucket(bucketName)
     }
+    await minioClient.setBucketPolicy(bucketName, JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [{
+            Effect: 'Allow',
+            Principal: { AWS: ['*'] },
+            Action: ['s3:GetObject'],
+            Resource: [`arn:aws:s3:::${bucketName}/*`]
+        }]
+    }))
 }
 
 export async function uploadPhoto(
     input: PhotoUploadInput,
-    bucketName = bucket
+    bucketName = defaultBucket
 ): Promise<PhotoUploadResult> {
     await ensureBucketExists(bucketName)
 
@@ -51,12 +57,18 @@ export async function uploadPhoto(
 
 export async function uploadPhotos(
     inputs: PhotoUploadInput[],
-    bucketName = bucket
+    bucketName = defaultBucket
 ): Promise<PhotoUploadResult[]> {
     await ensureBucketExists(bucketName)
     return await Promise.all(inputs.map(input => uploadPhoto(input, bucketName)))
 }
 
-export async function deletePhoto(key: string, bucketName = bucket) {
+// export async function getPhoto(
+//     key: string,
+//
+// ): Promise<>
+
+
+export async function deletePhoto(key: string, bucketName = defaultBucket) {
     await minioClient.removeObject(bucketName, key)
 }
