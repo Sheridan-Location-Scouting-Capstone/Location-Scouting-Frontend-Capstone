@@ -77,6 +77,11 @@ export async function createLocation(
 
 export async function getLocationById(id: string, options?: { db?: PrismaClient }) {
     const db = options?.db ?? defaultPrisma
+    return db.location.findUnique({ where: { id } });
+}
+
+export async function getLocationWithPhotos(id: string, options?: { db?: PrismaClient }) {
+    const db = options?.db ?? defaultPrisma
     return db.location.findUnique({
         where: { id },
         include: { photos: { orderBy: { displayOrder: 'asc' }}}

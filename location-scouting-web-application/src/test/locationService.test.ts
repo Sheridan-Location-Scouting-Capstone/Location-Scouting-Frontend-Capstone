@@ -1,8 +1,8 @@
 import {describe, expect, it, test, vi} from 'vitest'
-import {createLocation} from "@/app/services/locationService";
+import {createLocation, getLocationById, getLocationWithPhotos} from "@/app/services/locationService";
 import {prisma} from '@/test/setup'
 import {Geocoder} from "@/app/schemas/geocoder";
-describe('Location Service', () => {
+describe('Location Services', () => {
     describe('createLocation', () =>{
         it('should save a location with minimum required fields and return it with an id', async () => {
             // Arrange
@@ -281,5 +281,117 @@ describe('Location Service', () => {
             // Assert
             await expect(result).rejects.toThrow()
         }, 20000)
+    })
+
+
+    describe('getLocation', () => {
+        it('should retrieve a location by id', async () => {
+            // Arrange
+            const locationInput = {
+                name: 'Downtown Alley',
+                address: '123 Main St',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 1A1'
+            }
+
+            const createdLocation = await createLocation(locationInput, {db: prisma});
+            expect(createdLocation.id).toBeDefined()
+            expect(createdLocation.id).not.toBeNull()
+
+            // Act
+            const result = await getLocationById(createdLocation.id, { db: prisma })
+
+            // Assert
+            expect(result).not.toBeNull()
+            expect(result!.id).toBe(createdLocation.id)
+            expect(result!.name).toBe(locationInput.name)
+            expect(result!.address).toBe(locationInput.address)
+            expect(result!.city).toBe(locationInput.city)
+            expect(result!.province).toBe(locationInput.province)
+            expect(result!.postalCode).toBe(locationInput.postalCode)
+        })
+
+        it('should return null if location with given id does not exist', async () => {
+            // Arrange
+            const nonExistentId = '9999'
+
+            // Act
+            const result = await getLocationById(nonExistentId, { db: prisma })
+
+            // Assert
+            expect(result).toBeNull()
+        })
+    })
+
+    describe('getLocationWithPhotos', () => {
+        it('should retrieve a location along with its associated photos', async () => {
+            // Arrange
+            const locationInput = {
+                name: 'Downtown Alley',
+                address: '123 Main St',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 1A1'
+            }
+
+            const photoInput = [{
+                buffer: Buffer.from('89504e470d0a1a0a', 'hex'),
+                filename: 'test.jpg',
+                mimeType: 'image/jpeg',
+            },
+            {
+                buffer: Buffer.from('89504e470d0a1a0a', 'hex'),
+                filename: 'test2.jpg',
+                mimeType: 'image/jpeg',
+            }]
+
+            const createdLocation = await createLocation(locationInput, { db: prisma, photoInput: photoInput });
+            expect(createdLocation.id).toBeDefined()
+            expect(createdLocation.id).not.toBeNull()
+
+            // Act
+            const result = await getLocationWithPhotos(createdLocation.id, { db: prisma })
+
+            // Assert
+            expect(result).not.toBeNull()
+            expect(result!.id).toBe(createdLocation.id)
+            expect(result!.photos).toHaveLength(2)
+            expect(result!.photos[0].name).toBe('test.jpg')
+            expect(result!.photos[1].name).toBe('test2.jpg')
+            expect(result!.photos[0].url).toBeDefined()
+            expect(result!.photos[1].url).toBeDefined()
+            expect(result!.photos[0].locationId).toBe(createdLocation.id)
+            expect(result!.photos[1].locationId).toBe(createdLocation.id)
+        })
+
+        it('should return an empty photos array if location has no associated photos', async () => {
+            // Arrange
+            const locationInput = {
+                name: 'Downtown Alley',
+                address: '123 Main St',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 1A1'
+            }
+
+            const createdLocation = await createLocation(locationInput, { db: prisma });
+            expect(createdLocation.id).toBeDefined()
+            expect(createdLocation.id).not.toBeNull()
+
+            // Act
+            const result = await getLocationWithPhotos(createdLocation.id, { db: prisma })
+
+            // Assert
+            expect(result).not.toBeNull()
+            expect(result!.id).toBe(createdLocation.id)
+            expect(result!.photos).toHaveLength(0)
+        })
+    })
+
+    describe('updateLocation', () => {
+        it('should update a location and return the updated record', async () => {
+
+        })
     })
 })
