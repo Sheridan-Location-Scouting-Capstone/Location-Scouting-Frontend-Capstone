@@ -1,9 +1,11 @@
 import { prisma as defaultPrisma} from '@/app/lib/prisma'
-import {Location, Prisma, PrismaClient } from "@prisma/client";
+import {$Enums, Location, Prisma, PrismaClient} from "@prisma/client";
 import {CreateLocationScheme} from "@/app/schemas/locationSchema";
 import {Geocoder} from "@/app/schemas/geocoder";
 import {PhotoUploadInput} from "@/app/schemas/photoUploadInput";
 import { uploadPhotos, defaultBucket } from "@/app/services/photoService";
+import LocationStatus = $Enums.LocationStatus;
+import {addPhotosToLocation, removePhotosFromLocation} from "@/app/services/locationPhotoService";
 
 const defaultGeocoder: Geocoder = async (address: string) => {
     const encoded = encodeURIComponent(address)
@@ -59,15 +61,7 @@ export async function createLocation(
         .catch(() => {}) // swallow geocoding errors silently. Potentially add a queue system here to retry periodically or on a cron job
 
     if(photoInput?.length) {
-        const uploadedPhotos = await uploadPhotos(photoInput, bucket)
-        await db.photo.createMany({
-            data: uploadedPhotos.map((result, index) => ({
-                name: photoInput[index].filename,
-                url: result.url,
-                locationId: location.id,
-                displayOrder: index
-            }))
-        })
+        await addPhotosToLocation(location.id, photoInput, { db, bucket })
     }
 
     return location
@@ -86,4 +80,21 @@ export async function getLocationWithPhotos(id: string, options?: { db?: PrismaC
         where: { id },
         include: { photos: { orderBy: { displayOrder: 'asc' }}}
     });
+}
+
+export async function updateLocation(id: string, data: Prisma.LocationUpdateInput, options?: { db?: PrismaClient, geocoder?: Geocoder }) {
+    const db = options?.db ?? defaultPrisma
+    const geocoder = options?.geocoder ?? defaultGeocoder
+
+    return db.location.update({ where: { id }, data });
+}
+
+export async function deleteLocationById(id: string, options?: { db?: PrismaClient }) {
+    const db = options?.db ?? defaultPrisma
+    await db.location.update({
+        where: { id },
+        data: { status: LocationStatus.DELETED }
+    })
+
+    await removePhotosFromLocation(id, [], { db })
 }

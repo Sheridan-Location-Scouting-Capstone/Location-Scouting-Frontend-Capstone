@@ -1,9 +1,16 @@
 import {describe, expect, it, test, vi} from 'vitest'
-import {createLocation, getLocationById, getLocationWithPhotos} from "@/app/services/locationService";
+import {
+    createLocation,
+    deleteLocationById,
+    getLocationById,
+    getLocationWithPhotos,
+    updateLocation
+} from "@/app/services/locationService";
 import {prisma} from '@/test/setup'
 import {Geocoder} from "@/app/schemas/geocoder";
+import {addPhotosToLocation} from "@/app/services/locationPhotoService";
 describe('Location Services', () => {
-    describe('createLocation', () =>{
+    describe('createLocation', () => {
         it('should save a location with minimum required fields and return it with an id', async () => {
             // Arrange
             const locationInput = {
@@ -15,7 +22,7 @@ describe('Location Services', () => {
             }
 
             // Act
-            const result = await createLocation( locationInput, {db: prisma});
+            const result = await createLocation(locationInput, {db: prisma});
 
             // Assert
             expect(result.id).toBeDefined()
@@ -28,17 +35,43 @@ describe('Location Services', () => {
         })
 
         test.each([
-            ['empty postal code', {name: 'Downtown Alley', address: '123 Main St', city: 'Toronto', province: 'ON', postalCode: ''}],
-            ['empty province', {name: 'Downtown Alley', address: '123 Main St', city: 'Toronto', province: '', postalCode: 'M5V 1A1'}],
-            ['empty city', {name: 'Downtown Alley', address: '123 Main St', city: '', province: '', postalCode: 'M5V 1A1'}],
+            ['empty postal code', {
+                name: 'Downtown Alley',
+                address: '123 Main St',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: ''
+            }],
+            ['empty province', {
+                name: 'Downtown Alley',
+                address: '123 Main St',
+                city: 'Toronto',
+                province: '',
+                postalCode: 'M5V 1A1'
+            }],
+            ['empty city', {
+                name: 'Downtown Alley',
+                address: '123 Main St',
+                city: '',
+                province: '',
+                postalCode: 'M5V 1A1'
+            }],
             ['empty name', {name: '', address: '123 Main St', city: 'Toronto', province: '', postalCode: 'M5V 1A1'}],
-            ['empty address', {name: 'Downtown Alley', address: '', city: 'Toronto', province: '', postalCode: 'M5V 1A1'}],
+            ['empty address', {
+                name: 'Downtown Alley',
+                address: '',
+                city: 'Toronto',
+                province: '',
+                postalCode: 'M5V 1A1'
+            }],
         ])('should throw an error when there is an %s', async function (description, input) {
-            await expect(() => createLocation(input, { db: prisma })).rejects.toThrow()
+            await expect(() => createLocation(input, {db: prisma})).rejects.toThrow()
         })
 
-        it('should assign a unique ID to the location', async () => {})
-        it('should geocode an address on creation', async () => {})
+        it('should assign a unique ID to the location', async () => {
+        })
+        it('should geocode an address on creation', async () => {
+        })
         it('')
         test.each([
             '(705) 773 3685',
@@ -59,7 +92,7 @@ describe('Location Services', () => {
             }
 
             // Act
-            const result = await createLocation(locationInput, { db: prisma });
+            const result = await createLocation(locationInput, {db: prisma});
 
             // Assert
             expect(result.contactPhone).toBeDefined()
@@ -85,7 +118,7 @@ describe('Location Services', () => {
             }
 
             // Act & Assert (Expected Error)
-            await expect(createLocation(locationInput, { db: prisma })).rejects.toThrow();
+            await expect(createLocation(locationInput, {db: prisma})).rejects.toThrow();
         })
 
         test.each([
@@ -105,7 +138,7 @@ describe('Location Services', () => {
             }
 
             // Act
-            const result = await createLocation(locationInput, { db: prisma });
+            const result = await createLocation(locationInput, {db: prisma});
 
             // Assert
             expect(result.contactName).not.toBeNull()
@@ -128,7 +161,7 @@ describe('Location Services', () => {
             }
 
             // Act
-            const result = createLocation(locationInput, { db: prisma });
+            const result = createLocation(locationInput, {db: prisma});
 
             // Assert
             await expect(result).rejects.toThrow();
@@ -136,7 +169,7 @@ describe('Location Services', () => {
 
         it('should geocode an address on location creation', async () => {
             // Arrange
-            const mockGeocoder: Geocoder = async () => ({ lat: 43.6532, lng: -79.3832 })
+            const mockGeocoder: Geocoder = async () => ({lat: 43.6532, lng: -79.3832})
             const locationInput = {
                 name: 'Downtown Alley',
                 address: '123 Main St',
@@ -146,12 +179,12 @@ describe('Location Services', () => {
             }
 
             // Act
-            const result = await createLocation(locationInput, { db: prisma, geocoder: mockGeocoder });
+            const result = await createLocation(locationInput, {db: prisma, geocoder: mockGeocoder});
             expect(result.id).toBeDefined()
 
             // Assert
             await vi.waitFor(async () => {
-                const savedLocation = await prisma.location.findFirst({ where: { id: result.id }});
+                const savedLocation = await prisma.location.findFirst({where: {id: result.id}});
                 expect(savedLocation!.latitude).not.toBeNull()
                 expect(savedLocation!.longitude).not.toBeNull()
                 console.log(savedLocation)
@@ -169,15 +202,15 @@ describe('Location Services', () => {
             }
 
             // Act
-            const result = await createLocation(locationInput, { db: prisma })
+            const result = await createLocation(locationInput, {db: prisma})
 
             // Assert
             await vi.waitFor(async () => {
-                const savedLocation = await prisma.location.findFirst({ where: { id: result.id } })
+                const savedLocation = await prisma.location.findFirst({where: {id: result.id}})
                 expect(savedLocation!.latitude).not.toBeNull()
                 expect(savedLocation!.longitude).not.toBeNull()
                 console.log(savedLocation)
-            }, { timeout: 10000 }) // give it 10 seconds for the real network call
+            }, {timeout: 10000}) // give it 10 seconds for the real network call
         })
 
         test('Location should save regardless of geocoding success or failure', async () => {
@@ -192,7 +225,7 @@ describe('Location Services', () => {
             }
 
             // Act
-            const result = await createLocation(locationInput, { db: prisma, geocoder: mockGeocoder });
+            const result = await createLocation(locationInput, {db: prisma, geocoder: mockGeocoder});
             expect(result.id).toBeDefined()
 
             // Assert
@@ -201,12 +234,14 @@ describe('Location Services', () => {
                 expect(savedLocation!.latitude).toBeNull()
                 expect(savedLocation!.longitude).toBeNull()
                 console.log(savedLocation)
-            }, { timeout: 10000})
+            }, {timeout: 10000})
         })
 
         test('Location should save regardless of geocoding error', async () => {
             // Arrange
-            const mockGeocoder: Geocoder = async () => { throw new Error('Network error') }
+            const mockGeocoder: Geocoder = async () => {
+                throw new Error('Network error')
+            }
             const locationInput = {
                 name: 'Downtown Alley',
                 address: '123 Main St',
@@ -216,7 +251,7 @@ describe('Location Services', () => {
             }
 
             // Act
-            const result = await createLocation(locationInput,  { db: prisma, geocoder: mockGeocoder });
+            const result = await createLocation(locationInput, {db: prisma, geocoder: mockGeocoder});
             expect(result.id).toBeDefined()
 
             // Assert
@@ -225,7 +260,7 @@ describe('Location Services', () => {
                 expect(savedLocation!.latitude).toBeNull()
                 expect(savedLocation!.longitude).toBeNull()
                 console.log(savedLocation)
-            }, { timeout: 10000})
+            }, {timeout: 10000})
         })
 
         test('Location photos save successfully when creating a new location', async () => {
@@ -245,18 +280,18 @@ describe('Location Services', () => {
             }]
 
             // Act
-            const result = await createLocation(locationInput, { db: prisma, photoInput: photoInput });
+            const result = await createLocation(locationInput, {db: prisma, photoInput: photoInput});
 
 
             // Assert
             await vi.waitFor(async () => {
-                const photos = await prisma.photo.findMany({ where: {locationId: result.id} })
+                const photos = await prisma.photo.findMany({where: {locationId: result.id}})
                 expect(photos).not.toBeNull()
                 expect(photos).toHaveLength(1)
             })
         })
 
-        it('should reject photo uploads with more than 500 photos', async() => {
+        it('should reject photo uploads with more than 500 photos', async () => {
             // Arrange
             const locationInput = {
                 name: 'Downtown Alley',
@@ -267,7 +302,7 @@ describe('Location Services', () => {
             }
 
             const photoInput = []
-            for(let i = 0; i < 501; i++) {
+            for (let i = 0; i < 501; i++) {
                 photoInput.push({
                     buffer: Buffer.from('89504e470d0a1a0a', 'hex'),
                     filename: `test${i}.jpg`,
@@ -276,7 +311,7 @@ describe('Location Services', () => {
             }
 
             // Act
-            const result = createLocation(locationInput, { db: prisma, photoInput: photoInput });
+            const result = createLocation(locationInput, {db: prisma, photoInput: photoInput});
 
             // Assert
             await expect(result).rejects.toThrow()
@@ -300,7 +335,7 @@ describe('Location Services', () => {
             expect(createdLocation.id).not.toBeNull()
 
             // Act
-            const result = await getLocationById(createdLocation.id, { db: prisma })
+            const result = await getLocationById(createdLocation.id, {db: prisma})
 
             // Assert
             expect(result).not.toBeNull()
@@ -317,7 +352,7 @@ describe('Location Services', () => {
             const nonExistentId = '9999'
 
             // Act
-            const result = await getLocationById(nonExistentId, { db: prisma })
+            const result = await getLocationById(nonExistentId, {db: prisma})
 
             // Assert
             expect(result).toBeNull()
@@ -340,18 +375,18 @@ describe('Location Services', () => {
                 filename: 'test.jpg',
                 mimeType: 'image/jpeg',
             },
-            {
-                buffer: Buffer.from('89504e470d0a1a0a', 'hex'),
-                filename: 'test2.jpg',
-                mimeType: 'image/jpeg',
-            }]
+                {
+                    buffer: Buffer.from('89504e470d0a1a0a', 'hex'),
+                    filename: 'test2.jpg',
+                    mimeType: 'image/jpeg',
+                }]
 
-            const createdLocation = await createLocation(locationInput, { db: prisma, photoInput: photoInput });
+            const createdLocation = await createLocation(locationInput, {db: prisma, photoInput: photoInput});
             expect(createdLocation.id).toBeDefined()
             expect(createdLocation.id).not.toBeNull()
 
             // Act
-            const result = await getLocationWithPhotos(createdLocation.id, { db: prisma })
+            const result = await getLocationWithPhotos(createdLocation.id, {db: prisma})
 
             // Assert
             expect(result).not.toBeNull()
@@ -375,12 +410,12 @@ describe('Location Services', () => {
                 postalCode: 'M5V 1A1'
             }
 
-            const createdLocation = await createLocation(locationInput, { db: prisma });
+            const createdLocation = await createLocation(locationInput, {db: prisma});
             expect(createdLocation.id).toBeDefined()
             expect(createdLocation.id).not.toBeNull()
 
             // Act
-            const result = await getLocationWithPhotos(createdLocation.id, { db: prisma })
+            const result = await getLocationWithPhotos(createdLocation.id, {db: prisma})
 
             // Assert
             expect(result).not.toBeNull()
@@ -390,8 +425,105 @@ describe('Location Services', () => {
     })
 
     describe('updateLocation', () => {
-        it('should update a location and return the updated record', async () => {
+        it('should update partial location details and return the updated record', async () => {
+            // Arrange
+            const locationInput = {
+                name: 'Downtown Alley',
+                address: '123 Main St',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 1A1'
+            }
 
+            const createdLocation = await createLocation(locationInput, {db: prisma})
+
+            // Act
+            const updatedData = {
+                name: 'Updated Alley',
+                city: 'Ottawa'
+            }
+            const result = await updateLocation(createdLocation.id, updatedData, {db: prisma})
+
+            // Assert
+            expect(result).not.toBeNull()
+            expect(result!.id).toBe(createdLocation.id)
+            expect(result!.name).toBe(updatedData.name)
+            expect(result!.city).toBe(updatedData.city)
+            expect(result!.address).toBe(locationInput.address) // unchanged
+            expect(result!.province).toBe(locationInput.province) // unchanged
+            expect(result!.postalCode).toBe(locationInput.postalCode) // unchanged
+            expect(result!.updatedAt.getTime()).toBeGreaterThan(createdLocation.updatedAt.getTime()) // updatedAt should be more recent than createdAt
+        })
+    })
+
+    describe('deleteLocation', () => {
+        it('should mark a location as deleted without actually removing it from the database', async () => {
+            // Arrange
+            const locationInput = {
+                name: 'Downtown Alley',
+                address: '123 Main St',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 1A1'
+            }
+
+            // Act
+            const createdLocation = await createLocation(locationInput, {db: prisma})
+            await deleteLocationById(createdLocation.id, {db: prisma})
+            const deletedLocation = await prisma.location.findFirst({
+                where: {id: createdLocation.id}
+            })
+
+            // Assert
+            expect(deletedLocation).not.toBeNull()
+            expect(deletedLocation!.id).toBe(createdLocation.id)
+            expect(deletedLocation!.status).toBe('DELETED')
+        })
+
+        it('should delete associated photos when a location is deleted', async () => {
+            // Arrange
+            const locationInput = {
+                name: 'Downtown Alley',
+                address: '123 Main St',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 1A1'
+            }
+
+            const createdLocation = await createLocation(locationInput, {db: prisma})
+
+            const photoInput = [{
+                    locationId: createdLocation.id,
+                    buffer: Buffer.from('89504e470d0a1a0a', 'hex'),
+                    filename: 'test.jpg',
+                    mimeType: 'image/jpeg',
+                },
+                {
+                    locationId: createdLocation.id,
+                    buffer: Buffer.from('89504e470d0a1a0a', 'hex'),
+                    filename: 'test2.jpg',
+                    mimeType: 'image/jpeg',
+                }]
+
+            const addedPhotosResult = await addPhotosToLocation(createdLocation.id, photoInput, {db: prisma})
+            expect(addedPhotosResult.success).toBe(true)
+            if(addedPhotosResult.success){
+                expect(addedPhotosResult.data).toHaveLength(2)
+            }
+
+            const createdLocationWithPhotos = await getLocationWithPhotos(createdLocation.id, {db: prisma})
+            expect(createdLocationWithPhotos).not.toBeNull()
+            expect(createdLocationWithPhotos!.photos).toHaveLength(2)
+
+
+            // Act
+            await deleteLocationById(createdLocation.id, {db: prisma})
+            const deletedPhotos = await prisma.photo.findMany({
+                where: {locationId: createdLocation.id}
+            })
+
+            // Assert
+            expect(deletedPhotos).toHaveLength(0);
         })
     })
 })

@@ -44,9 +44,10 @@ model Location {
 }
 
 model Photo {
-  id   String  @id @default(cuid())
-  name String?
-  url  String
+  id         String  @id @default(cuid())
+  name       String?
+  url        String
+  storageKey String
 
   displayOrder Int @default(0)
 
