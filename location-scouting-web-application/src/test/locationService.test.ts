@@ -481,7 +481,7 @@ describe('Location Services', () => {
         })
 
         it('should delete associated photos when a location is deleted', async () => {
-            // Arrange
+            // Arrange - Create Location
             const locationInput = {
                 name: 'Downtown Alley',
                 address: '123 Main St',
@@ -489,9 +489,9 @@ describe('Location Services', () => {
                 province: 'ON',
                 postalCode: 'M5V 1A1'
             }
-
             const createdLocation = await createLocation(locationInput, {db: prisma})
 
+            // Arrange - Add Photos to Location
             const photoInput = [{
                     locationId: createdLocation.id,
                     buffer: Buffer.from('89504e470d0a1a0a', 'hex'),
@@ -511,6 +511,7 @@ describe('Location Services', () => {
                 expect(addedPhotosResult.data).toHaveLength(2)
             }
 
+            // Verify photos were added before proceeding with delete test (Soft Assert)
             const createdLocationWithPhotos = await getLocationWithPhotos(createdLocation.id, {db: prisma})
             expect(createdLocationWithPhotos).not.toBeNull()
             expect(createdLocationWithPhotos!.photos).toHaveLength(2)
@@ -525,5 +526,7 @@ describe('Location Services', () => {
             // Assert
             expect(deletedPhotos).toHaveLength(0);
         })
+
+
     })
 })
