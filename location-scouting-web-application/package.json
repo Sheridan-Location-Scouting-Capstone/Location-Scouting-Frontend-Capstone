@@ -12,6 +12,10 @@
     "test:db:push": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/location_scouting_test?schema=public npx prisma db push"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.8",
+    "@mui/material": "^7.3.8",
     "@prisma/client": "^6.19.2",
     "@vis.gl/react-google-maps": "^1.7.1",
     "minio": "^8.0.6",

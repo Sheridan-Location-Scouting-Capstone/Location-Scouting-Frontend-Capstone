@@ -98,3 +98,23 @@ export async function deleteLocationById(id: string, options?: { db?: PrismaClie
 
     await removePhotosFromLocation(id, [], { db })
 }
+
+export async function getLocations(
+    options?: {
+        db?: PrismaClient
+        query?: string
+        keywords?: string[]
+    }
+) {
+    const db = options?.db ?? defaultPrisma
+    const where: Prisma.LocationWhereInput = {}
+
+    if (options?.query) {
+        where.OR = [
+            { name: { contains: options.query, mode: 'insensitive' } },
+            { address: { contains: options.query, mode: 'insensitive' } },
+            { city: { contains: options.query, mode: 'insensitive' } },
+        ]
+    }
+    if (options?.keywords ) {}
+}
