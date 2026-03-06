@@ -107,7 +107,9 @@ export async function getLocations(
     }
 ) {
     const db = options?.db ?? defaultPrisma
-    const where: Prisma.LocationWhereInput = {}
+    const where: Prisma.LocationWhereInput = {
+         status: { not: LocationStatus.DELETED }
+    }
 
     if (options?.query) {
         where.OR = [
@@ -116,5 +118,18 @@ export async function getLocations(
             { city: { contains: options.query, mode: 'insensitive' } },
         ]
     }
-    if (options?.keywords ) {}
+    if (options?.keywords && options.keywords.length > 0 ) {
+        where.keywords = { hasSome: options.keywords }
+    }
+
+    return db.location.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+            photos: {
+                orderBy: { displayOrder: 'asc' },
+                take: 1
+            }
+        }
+    })
 }

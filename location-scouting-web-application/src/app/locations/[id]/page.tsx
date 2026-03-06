@@ -28,15 +28,15 @@ export default async function LocationDetailPage({
       </Typography>
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          component={Link}
-          href="/locations"
-          variant="outlined"
-          size="small"
-        >
-          Back
-        </Button>
+        <Link href="/location" style={{ textDecoration: 'none' }}>
+          <Button
+            startIcon={<ArrowBackIcon />}
+            variant="outlined"
+            size="small"
+          >
+            Back
+          </Button>
+        </Link>
         <Box sx={{ display: 'flex', gap: 1.5 }}>
           <LocationStatusActions locationId={location.id} currentStatus={location.status} />
           <Button
@@ -46,14 +46,14 @@ export default async function LocationDetailPage({
           >
             Share
           </Button>
+          <Link href={`/locations/${location.id}/edit`} style={{ textDecoration: 'none' }}>
           <Button
             variant="contained"
             startIcon={<EditIcon />}
-            component={Link}
-            href={`/locations/${location.id}/edit`}
           >
             Edit Location
           </Button>
+          </Link>
         </Box>
       </Box>
 

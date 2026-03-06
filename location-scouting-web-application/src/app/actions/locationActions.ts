@@ -4,25 +4,26 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/app/lib/prisma'
 import {
-  createLocation,
-  getLocation,
+  createLocation, deleteLocationById,
+  // getLocation,
   getLocationWithPhotos,
   updateLocation,
-  updateLocationStatus,
-  searchLocations,
-  filterByKeywords,
+  // updateLocationStatus,
+  // searchLocations,
+  // filterByKeywords,
 } from '@/app/services/locationService'
-import { addPhotosToLocation, removePhotoFromLocation } from '@/app/services/locationPhotoService'
-import { CreateLocationSchema } from '@/schemas/locationSchema'
+import { addPhotosToLocation,
+        removePhotosFromLocation
+} from '@/app/services/locationPhotoService'
 
 // ─── List / Search ──────────────────────────────────────────
 
 export async function getLocationsAction(query?: string, keywords?: string[]) {
   if (query) {
-    return await searchLocations(query)
+   // return await searchLocations(query)
   }
   if (keywords && keywords.length > 0) {
-    return await filterByKeywords(keywords)
+   // return await filterByKeywords(keywords)
   }
   // Default: return all locations, newest first
   return await prisma.location.findMany({
@@ -77,7 +78,7 @@ export async function createLocationAction(formData: FormData) {
   }
 
   const location = await createLocation(raw, {
-    photos: photoInputs.length > 0 ? photoInputs : undefined,
+    photoInput: photoInputs.length > 0 ? photoInputs : undefined,
   })
 
   revalidatePath('/locations')
@@ -112,14 +113,16 @@ export async function updateLocationAction(id: string, formData: FormData) {
 // ─── Status ─────────────────────────────────────────────────
 
 export async function updateLocationStatusAction(id: string, status: 'ACTIVE' | 'ARCHIVED' | 'DELETED') {
-  await updateLocationStatus(id, status)
-  revalidatePath('/locations')
   if (status === 'DELETED') {
-    redirect('/locations')
+    await deleteLocationById(id)
+  } else {
+    await updateLocation(id, { status, deletedAt: null })
   }
+
+  revalidatePath('/locations')
+  if (status === 'DELETED') redirect('/locations')
   revalidatePath(`/locations/${id}`)
 }
-
 // ─── Photos ─────────────────────────────────────────────────
 
 export async function addPhotosAction(locationId: string, formData: FormData) {
@@ -145,6 +148,6 @@ export async function addPhotosAction(locationId: string, formData: FormData) {
 }
 
 export async function deletePhotoAction(photoId: string, locationId: string) {
-  await removePhotoFromLocation(photoId)
+  await removePhotosFromLocation(locationId, [photoId])
   revalidatePath(`/locations/${locationId}`)
 }

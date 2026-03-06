@@ -2,13 +2,14 @@ import {describe, expect, it, test, vi} from 'vitest'
 import {
     createLocation,
     deleteLocationById,
-    getLocationById,
+    getLocationById, getLocations,
     getLocationWithPhotos,
     updateLocation
 } from "@/app/services/locationService";
 import {prisma} from '@/test/setup'
 import {Geocoder} from "@/app/schemas/geocoder";
 import {addPhotosToLocation} from "@/app/services/locationPhotoService";
+import {LocationStatus} from "@prisma/client";
 describe('Location Services', () => {
     describe('createLocation', () => {
         it('should save a location with minimum required fields and return it with an id', async () => {
@@ -456,6 +457,32 @@ describe('Location Services', () => {
         })
     })
 
+    describe('updateLocationStatus', () => {
+        it('should update the status of a location', async () => {
+                // Arrange
+                const locationInput = {
+                    name: 'Downtown Alley',
+                    address: '123 Main St',
+                    city: 'Toronto',
+                    province: 'ON',
+                    postalCode: 'M5V 1A1'
+                }
+
+                const createdLocation = await createLocation(locationInput, {db: prisma})
+
+                // Act
+                const updatedData = {
+                    status: LocationStatus.ARCHIVED
+                }
+                const result = await updateLocation(createdLocation.id, updatedData, {db: prisma})
+
+                // Assert
+                expect(result).not.toBeNull()
+                expect(result!.id).toBe(createdLocation.id)
+                expect(result!.status).toBe(LocationStatus.ARCHIVED)
+        })
+    })
+
     describe('deleteLocation', () => {
         it('should mark a location as deleted without actually removing it from the database', async () => {
             // Arrange
@@ -529,4 +556,51 @@ describe('Location Services', () => {
 
 
     })
+
+    describe('getLocations', () => {
+        it('should get all locations not marked with the DELETED status', async () => {
+            // Arrange
+            // Prepare test data with a mix of ACTIVE and DELETED locations
+            const activeLocationInput = {
+                name: 'Active Location',
+                address: '123 Active St',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 1A1'
+            }
+
+            const secondActiveLocationInput = {
+                name: 'Second Active Location',
+                address: '789 Active Ave',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 3C3'
+            }
+            const deletedLocationInput = {
+                name: 'Deleted Location',
+                address: '456 Deleted Ave',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 2B2'
+            }
+
+            createLocation(activeLocationInput, {db: prisma})
+            createLocation(secondActiveLocationInput, {db: prisma})
+            const deletedLocation = await createLocation(deletedLocationInput, {db: prisma})
+
+            await deleteLocationById(deletedLocation.id, {db: prisma})
+
+            // Act
+            const results = await getLocations({db: prisma})
+
+            // Assert
+            expect(results).toHaveLength(2)
+            const locationNames = results.map(loc => loc.name)
+            expect(locationNames).toContain(activeLocationInput.name)
+            expect(locationNames).toContain(secondActiveLocationInput.name)
+            expect(locationNames).not.toContain(deletedLocation)
+        })
+    })
+
+
 })

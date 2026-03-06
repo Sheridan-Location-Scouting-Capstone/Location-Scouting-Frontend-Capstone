@@ -21,15 +21,15 @@ export default async function LocationsPage({
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4">Locations</Typography>
-          <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              component={Link}
-              href="/locations/new"
-              size="large"
-          >
-            Add New Location
-          </Button>
+            <Link href="/locations/new" style={{ textDecoration: 'none' }}>
+                <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    size="large"
+                 >
+                    Add New Location
+                </Button>
+            </Link>
         </Box>
 
         {/* Table */}
