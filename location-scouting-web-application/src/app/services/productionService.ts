@@ -12,3 +12,10 @@ export async function createProject(input: z.infer<typeof CreateProjectSchema>, 
     const project = await db.project.create({ data: validated })
     return { success: true, data: project }
 }
+
+export async function getProjects(options?: { db?: typeof defaultPrisma }) {
+    const db = options?.db ?? defaultPrisma
+
+    const projects = await db.project.findMany()
+    return { success: true, data: projects }
+}
