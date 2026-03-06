@@ -1,11 +1,14 @@
-// schemas are created as typescript interfaces, similar to how props are created and passed into a component
-// we will need to implement zed later for api integration
-// interface ProjectSchema {
-//     id:         number;
-//     name:       string;
-//     scenes:     string[];
-//     locations:  string[];
-// }
+import { z } from 'zod'
+
+export const CreateProjectSchema = z.object({
+    name:       z.string().min(1, 'Project name is required'),
+    address:    z.string().min(1, 'Street address is required'),
+    city:       z.string().min(1, 'City is required'),
+    province:   z.string().min(1, 'Province is required'),
+    postalCode: z.string().min(1, 'Postal code is required'),
+    country:    z.string().min(1, 'Country is required').optional()
+})
+
 
 interface ProjectSchema {
     id:         number;
