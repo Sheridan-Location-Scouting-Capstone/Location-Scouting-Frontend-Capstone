@@ -28,7 +28,7 @@ export default async function LocationDetailPage({
       </Typography>
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Link href="/location" style={{ textDecoration: 'none' }}>
+        <Link href="/locations" style={{ textDecoration: 'none' }}>
           <Button
             startIcon={<ArrowBackIcon />}
             variant="outlined"
