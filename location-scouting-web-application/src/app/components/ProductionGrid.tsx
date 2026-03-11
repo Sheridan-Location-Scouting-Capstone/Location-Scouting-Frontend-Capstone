@@ -73,9 +73,6 @@ export default function ProductionGrid({ projects }: { projects: Project[] }) {
                       {project.city}, {project.province}
                     </Typography>
                   </Box>
-                  <IconButton size="small" onClick={(e) => e.stopPropagation()}>
-                    <StarBorderIcon sx={{ color: 'text.secondary' }} />
-                  </IconButton>
                 </Box>
               </CardContent>
 

@@ -36,12 +36,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   py: 1.5,
                 }}
             >
-              <IconButton size="small">
-                <StarBorderIcon sx={{ color: 'text.secondary' }} />
-              </IconButton>
-              <IconButton size="small">
-                <StarBorderIcon sx={{ color: 'text.secondary' }} />
-              </IconButton>
               <Avatar
                   sx={{ width: 36, height: 36, bgcolor: 'primary.main', ml: 1 }}
               >
