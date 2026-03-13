@@ -136,5 +136,60 @@ describe('Scene Service', () => {
                 expect(sceneNumbers).toContain(additionalSceneInput.sceneNumber)
             }
         })
+
+        it('should identify location characteristics from the script section', async () => {
+            // Arrange
+            // First create a project to associate the scene with
+            const project = await createProject({
+                    name: 'Test Project',
+                    address: '456 Film St',
+                    city: 'Vancouver',
+                    province: 'BC',
+                    postalCode: 'V5K 0A1',
+                    country: 'Canada'
+            }, { db: prisma })
+
+            // Verify project creation was successful
+            expect(project.success).toBe(true)
+            if (!project.success) {
+                throw new Error('Failed to create project for test setup')
+            }
+            console.log("created project for scene test:", project.data)
+
+            const sceneInput = {
+                sceneNumber: 2,
+                intExt: IntExt.EXT,
+                sceneLocation: 'CURTIS HOME - YARD - FRENCHTOWN FL',
+                sceneTimeOfDay: 'Day',
+                scriptSection: ' ELWOOD (6-8ish) POV of the midday sky where the moon is\n' +
+                    '     visible against its blue hue. The underside of a lemon tree\n' +
+                    '     with lemons is also in view.\n' +
+                    '\n' +
+                    '                         EVELYN (O.S.)\n' +
+                    '                   (calling out)\n' +
+                    '               Elwood? Elwood! (louder) El!\n' +
+                    '\n' +
+                    '     He tilts his head toward the house, his arm outstretched in\n' +
+                    '     the same direction in the unruly tropical backyard of the\n' +
+                    '     family house.\n' +
+                    '\n' +
+                    '                         HATTIE (O.S.)\n' +
+                    '               He\'s out back, looking like he fell\n' +
+                    '               out.\n',
+                projectId: project.data.id
+            }
+
+            // Act
+            const createdScene = await createScene(sceneInput, { db: prisma })
+
+            // Assert
+            expect(createdScene.success).toBe(true)
+            if(createdScene.success) {
+                expect(createdScene.data).not.toBeNull()
+                expect(createdScene.data.keywords).toBeDefined()
+                expect(createdScene.data.keywords).to.contain('backyard')
+                expect(createdScene.data.keywords).to.contain('house')
+            }
+        })
     })
 })

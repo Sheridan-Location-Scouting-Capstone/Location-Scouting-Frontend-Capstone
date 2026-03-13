@@ -95,12 +95,13 @@ model Project {
 }
 
 model Scene {
-  id             String  @id @default(cuid())
+  id             String   @id @default(cuid())
   sceneNumber    Int
   intExt         IntExt?
   sceneLocation  String
   sceneTimeOfDay String?
   scriptSection  String
+  keywords       String[]
 
   projectDisplayOrder Int @default(0)
 
