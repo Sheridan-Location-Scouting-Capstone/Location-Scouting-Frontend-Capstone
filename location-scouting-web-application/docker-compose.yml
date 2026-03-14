@@ -38,6 +38,13 @@ services:
     volumes:
       - minio_data:/data
 
+  keyword-generation:
+    build: ./keyword-generation
+    container_name: keyword-generation
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+
 
 volumes:
   postgres_data:
