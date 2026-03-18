@@ -1,34 +1,27 @@
 import { prisma as defaultPrisma} from '@/app/lib/prisma'
 import { z } from 'zod'
 import {CreateSceneSchema} from "@/app/schemas/sceneSchema";
+import {getKeywords, KeywordGenerator} from "@/app/services/keywordGenerator";
 
-export async function createScene(input: z.infer<typeof CreateSceneSchema>, options?: { db?: typeof defaultPrisma }) {
+const defaultKeywordGenerator: KeywordGenerator = async (scriptContent: string) => {
+    return getKeywords(scriptContent)
+}
+
+export async function createScene(input: z.infer<typeof CreateSceneSchema>, options?: { db?: typeof defaultPrisma, keywordGenerator?: KeywordGenerator }) {
     const db = options?.db ?? defaultPrisma
+    const keywordGenerator = options?.keywordGenerator ?? defaultKeywordGenerator
 
     const validated = CreateSceneSchema.parse(input)
 
-    const scene = await db.scene.create({ data: validated })
+    let scene = await db.scene.create({ data: validated })
 
-    const response = await fetch('http://3.239.10.251/prediction', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            scene: sanitizeSceneContent(scene.scriptSection)
-        })
-    })
-    if (response.ok) {
-        const keywords: string[] = await response.json()
-        if(keywords.length > 0) {
-            const sceneWithKeywords = await db.scene.update({
+    const response = await keywordGenerator(scene.scriptSection)
+    if (response.length > 0) {
+            scene = await db.scene.update({
                 where: {id: scene.id},
-                data: {keywords: keywords }
+                data: {keywords: response }
             })
-
-            return { success: true, data: sceneWithKeywords }
         }
-
-        return { success: false, data: scene }
-    }
     return { success: true, data: scene }
 }
 
@@ -66,8 +59,3 @@ export async function updateScene(sceneId: string, input: Partial<z.infer<typeof
     return { success: true, data: updatedScene }
 }
 
-function sanitizeSceneContent(text: string): string {
-    return text.replace(/[\n\r\t]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-}

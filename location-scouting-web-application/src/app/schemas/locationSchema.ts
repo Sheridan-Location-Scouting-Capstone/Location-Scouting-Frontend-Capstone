@@ -4,7 +4,7 @@ const phoneRegex = new RegExp(
     /^[\d\s\-+()]{7,20}$/
 );
 
-export const CreateLocationScheme = z.object({
+export const   CreateLocationScheme = z.object({
     name: z.string().min(1, 'Name is required').max(255),
     address: z.string().min(1, 'Address is required'),
     city: z.string().min(1, 'City is required'),
