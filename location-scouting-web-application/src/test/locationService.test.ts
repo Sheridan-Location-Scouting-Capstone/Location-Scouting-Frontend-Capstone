@@ -9,7 +9,8 @@ import {
 import {prisma} from '@/test/setup'
 import {Geocoder} from "@/app/schemas/geocoder";
 import {addPhotosToLocation} from "@/app/services/locationPhotoService";
-import {LocationStatus} from "@prisma/client";
+// @ts-ignore
+import { LocationStatus } from "@prisma/client";
 describe('Location Services', () => {
     describe('createLocation', () => {
         it('should save a location with minimum required fields and return it with an id', async () => {
@@ -426,6 +427,24 @@ describe('Location Services', () => {
     })
 
     describe('updateLocation', () => {
+
+        // test.each([
+        //     {
+        //         name: 'Updated name'
+        //     },
+        //     {
+        //         address: '124 Main St',
+        //     },
+        //     {
+        //          city: 'Ottawa'
+        //     },
+        //     {
+        //         province: 'BC'
+        //     },
+        //     {
+        //         postalCode: '1A1 F4F'
+        //     }
+        // ])('it should update ')
         it('should update partial location details and return the updated record', async () => {
             // Arrange
             const locationInput = {
@@ -595,7 +614,7 @@ describe('Location Services', () => {
 
             // Assert
             expect(results).toHaveLength(2)
-            const locationNames = results.map(loc => loc.name)
+            const locationNames = results.map((loc: { name: any; }) => loc.name)
             expect(locationNames).toContain(activeLocationInput.name)
             expect(locationNames).toContain(secondActiveLocationInput.name)
             expect(locationNames).not.toContain(deletedLocation)

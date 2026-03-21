@@ -1,5 +1,6 @@
 import {prisma} from '@/test/setup'
 import {beforeEach, describe, expect, it, test, vi} from 'vitest'
+// @ts-ignore
 import {IntExt} from "@prisma/client";
 import {createScene, getScenesForProject} from "@/app/services/sceneService";
 import {createProject} from "@/app/services/productionService";
@@ -263,7 +264,7 @@ describe('Scene Service', () => {
             if(result.success) {
                 expect(result.data).not.toBeNull()
                 expect(result.data).toHaveLength(2)
-                const sceneNumbers = result.data.map(s => s.sceneNumber)
+                const sceneNumbers = result.data.map((s: { sceneNumber: any; }) => s.sceneNumber)
                 expect(sceneNumbers).toContain(sceneInput.sceneNumber)
                 expect(sceneNumbers).toContain(additionalSceneInput.sceneNumber)
             }
