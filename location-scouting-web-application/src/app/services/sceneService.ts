@@ -16,10 +16,10 @@ export async function createScene(input: z.infer<typeof CreateSceneSchema>, opti
     let scene = await db.scene.create({ data: validated })
 
     const response = await keywordGenerator(scene.scriptSection)
-    if (response.length > 0) {
+    if (response.success) {
             scene = await db.scene.update({
-                where: {id: scene.id},
-                data: {keywords: response }
+                where: { id: scene.id },
+                data: { keywords: response.data }
             })
         }
     return { success: true, data: scene }

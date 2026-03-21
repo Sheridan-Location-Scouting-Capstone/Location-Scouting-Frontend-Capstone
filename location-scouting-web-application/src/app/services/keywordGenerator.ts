@@ -1,23 +1,31 @@
-export type KeywordGenerator = (content: string) => Promise<string[]>
+export type KeywordGenerator = (content: string) => Promise<{ success: true, data: string[] } | { success : false }>
 
-export async function getKeywords(content: string): Promise<string[]> {
+export async function getKeywords(content: string): Promise<{ success: true, data: string[] } | { success : false }> {
     const url = process.env.KEYWORD_GENERATION_API_URL
     if(!url) {
-        throw new Error('No url set for keyword generation API')
+        console.warn('[KeywordGeneration] No API URL configured')
+        return { success: false}
     }
 
-    const response = await fetch(url, {
-        method: 'POST',
-        signal: AbortSignal.timeout(10000),
-        headers: { 'Content-Type': 'application/json'},
-        body: JSON.stringify({ scene: sanitizeSceneContent(content) })
-    })
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            signal: AbortSignal.timeout(10000),
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({scene: sanitizeSceneContent(content)})
+        })
 
-    if(!response.ok) {
-        throw new Error(`Failed to get keyword for ${content}`)
+        if (!response.ok) {
+            console.error(`[KeywordGeneration] API returned ${ response.status }`)
+            return { success: false }
+        }
+
+        const keywords: string[] = await response.json()
+        return { success: true, data: keywords }
+    } catch (error) {
+        console.warn(`[KeywordGeneration] ${ error instanceof Error ? error.message : 'Unknown Error' } `)
+        return { success: false }
     }
-
-    return await response.json()
 }
 
 function sanitizeSceneContent(text: string): string {
