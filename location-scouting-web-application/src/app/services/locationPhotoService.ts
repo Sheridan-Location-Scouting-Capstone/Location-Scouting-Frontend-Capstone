@@ -3,7 +3,7 @@ import {defaultBucket, deletePhoto, PhotoUploadResult, uploadPhoto, uploadPhotos
 import {Result} from "@/app/schemas/result";
 import {PhotoUploadInput} from "@/app/schemas/photoUploadInput";
 import {prisma} from "@/app/lib/prisma";
-
+import { PhotoUpdateInput } from "@/app/schemas/photoUpdateInput";
 
 export async function addPhotosToLocation(
     locationId: string,
@@ -18,7 +18,7 @@ export async function addPhotosToLocation(
 
     const result = await db.photo.createManyAndReturn({
         data: uploadedPhotos.map((result, index) => ({
-            name: photoInput[index].filename,
+            name: photoInput[index].name || photoInput[index].filename,
             url: result.url,
             storageKey: result.key,
             locationId: locationId,
@@ -68,12 +68,48 @@ export async function removePhotosFromLocation(
     return { success: true, data: undefined }
 }
 
-// export async function updatePhotoDisplayOrder(
-//     locationId: string,
-//     photoOrder: { photoId: string, displayOrder: number }[],
-//     options?: { db?: PrismaClient }
-// ): Promise<Result<void>> {
-//     const db = options?.db ?? prisma)
-//
-//
-// }
+export async function updatePhoto(
+    photoId: string,
+    updateInput: PhotoUpdateInput,
+    options: { db? : PrismaClient }) : Promise<Result<any>>
+{
+    const db = options?.db ?? prisma
+
+    try {
+        const updated = await db.photo.update({
+            where: { id: photoId },
+            data: updateInput,
+        })
+        return { success: true, data: updated }
+    } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            return { success: false, error: 'Photo not found' }
+        }
+        throw error
+    }
+}
+
+export async function updatePhotoDisplayOrder(
+    locationId: string,
+    orderedPhotoIds: string[],
+    options?: { db?: PrismaClient }
+): Promise<Result<void>> {
+    const db = options?.db ?? prisma
+
+    try {
+        await db.$transaction(
+            orderedPhotoIds.map((id, index) =>
+                db.photo.update({
+                    where: { id, locationId },
+                    data: { displayOrder: index },
+                })
+            )
+        )
+        return { success: true, data: undefined }
+    } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            return { success: false, error: 'One or more photos do not belong to this location' }
+        }
+        throw error
+    }
+}
