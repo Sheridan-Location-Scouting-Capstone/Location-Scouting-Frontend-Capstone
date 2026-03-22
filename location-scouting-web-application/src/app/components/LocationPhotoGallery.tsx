@@ -11,6 +11,65 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
 import {addPhotosAction, deletePhotoAction, updatePhotoNameAction} from '@/app/actions/locationActions'
 import EditIcon from "@mui/icons-material/Edit";
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
+
+function SortablePhoto({ photo, index, isSelected, onClick }: {
+    photo: Photo
+    index: number
+    isSelected: boolean
+    onClick: () => void
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: photo.id })
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition
+    }
+
+    return (
+        <Box
+            ref={setNodeRef}
+            style={style}
+            onClick={onClick}
+            sx={{
+                position: 'relative',
+                aspectRatio: '4/3',
+                borderRadius: 1,
+                overflow: 'hidden',
+                cursor: 'pointer',
+                outline: isSelected ? '3px solid' : '2px solid transparent',
+                outlineColor: isSelected ? 'primary.main' : 'transparent',
+            }}
+            >
+            {/* Drag handle */}
+            <IconButton
+                size="small"
+                {...attributes}
+                {...listeners}
+                sx={{
+                    position: 'absolute',
+                    top: 4,
+                    left: 4,
+                    bgcolor: 'rgba(0,0,0,0.5)',
+                    color: 'white',
+                    cursor: 'grab',
+                    zIndex: 1,
+                    '&:hover': { bgcolor: 'rgba(0,0,0,0.7)'},
+                }}
+                >
+                <DragIndicatorIcon fontSize="small"/>
+            </IconButton>
+            <Box
+                component="img"
+                src={photo.url}
+                alt={photo.name || `Photo ${index + 1}`}
+                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+        </Box>
+    )
+}
 
 type Photo = {
   id: string

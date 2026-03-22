@@ -14,7 +14,7 @@ import {
 } from '@/app/services/locationService'
 import {
   addPhotosToLocation,
-  removePhotosFromLocation, updatePhoto
+  removePhotosFromLocation, updatePhoto, updatePhotoDisplayOrder
 } from '@/app/services/locationPhotoService'
 
 // ─── List / Search ──────────────────────────────────────────
@@ -159,5 +159,10 @@ export async function deletePhotoAction(photoId: string, locationId: string) {
 
 export async function updatePhotoNameAction(photoId: string, name: string, locationId: string) {
   await updatePhoto(photoId, { name })
+  revalidatePath(`/locations/${locationId}`)
+}
+
+export async function updatePhotoDisplayOrderAction(locationId: string, orderedPhotoIds: string[]) {
+  await updatePhotoDisplayOrder(locationId, orderedPhotoIds)
   revalidatePath(`/locations/${locationId}`)
 }
