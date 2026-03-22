@@ -1,4 +1,3 @@
 export type PhotoUpdateInput = {
-    name?: string,
-    displayOrder?: number,
+    name?: string
 }

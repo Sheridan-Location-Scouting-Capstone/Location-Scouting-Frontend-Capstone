@@ -12,8 +12,9 @@ import {
   // searchLocations,
   // filterByKeywords,
 } from '@/app/services/locationService'
-import { addPhotosToLocation,
-        removePhotosFromLocation
+import {
+  addPhotosToLocation,
+  removePhotosFromLocation, updatePhoto
 } from '@/app/services/locationPhotoService'
 
 // ─── List / Search ──────────────────────────────────────────
@@ -64,15 +65,17 @@ export async function createLocationAction(formData: FormData) {
 
   // Collect photo files
   const photoFiles = formData.getAll('photos') as File[]
+  const photoNames = formData.getAll('photoNames') as string[]
   const photoInputs = []
 
-  for (const file of photoFiles) {
-    if (file.size > 0) {
-      const buffer = Buffer.from(await file.arrayBuffer())
+  for (let i = 0; i < photoFiles.length; i++) {
+    if (photoFiles[i].size > 0) {
+      const buffer = Buffer.from(await photoFiles[i].arrayBuffer())
       photoInputs.push({
         buffer,
-        filename: file.name,
-        mimeType: file.type,
+        filename: photoFiles[i].name,
+        mimeType: photoFiles[i].type,
+        name: photoNames[i] || undefined,
       })
     }
   }
@@ -127,15 +130,17 @@ export async function updateLocationStatusAction(id: string, status: 'ACTIVE' | 
 
 export async function addPhotosAction(locationId: string, formData: FormData) {
   const photoFiles = formData.getAll('photos') as File[]
+  const photoNames = formData.getAll('photoNames') as string[]
   const photoInputs = []
 
-  for (const file of photoFiles) {
-    if (file.size > 0) {
-      const buffer = Buffer.from(await file.arrayBuffer())
+  for (let i = 0; i < photoFiles.length; i++) {
+    if (photoFiles[i].size > 0) {
+      const buffer = Buffer.from(await photoFiles[i].arrayBuffer())
       photoInputs.push({
         buffer,
-        filename: file.name,
-        mimeType: file.type,
+        filename: photoFiles[i].name,
+        mimeType: photoFiles[i].type,
+        name: photoNames[i] || undefined,
       })
     }
   }
@@ -149,5 +154,10 @@ export async function addPhotosAction(locationId: string, formData: FormData) {
 
 export async function deletePhotoAction(photoId: string, locationId: string) {
   await removePhotosFromLocation(locationId, [photoId])
+  revalidatePath(`/locations/${locationId}`)
+}
+
+export async function updatePhotoNameAction(photoId: string, name: string, locationId: string) {
+  await updatePhoto(photoId, { name })
   revalidatePath(`/locations/${locationId}`)
 }

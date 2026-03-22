@@ -25,6 +25,7 @@ export default function NewLocationPage() {
   const [keywordInput, setKeywordInput] = useState('')
   const [photoFiles, setPhotoFiles] = useState<File[]>([])
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
+  const [photoNames, setPhotoNames] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
 
   const addKeyword = () => {
@@ -42,6 +43,7 @@ export default function NewLocationPage() {
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     setPhotoFiles((prev) => [...prev, ...files])
+    setPhotoNames((prev) => [...prev, ...files.map(() => '')])
 
     // Generate previews
     files.forEach((file) => {
@@ -56,6 +58,7 @@ export default function NewLocationPage() {
   const removePhoto = (index: number) => {
     setPhotoFiles((prev) => prev.filter((_, i) => i !== index))
     setPhotoPreviews((prev) => prev.filter((_, i) => i !== index))
+    setPhotoNames((prev) => prev.filter((_, i) => i !== index))
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -70,8 +73,9 @@ export default function NewLocationPage() {
 
     // Remove the file input and re-add our managed files
     formData.delete('photos')
-    photoFiles.forEach((file) => {
+    photoFiles.forEach((file, i) => {
       formData.append('photos', file)
+      formData.append('photoNames', photoNames[i] || '')
     })
 
     try {
@@ -114,19 +118,19 @@ export default function NewLocationPage() {
               />
 
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField name="address" label="Street Address" required fullWidth />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField name="city" label="City" required fullWidth />
                 </Grid>
-                <Grid item xs={3}>
+                <Grid size={3}>
                   <TextField name="province" label="Province" required fullWidth />
                 </Grid>
-                <Grid item xs={3}>
+                <Grid size={3}>
                   <TextField name="postalCode" label="Postal Code" required fullWidth />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField name="country" label="Country" defaultValue="Canada" fullWidth />
                 </Grid>
               </Grid>
@@ -167,13 +171,13 @@ export default function NewLocationPage() {
                 Contact Information
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField name="contactName" label="Contact Name" fullWidth />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField name="contactPhone" label="Phone" fullWidth />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField name="contactEmail" label="Email" type="email" fullWidth />
                 </Grid>
               </Grid>
@@ -193,7 +197,7 @@ export default function NewLocationPage() {
             {photoPreviews.length > 0 && (
               <Grid container spacing={1} sx={{ mb: 2 }}>
                 {photoPreviews.map((preview, index) => (
-                  <Grid item xs={3} sm={2} key={index}>
+                    <Grid size={{ xs: 3, sm: 2 }} key={index}>
                     <Box sx={{ position: 'relative' }}>
                       <Box
                         component="img"
@@ -222,6 +226,20 @@ export default function NewLocationPage() {
                         <CloseIcon sx={{ fontSize: 14 }} />
                       </IconButton>
                     </Box>
+                    <TextField
+                      size="small"
+                      placeholder={photoFiles[index]?.name || 'Photo name'}
+                      value={photoNames[index] || ''}
+                      onChange={(e) => {
+                        setPhotoNames((prev) => {
+                          const updated = [...prev]
+                          updated[index] = e.target.value
+                          return updated
+                        })
+                      }}
+                      fullWidth
+                      sx={{ mt: 0.5 }}
+                    />
                   </Grid>
                 ))}
               </Grid>

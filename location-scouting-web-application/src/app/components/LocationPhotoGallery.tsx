@@ -2,14 +2,15 @@
 
 import { useState, useRef } from 'react'
 import {
-  Box,
-  Typography,
-  IconButton,
-  Button,
+    Box,
+    Typography,
+    IconButton,
+    Button, TextField,
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
-import { addPhotosAction, deletePhotoAction } from '@/app/actions/locationActions'
+import {addPhotosAction, deletePhotoAction, updatePhotoNameAction} from '@/app/actions/locationActions'
+import EditIcon from "@mui/icons-material/Edit";
 
 type Photo = {
   id: string
@@ -25,9 +26,11 @@ export default function LocationPhotoGallery({
   photos: Photo[]
   locationId: string
 }) {
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [uploading, setUploading] = useState(false)
+    const [selectedIndex, setSelectedIndex] = useState(0)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const [uploading, setUploading] = useState(false)
+    const [editingName, setEditingName] = useState(false)
+    const [nameValue, setNameValue] = useState('')
 
   const selectedPhoto = photos[selectedIndex] || null
 
@@ -171,18 +174,43 @@ export default function LocationPhotoGallery({
               }}
             />
             {/* Photo name label */}
-            {selectedPhoto.name && (
-              <Typography
-                variant="body2"
-                sx={{
-                  mt: 1,
-                  color: 'text.secondary',
-                  fontWeight: 500,
-                }}
-              >
-                {selectedPhoto.name}
-              </Typography>
-            )}
+              {editingName ? (
+                  <TextField
+                      size="small"
+                      value={nameValue}
+                      onChange={(e) => setNameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                              updatePhotoNameAction(selectedPhoto.id, nameValue, locationId)
+                              setEditingName(false)
+                          }
+                          if (e.key === 'Escape') {
+                              setEditingName(false)
+                          }
+                      }}
+                      onBlur={() => {
+                          updatePhotoNameAction(selectedPhoto.id, nameValue, locationId)
+                          setEditingName(false)
+                      }}
+                      autoFocus
+                      sx={{ mt: 1 }}
+                  />
+              ) : (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+                      <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                          {selectedPhoto.name || 'Untitled'}
+                      </Typography>
+                      <IconButton
+                          size="small"
+                          onClick={() => {
+                              setNameValue(selectedPhoto.name || '')
+                              setEditingName(true)
+                          }}
+                      >
+                          <EditIcon fontSize="small" />
+                      </IconButton>
+                  </Box>
+              )}
             {/* Delete button */}
             <IconButton
               size="small"

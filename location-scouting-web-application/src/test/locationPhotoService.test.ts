@@ -55,7 +55,7 @@ describe('Location Photo Service', () => {
             }
         })
 
-        it('Should set custom names for a photo when specified', async() => {
+        it('Should save a client specified name for a photo', async() => {
             // Arrange
             const firstPhotoName = 'Alley from North'
             const lastPhotoName = 'Alley from South'
@@ -89,13 +89,50 @@ describe('Location Photo Service', () => {
             }
         })
 
-        it('Should not upload more than 500 photos', () => {
+        it('should automatically assign a display order value if unspecified', async() => {
+            // Arrange
+            const firstPhotoInput = [{
+                locationId: locationId,
+                buffer: Buffer.from('fake image data'),
+                filename: 'alley.jpg',
+                name: 'Alley',
+                mimeType: 'image/jpeg'
+            }]
 
+            const secondPhotoInput = [{
+                locationId: locationId,
+                buffer: Buffer.from('another fake image'),
+                filename: 'border.jpg',
+                name: 'Border',
+                mimeType: 'image/jpeg'
+            }]
+
+            // Act first photo
+            const firstPhotoResult = await addPhotosToLocation(locationId, firstPhotoInput, { db: prisma })
+
+            // Assert that the display order is present and a positive number
+            expect(firstPhotoResult.success).toBe(true)
+            if(firstPhotoResult.success) {
+                expect(firstPhotoResult.data[0].displayOrder).toBeDefined()
+                expect(firstPhotoResult.data[0].displayOrder).not.toBeNull()
+                expect(firstPhotoResult.data[0].displayOrder).toBeGreaterThan(-1)
+                console.log("First photo display order value: " + firstPhotoResult.data[0].displayOrder)
+
+                // Act - add second photo
+                const secondPhotoResult = await addPhotosToLocation(locationId, firstPhotoInput, { db: prisma })
+
+                // Assert - Second Photo should be greater than the first display photo
+                expect(secondPhotoResult.success).toBe(true)
+                if(secondPhotoResult.success) {
+                    expect(secondPhotoResult.data[0].displayOrder).toBeDefined()
+                    expect(secondPhotoResult.data[0].displayOrder).not.toBeNull()
+                    expect(secondPhotoResult.data[0].displayOrder).toBeGreaterThan(firstPhotoResult.data[0].displayOrder)
+                    console.log("Second Photo display order value: " + secondPhotoResult.data[0].displayOrder)
+                }
+            }
         })
-        it('Should associate uploaded photos with the correct location', () => {})
-        it('Should not associate photos with an archived (marked as deleted) location', () => {})
-        it('')
     })
+
     describe('updatePhoto', async() => {
         let locationId: string
         let photoId: string

@@ -16,13 +16,17 @@ export async function addPhotosToLocation(
 
     const uploadedPhotos = await uploadPhotos(photoInput, bucket)
 
+    const existingCount = await db.photo.count({
+        where: { locationId }
+    })
+
     const result = await db.photo.createManyAndReturn({
         data: uploadedPhotos.map((result, index) => ({
             name: photoInput[index].name || photoInput[index].filename,
             url: result.url,
             storageKey: result.key,
             locationId: locationId,
-            displayOrder: index
+            displayOrder: photoInput[index].displayOrder ?? (existingCount + index)
         }))
     })
 
@@ -71,7 +75,7 @@ export async function removePhotosFromLocation(
 export async function updatePhoto(
     photoId: string,
     updateInput: PhotoUpdateInput,
-    options: { db? : PrismaClient }) : Promise<Result<any>>
+    options?: { db? : PrismaClient }) : Promise<Result<any>>
 {
     const db = options?.db ?? prisma
 
