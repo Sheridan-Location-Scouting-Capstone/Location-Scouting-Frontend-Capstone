@@ -7,9 +7,26 @@ import {
     IconButton,
     Button, TextField,
 } from '@mui/material'
+import {
+    DndContext,
+    closestCenter,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core'
+import {
+    arrayMove,
+    SortableContext,
+    rectSortingStrategy,
+} from '@dnd-kit/sortable'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
-import {addPhotosAction, deletePhotoAction, updatePhotoNameAction} from '@/app/actions/locationActions'
+import {
+    addPhotosAction,
+    deletePhotoAction,
+    updatePhotoDisplayOrderAction,
+    updatePhotoNameAction
+} from '@/app/actions/locationActions'
 import EditIcon from "@mui/icons-material/Edit";
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -41,6 +58,10 @@ function SortablePhoto({ photo, index, isSelected, onClick }: {
                 cursor: 'pointer',
                 outline: isSelected ? '3px solid' : '2px solid transparent',
                 outlineColor: isSelected ? 'primary.main' : 'transparent',
+                transition: 'outline-color 0.15s',
+                '&:hover': {
+                    outlineColor: isSelected ? 'primary.main' : '#B0B0B0',
+                },
             }}
             >
             {/* Drag handle */}
@@ -90,6 +111,13 @@ export default function LocationPhotoGallery({
     const [uploading, setUploading] = useState(false)
     const [editingName, setEditingName] = useState(false)
     const [nameValue, setNameValue] = useState('')
+    const [orderedPhotos, setOrderedPhotos] = useState(photos)
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: { distance: 8 },
+        })
+    )
 
   const selectedPhoto = photos[selectedIndex] || null
 
@@ -111,6 +139,23 @@ export default function LocationPhotoGallery({
       setSelectedIndex(Math.max(0, photos.length - 2))
     }
   }
+
+    const handleDragEnd = (event: any) => {
+        const { active, over } = event
+        // active = the photo being dragged
+        // over = the photo it was dropped on
+        if (!over || active.id === over.id) return
+
+        const oldIndex = orderedPhotos.findIndex(p => p.id === active.id)
+        const newIndex = orderedPhotos.findIndex(p => p.id === over.id)
+
+        // arrayMove is a dnd-kit utility — takes the array, swaps the item
+        // from oldIndex to newIndex, returns a new array
+        const reordered = arrayMove(orderedPhotos, oldIndex, newIndex)
+
+        setOrderedPhotos(reordered)  // update UI immediately
+        updatePhotoDisplayOrderAction(locationId, reordered.map(p => p.id))  // persist to DB
+    }
 
   if (photos.length === 0) {
     return (
@@ -173,6 +218,8 @@ export default function LocationPhotoGallery({
 
       <Box sx={{ display: 'flex', gap: 2 }}>
         {/* Thumbnail grid — left side */}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={orderedPhotos.map(p => p.id)} strategy={rectSortingStrategy}>
         <Box
           sx={{
             width: 340,
@@ -185,37 +232,19 @@ export default function LocationPhotoGallery({
             overflowY: 'auto',
           }}
         >
-          {photos.map((photo, idx) => (
-            <Box
+          {orderedPhotos.map((photo, idx) => (
+            <SortablePhoto
               key={photo.id}
-              onClick={() => setSelectedIndex(idx)}
-              sx={{
-                position: 'relative',
-                aspectRatio: '4/3',
-                borderRadius: 1,
-                overflow: 'hidden',
-                cursor: 'pointer',
-                outline: idx === selectedIndex ? '3px solid' : '2px solid transparent',
-                outlineColor: idx === selectedIndex ? 'primary.main' : 'transparent',
-                transition: 'outline-color 0.15s',
-                '&:hover': {
-                  outlineColor: idx === selectedIndex ? 'primary.main' : '#B0B0B0',
-                },
-              }}
-            >
-              <Box
-                component="img"
-                src={photo.url}
-                alt={photo.name || `Photo ${idx + 1}`}
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                }}
+              photo={photo}
+              index={idx}
+              isSelected={idx === selectedIndex }
+              onClick={() => setSelectedIndex(idx) }
               />
-            </Box>
           ))}
         </Box>
+      </SortableContext>
+  </DndContext>
+
 
         {/* Large preview — right side */}
         {selectedPhoto && (
