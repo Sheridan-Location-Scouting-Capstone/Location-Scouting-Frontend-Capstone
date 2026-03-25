@@ -71,13 +71,13 @@ export async function createLocation(
 
 export async function getLocationById(id: string, options?: { db?: PrismaClient }) {
     const db = options?.db ?? defaultPrisma
-    return db.location.findUnique({ where: { id } });
+    return db.location.findFirst({ where: { id, status: { not: LocationStatus.DELETED }}});
 }
 
 export async function getLocationWithPhotos(id: string, options?: { db?: PrismaClient }) {
     const db = options?.db ?? defaultPrisma
-    return db.location.findUnique({
-        where: { id },
+    return db.location.findFirst({
+        where: { id, status: { not: LocationStatus.DELETED }},
         include: { photos: { orderBy: { displayOrder: 'asc' }}}
     });
 }
@@ -95,8 +95,6 @@ export async function deleteLocationById(id: string, options?: { db?: PrismaClie
         where: { id },
         data: { status: LocationStatus.DELETED }
     })
-
-    await removePhotosFromLocation(id, [], { db })
 }
 
 export async function getLocations(

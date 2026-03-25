@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/app/lib/prisma'
 import {
-  createLocation, deleteLocationById,
+  createLocation, deleteLocationById, getLocations,
   // getLocation,
   getLocationWithPhotos,
   updateLocation,
@@ -20,22 +20,7 @@ import {
 // ─── List / Search ──────────────────────────────────────────
 
 export async function getLocationsAction(query?: string, keywords?: string[]) {
-  if (query) {
-   // return await searchLocations(query)
-  }
-  if (keywords && keywords.length > 0) {
-   // return await filterByKeywords(keywords)
-  }
-  // Default: return all locations, newest first
-  return await prisma.location.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: {
-      photos: {
-        orderBy: { displayOrder: 'asc' },
-        take: 1, // just the thumbnail
-      },
-    },
-  })
+  return getLocations({ query, keywords })
 }
 
 // ─── Single Location ────────────────────────────────────────
