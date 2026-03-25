@@ -526,7 +526,7 @@ describe('Location Services', () => {
             expect(deletedLocation!.status).toBe('DELETED')
         })
 
-        it('should delete associated photos when a location is deleted', async () => {
+        it('should not delete associated photos when a location is deleted', async () => {
             // Arrange - Create Location
             const locationInput = {
                 name: 'Downtown Alley',
@@ -551,26 +551,28 @@ describe('Location Services', () => {
                     mimeType: 'image/jpeg',
                 }]
 
+            const numOfPhotos = photoInput.length
+
             const addedPhotosResult = await addPhotosToLocation(createdLocation.id, photoInput, {db: prisma})
             expect(addedPhotosResult.success).toBe(true)
             if(addedPhotosResult.success){
-                expect(addedPhotosResult.data).toHaveLength(2)
+                expect(addedPhotosResult.data).toHaveLength(numOfPhotos)
             }
 
             // Verify photos were added before proceeding with delete test (Soft Assert)
             const createdLocationWithPhotos = await getLocationWithPhotos(createdLocation.id, {db: prisma})
             expect(createdLocationWithPhotos).not.toBeNull()
-            expect(createdLocationWithPhotos!.photos).toHaveLength(2)
+            expect(createdLocationWithPhotos!.photos).toHaveLength(numOfPhotos)
 
 
             // Act
             await deleteLocationById(createdLocation.id, {db: prisma})
-            const deletedPhotos = await prisma.photo.findMany({
+            const associatedPhotos = await prisma.photo.findMany({
                 where: {locationId: createdLocation.id}
             })
 
             // Assert
-            expect(deletedPhotos).toHaveLength(0);
+            expect(associatedPhotos).toHaveLength(numOfPhotos);
         })
 
 
