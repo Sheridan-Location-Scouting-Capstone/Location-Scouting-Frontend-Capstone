@@ -1,4 +1,4 @@
-import {describe, expect, it, test, vi} from 'vitest'
+import {beforeEach, describe, expect, it, test, vi} from 'vitest'
 import {
     createLocation,
     deleteLocationById,
@@ -428,23 +428,21 @@ describe('Location Services', () => {
 
     describe('updateLocation', () => {
 
-        // test.each([
-        //     {
-        //         name: 'Updated name'
-        //     },
-        //     {
-        //         address: '124 Main St',
-        //     },
-        //     {
-        //          city: 'Ottawa'
-        //     },
-        //     {
-        //         province: 'BC'
-        //     },
-        //     {
-        //         postalCode: '1A1 F4F'
-        //     }
-        // ])('it should update ')
+        let locationId: string
+
+        beforeEach(async() => {
+            const locationInput = {
+                name: 'Downtown Alley',
+                address: '123 Main St',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 1A1'
+            }
+
+            const result = await createLocation(locationInput, { db: prisma })
+            locationId = result.id;
+        })
+
         it('should update partial location details and return the updated record', async () => {
             // Arrange
             const locationInput = {
@@ -474,6 +472,25 @@ describe('Location Services', () => {
             expect(result!.postalCode).toBe(locationInput.postalCode) // unchanged
             expect(result!.updatedAt.getTime()).toBeGreaterThan(createdLocation.updatedAt.getTime()) // updatedAt should be more recent than createdAt
         })
+
+        test.each([
+            '', // 0 char
+            'Alexander Maximillian Christopher-Jonathan Montgomery-Smythe Jr. The Gr', // 71 char
+            'Alexander Maximillian Christopher-Jonathan Montgomery-Smythe Jr. The Gre' // 72 char
+        ])('should reject invalid contact names (boundary value analysis)', async (input) => {
+            // Arrange
+            const locationInput = {
+                name: 'Downtown Alley',
+                address: '123 Main St',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 1A1',
+                contactName: input
+            }
+
+            // Act & Assert
+            await expect(updateLocation(locationId, locationInput, { db: prisma })).rejects.toThrow();
+        })
     })
 
     describe('updateLocationStatus', () => {
@@ -487,7 +504,7 @@ describe('Location Services', () => {
                     postalCode: 'M5V 1A1'
                 }
 
-                const createdLocation = await createLocation(locationInput, {db: prisma})
+                const createdLocation = await createLocation(locationInput, { db: prisma })
 
                 // Act
                 const updatedData = {

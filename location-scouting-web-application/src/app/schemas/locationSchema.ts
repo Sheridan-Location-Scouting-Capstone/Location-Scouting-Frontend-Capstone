@@ -1,10 +1,11 @@
 import { z } from 'zod'
+import {LocationStatus} from "@prisma/client";
 // Phone number validation. libphonenumber-js can be used in the future if more rigorous phone validation is required
 const phoneRegex = new RegExp(
     /^[\d\s\-+()]{7,20}$/
 );
 
-export const   CreateLocationScheme = z.object({
+export const CreateLocationScheme = z.object({
     name: z.string().min(1, 'Name is required').max(255),
     address: z.string().min(1, 'Address is required'),
     city: z.string().min(1, 'City is required'),
@@ -18,6 +19,11 @@ export const   CreateLocationScheme = z.object({
     contactEmail: z.email().optional(),
     notes: z.string().optional(),
     keywords: z.array(z.string()).default([]),
+})
+
+
+export const UpdateLocationScheme = CreateLocationScheme.partial().extend({
+    status: z.enum(LocationStatus).optional()
 })
 
 interface LocationSchema {

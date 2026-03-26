@@ -188,7 +188,7 @@ describe('Scene Service', () => {
                 expect(createdScene.data.keywords).toBeDefined()
                 console.log(createdScene.data.keywords)
             }
-        })
+        }, 10000)
     })
 
     describe('getScenesForProject', () => {

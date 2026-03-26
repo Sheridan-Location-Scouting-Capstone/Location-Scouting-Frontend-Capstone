@@ -1,6 +1,6 @@
 import { prisma as defaultPrisma} from '@/app/lib/prisma'
 import {$Enums, Location, Prisma, PrismaClient} from "@prisma/client";
-import {CreateLocationScheme} from "@/app/schemas/locationSchema";
+import {CreateLocationScheme, UpdateLocationScheme} from "@/app/schemas/locationSchema";
 import {Geocoder} from "@/app/schemas/geocoder";
 import {PhotoUploadInput} from "@/app/schemas/photoUploadInput";
 import { uploadPhotos, defaultBucket } from "@/app/services/photoService";
@@ -86,7 +86,30 @@ export async function updateLocation(id: string, data: Prisma.LocationUpdateInpu
     const db = options?.db ?? defaultPrisma
     const geocoder = options?.geocoder ?? defaultGeocoder
 
-    return db.location.update({ where: { id }, data });
+    const validated = UpdateLocationScheme.parse(data)
+
+    const address = `${validated.address}, ${validated.city}, ${validated.province}, ${validated.postalCode}, ${validated.country}`
+
+    const updatedLocation = db.location.update({ where: { id },  data: validated });
+
+    geocoder(address)
+        .then(async coords => {
+            if (coords) {
+                console.log(coords)
+                await db.location.update({
+                    where: { id: id},
+                    data: { latitude: coords.lat, longitude: coords.lng }
+                })
+            }
+        }) // If geocoding fails, set the values to null in order to avoid old address being valid, and pointing to the wrong area on a map
+        .catch(async() => {
+            await db.location.update({
+                where: { id: id},
+                data: { latitude: null, longitude: null }
+            })
+        })
+
+    return updatedLocation;
 }
 
 export async function deleteLocationById(id: string, options?: { db?: PrismaClient }) {
