@@ -14,6 +14,7 @@ import {
 } from '@mui/material'
 import ImageIcon from '@mui/icons-material/Image'
 import { updateLocationAction } from '@/app/actions/locationActions'
+import { isValidPhoneNumber } from "libphonenumber-js"
 
 type LocationData = {
   id: string
@@ -35,6 +36,8 @@ export default function EditLocationForm({ location }: { location: LocationData 
   const [keywords, setKeywords] = useState<string[]>(location.keywords)
   const [keywordInput, setKeywordInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [contactPhone, setContactPhone] = useState(location.contactPhone || '')
+  const [phoneError, setPhoneError] = useState('')
 
   const addKeyword = () => {
     const trimmed = keywordInput.trim()
@@ -44,12 +47,24 @@ export default function EditLocationForm({ location }: { location: LocationData 
     }
   }
 
+  const handlePhoneBlur = () => {
+    if (contactPhone && !isValidPhoneNumber(contactPhone, 'CA')) {
+      setPhoneError('Invalid phone number')
+    } else {
+      setPhoneError('')
+    }
+  }
+
   const removeKeyword = (kw: string) => {
     setKeywords(keywords.filter((k) => k !== kw))
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if(contactPhone && !isValidPhoneNumber(contactPhone, 'CA')) {
+      setPhoneError('Invalid phone number')
+      return
+    }
     setSubmitting(true)
 
     const formData = new FormData(e.currentTarget)
@@ -158,7 +173,21 @@ export default function EditLocationForm({ location }: { location: LocationData 
                       defaultValue={location.contactName || ''} />
                 </Grid>
                 <Grid size={6}>
-                  <TextField name="contactPhone" label="Phone" fullWidth defaultValue={location.contactPhone || ''} />
+                  <TextField
+                      name = "contactPhone"
+                      label = "Phone"
+                      type = "tel"
+                      fullWidth
+                      slotProps = {{ htmlInput: { maxLength: 10 }}}
+                      value = { contactPhone }
+                      onChange = {(e) => {
+                        setContactPhone(e.target.value)
+                        if (phoneError) setPhoneError('')
+                      }}
+                      onBlur = { handlePhoneBlur }
+                      error = { !!phoneError }
+                      helperText = { phoneError }
+                  />
                 </Grid>
                 <Grid size={6}>
                   <TextField name="contactEmail" label="Email" type="email" fullWidth defaultValue={location.contactEmail || ''} />
