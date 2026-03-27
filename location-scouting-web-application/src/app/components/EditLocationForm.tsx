@@ -96,19 +96,19 @@ export default function EditLocationForm({ location }: { location: LocationData 
               />
 
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField name="address" label="Street Address" required fullWidth defaultValue={location.address} />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField name="city" label="City" required fullWidth defaultValue={location.city} />
                 </Grid>
-                <Grid item xs={3}>
+                <Grid size={3}>
                   <TextField name="province" label="Province" required fullWidth defaultValue={location.province} />
                 </Grid>
-                <Grid item xs={3}>
+                <Grid size={3}>
                   <TextField name="postalCode" label="Postal Code" required fullWidth defaultValue={location.postalCode} />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField name="country" label="Country" fullWidth defaultValue={location.country} />
                 </Grid>
               </Grid>
@@ -149,13 +149,18 @@ export default function EditLocationForm({ location }: { location: LocationData 
                 Contact Information
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField name="contactName" label="Contact Name" fullWidth defaultValue={location.contactName || ''} />
+                <Grid size={12}>
+                  <TextField
+                      name="contactName"
+                      label="Contact Name"
+                      fullWidth
+                      slotProps = {{ htmlInput: { maxLength: 70 }}}
+                      defaultValue={location.contactName || ''} />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField name="contactPhone" label="Phone" fullWidth defaultValue={location.contactPhone || ''} />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField name="contactEmail" label="Email" type="email" fullWidth defaultValue={location.contactEmail || ''} />
                 </Grid>
               </Grid>
