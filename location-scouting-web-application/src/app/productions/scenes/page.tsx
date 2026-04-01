@@ -53,7 +53,7 @@ export default function NewScenePage() {
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, maxWidth: 600 }}>
               <Grid container spacing={2}>
-                <Grid item xs={4}>
+                <Grid size={4}>
                   <TextField
                     name="sceneNumber"
                     label="Scene Number"
@@ -62,7 +62,7 @@ export default function NewScenePage() {
                     fullWidth
                   />
                 </Grid>
-                <Grid item xs={4}>
+                <Grid size={4}>
                   <FormControl fullWidth required>
                     <InputLabel>Int / Ext</InputLabel>
                     <Select name="intExt" label="Int / Ext" defaultValue="">
@@ -72,7 +72,7 @@ export default function NewScenePage() {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={4}>
+                <Grid size={4}>
                   <TextField
                     name="sceneTimeOfDay"
                     label="Time of Day"
