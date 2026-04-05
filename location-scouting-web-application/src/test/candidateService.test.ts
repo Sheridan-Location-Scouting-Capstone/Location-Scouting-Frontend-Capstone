@@ -5,8 +5,9 @@ import {createProject} from "@/app/services/productionService";
 import {IntExt} from "@prisma/client";
 import {KeywordGenerator} from "@/app/services/keywordGenerator";
 import {createScene} from "@/app/services/sceneService";
-import {createCandidate} from "@/app/services/candidateService";
+import {createCandidate, getCandidatesForScene} from "@/app/services/candidateService";
 import {addPhotosToLocation} from "@/app/services/locationPhotoService";
+import {Geocoder} from "@/app/schemas/geocoder";
 
 const dummyKeyWordGen: KeywordGenerator = async() => ({ success: true, data: ['house', 'generated', 'gothic'] })
 
@@ -14,6 +15,9 @@ describe('Candidate Services', () => {
     let locationId: string
     let projectId: string
     let sceneId: string
+
+    const mockGeocoder: Geocoder = async () => ({ lat: 43.6532, lng: -79.3832 })
+
 
     beforeEach(async() => {
         // Location Arrange
@@ -25,7 +29,7 @@ describe('Candidate Services', () => {
             postalCode: 'M5V 1A1'
         }
 
-        const locationResult = await createLocation(locationInput, { db: prisma })
+        const locationResult = await createLocation(locationInput, { db: prisma, geocoder: mockGeocoder })
 
         expect(locationResult.id).toBeDefined()
         expect(locationResult.id).not.toBeNull()
@@ -191,12 +195,103 @@ describe('Candidate Services', () => {
             // Assert
             expect(result.success).toBe(false)
         })
+
+        it(' should reject a candidate that already has a location associated with a scene', async() => {
+            // Arrange
+            const candidateInput = {
+                sceneId: sceneId,
+                locationId: locationId
+            }
+
+            const setupResult = await createCandidate(candidateInput, { db: prisma })
+            expect(setupResult.success).toBe(true)
+
+            // Act
+            const result = await createCandidate(candidateInput, { db: prisma })
+
+            // Assert
+            expect(result.success).toBe(false)
+        })
     })
 
     describe('Get all candidates by Scene', () => {
-        it(' should get all candidates by scene id', async () => {
 
+        let candidateIds: string[]
+
+
+        beforeEach( async() => {
+            // Arrange first candidate
+            const firstCandidateInput = {
+                sceneId: sceneId,
+                locationId: locationId
+            }
+
+
+            // Arrange second location. This separates out the candidate set across multiple locations
+            const secondLocationInput = {
+                name: 'Downtown Alley',
+                address: '124 Main St',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 1A1'
+            }
+
+            // Act & Assert - create second location
+            const secondLocationInputResult = await createLocation(secondLocationInput, { db: prisma, geocoder: mockGeocoder })
+            expect(secondLocationInputResult).toBeDefined()
+            expect(secondLocationInputResult.id).not.toBeNull()
+            const secondLocationId: string = secondLocationInputResult.id
+
+
+            // Arrange - second candidate
+            const secondCandidateInput = {
+                sceneId: sceneId,
+                locationId: secondLocationId
+            }
+
+            // Act - create first and second candidates
+            const firstCandidateResult = await createCandidate(firstCandidateInput, { db: prisma })
+            const secondCandidateResult = await createCandidate(secondCandidateInput, { db: prisma })
+
+            expect(firstCandidateResult.success).toBe(true)
+            expect(secondCandidateResult.success).toBe(true)
+
+
+            // Assert both candidates were created & assign ids to accessible values in tests
+            let firstCandidateId : string
+            let secondCandidateId : string
+
+            if(firstCandidateResult.success) {
+                expect(firstCandidateResult.data).toBeDefined()
+                expect(firstCandidateResult.data.id).not.toBeNull()
+                firstCandidateId = firstCandidateResult.data.id
+            }
+
+            if(secondCandidateResult.success) {
+                expect(secondCandidateResult.data).toBeDefined()
+                expect(secondCandidateResult.data.id).not.toBeNull()
+                secondCandidateId = secondCandidateResult.data.id
+            }
+
+            candidateIds = [firstCandidateId!, secondCandidateId!]
         })
+
+
+        it(' should get all candidates by scene id', async () => {
+            // Arrange & Act
+            const result = await getCandidatesForScene(sceneId, { db: prisma })
+
+            // Assert
+            expect(result).toBeDefined()
+            expect(result.success).toBe(true)
+            if(result.success){
+                expect(result.data).toHaveLength(candidateIds.length)
+                const resultIds: string[] = result.data.map(c => c.id)
+                expect(resultIds).toEqual(expect.arrayContaining(candidateIds))
+            }
+        })
+
+        it('')
     })
 
     describe('Delete Candidate', () => {

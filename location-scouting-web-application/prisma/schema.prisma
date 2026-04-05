@@ -127,6 +127,8 @@ model Candidate {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([sceneId, locationId]) // Can't list the same location as a candidate twice
 }
 
 model CandidatePhoto {

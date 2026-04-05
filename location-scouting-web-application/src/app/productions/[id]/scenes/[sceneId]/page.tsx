@@ -7,6 +7,9 @@ import Link from 'next/link'
 import { prisma } from '@/app/lib/prisma'
 import { getSceneById } from '@/app/services/sceneService'
 import {getProject} from "@/app/actions/productionActions";
+import {getCandidatesForScene} from "@/app/services/candidateService";
+import SceneDetailCard from "@/app/components/SceneDetailCard";
+import CandidateTable from "@/app/components/CandidateTable";
 // import { getCandidatesForScene } from '@/app/services/candidateService'
 // import SceneDetailCard from '@/app/components/SceneDetailCard'
 // import CandidateTable from '@/app/components/CandidateTable'
@@ -30,6 +33,7 @@ export default async function ViewScenePage({
 
     // Fetch candidates with their locations and photos
     const candidatesResult = await getCandidatesForScene(sceneId)
+    if(!candidatesResult.success) notFound()
     const candidates = candidatesResult.data
 
     // Build slug-line display: "INT. KITCHEN - DAY"
