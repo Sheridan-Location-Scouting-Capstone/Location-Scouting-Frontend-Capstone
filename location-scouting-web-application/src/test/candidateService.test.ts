@@ -85,7 +85,7 @@ describe('Candidate Services', () => {
             // Arrange
             const candidateInput = {
                 sceneId: sceneId,
-                locationId: locationId,
+                locationId: locationId
             }
 
             // Act
@@ -133,13 +133,63 @@ describe('Candidate Services', () => {
             const result = await createCandidate(candidateInput, { db: prisma })
 
             // Assert
-
-
-
+            expect(result.success).toBe(true)
+            if(result.success) {
+                const candidatePhotos = await prisma.candidatePhoto.findMany({
+                    where : { candidateId: result.data.id }
+                })
+                expect(candidatePhotos).toBeDefined()
+                expect(candidatePhotos).toHaveLength(2)
+            }
         })
 
-        test.each([{}])(' should save a candidate with minimum required fields and %s', async function(description, input) {
+        test.each([
+            { selected: true },
+            { selected: false },
+            { selected: undefined }
+        ])('should save a candidate with selected=$selected', async({selected}) => {
+            // Arrange
+            const candidateInput = {
+                sceneId,
+                locationId,
+                ... (selected !== undefined && { selected })
+            }
 
+            // Act
+            const result = await createCandidate(candidateInput, { db: prisma })
+
+            // Assert
+            expect(result.success).toBe(true)
+            if(result.success){
+                expect(result.data.id).toBeDefined()
+                expect(result.data.id).not.toBeNull()
+                expect(result.data.sceneId).toBe(sceneId)
+                expect(result.data.locationId).toBe(locationId)
+                expect(result.data.selected).toBe(selected ?? false)
+            }
+        })
+
+        it.each([
+            {
+                sceneId: "doesntexist",
+                locationId: undefined
+            },
+            {
+                sceneId: undefined,
+                locationId: "doesntexist"
+            }
+        ])(' should fail to save if either the location or scene do not exist', async(input) => {
+            // Arrange
+            const candidateInput = {
+                sceneId: input.sceneId ?? sceneId,
+                locationId: input.locationId ?? locationId
+            }
+
+            // Act
+            const result = await createCandidate( candidateInput, { db: prisma })
+
+            // Assert
+            expect(result.success).toBe(false)
         })
     })
 
