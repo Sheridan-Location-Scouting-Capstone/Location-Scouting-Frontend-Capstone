@@ -36,3 +36,21 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 Note: schemas in Next/React.Js are equivalent to DOAs (Data Objects), and they are used as such, so data objects will reside in the schemas directory.
 
+# Project Setup
+
+## Download AI model
+- Populate *./keyword-generation/labelled_scenes/* with labels.json
+- Populate *./keyword-generation/models/* with model *checkpoint-29550*
+
+## Docker Run Information
+- run *Docker Desktop GUI*
+- in project :
+- `docker-compose up -d`
+- `docker build`
+- Run container from *Docker GUI*
+
+## Prisma Setup
+- `npx prisma generate`
+- `npx prisma migrate deploy`
+- `npx prisma deploy`
+- `npm run test:db:push`

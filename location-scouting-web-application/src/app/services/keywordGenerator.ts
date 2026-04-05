@@ -1,6 +1,10 @@
-export type KeywordGenerator = (content: string) => Promise<{ success: true, data: string[] } | { success : false }>
+import { PhotoUpdateInput } from "../schemas/photoUpdateInput"
+import { PhotoUploadInput } from "../schemas/photoUploadInput"
 
-export async function getKeywords(content: string): Promise<{ success: true, data: string[] } | { success : false }> {
+export type KeywordGenerator = (content : string) => Promise<{ success: true, data: string[] } | { success : false, error: string }>
+export type PhotoKeywordGenerator = (content : PhotoUploadInput) => Promise<{ success: true, data: string[] } | { success : false, error: string }>
+
+export async function getKeywords(content: string): Promise<{ success: true, data: string[] } | { success : false, error: string }> {
     const url = process.env.KEYWORD_GENERATION_API_URL
     if(!url) {
         console.warn('[KeywordGeneration] No API URL configured')
@@ -24,9 +28,11 @@ export async function getKeywords(content: string): Promise<{ success: true, dat
         return { success: true, data: keywords }
     } catch (error) {
         console.warn(`[KeywordGeneration] ${ error instanceof Error ? error.message : 'Unknown Error' } `)
-        return { success: false }
+        return { success: false, error: "Failed error" }
     }
 }
+
+/* export async function getPhotoKeywords(content: PhotoKeywordGenerator) TODO: (SAMI) */
 
 function sanitizeSceneContent(text: string): string {
     return text.replace(/[\n\r\t]/g, ' ')

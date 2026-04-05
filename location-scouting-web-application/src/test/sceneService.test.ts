@@ -8,7 +8,7 @@ import {KeywordGenerator} from "@/app/services/keywordGenerator";
 
 
 const dummyKeyWordGen: KeywordGenerator = async() => ({ success: true, data: ['generated', 'keywords']})
-const failingGenerator: KeywordGenerator = async() => ({ success: false })
+const failingGenerator: KeywordGenerator = async() => ({ success: false, error: "Error Failed" })
 
 describe('Scene Service', () => {
 
