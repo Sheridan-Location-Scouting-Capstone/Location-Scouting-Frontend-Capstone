@@ -1,6 +1,8 @@
 import { prisma as defaultPrisma} from '@/app/lib/prisma'
 import { CreateProjectSchema } from "@/app/schemas/projectSchema";
 import { z } from 'zod';
+import {Project} from "@prisma/client";
+import {Result} from "@/app/schemas/result";
 
 
 
@@ -18,4 +20,15 @@ export async function getProjects(options?: { db?: typeof defaultPrisma }) {
 
     const projects = await db.project.findMany()
     return { success: true, data: projects }
+}
+
+export async function getProjectById(id: string, options?: {db?: typeof defaultPrisma}): Promise<Result<Project>> {
+    const db = options?.db ?? defaultPrisma
+
+    const project = await db.project.findUnique({ where: { id } })
+    if(!project) {
+        return { success: false, error: "Project not found" }
+    } else {
+        return { success: true, data: project }
+    }
 }

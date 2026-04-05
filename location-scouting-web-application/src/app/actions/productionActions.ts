@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createProject, getProjects } from '@/app/services/productionService'
+import { createProject, getProjects, getProjectById } from '@/app/services/productionService'
 import { createScene, getScenesForProject } from '@/app/services/sceneService'
 
 // ─── Projects ───────────────────────────────────────────────
@@ -26,6 +26,12 @@ export async function createProjectAction(formData: FormData) {
 
   revalidatePath('/productions')
   redirect(`/productions/${result.data.id}`)
+}
+
+
+export async function getProject(projectId: string)  {
+  const result = await getProjectById(projectId)
+  return result
 }
 
 // ─── Scenes ─────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import AddIcon from '@mui/icons-material/Add'
 import Link from 'next/link'
 import { prisma } from '@/app/lib/prisma'
 import { getSceneById } from '@/app/services/sceneService'
+import {getProject} from "@/app/actions/productionActions";
 // import { getCandidatesForScene } from '@/app/services/candidateService'
 // import SceneDetailCard from '@/app/components/SceneDetailCard'
 // import CandidateTable from '@/app/components/CandidateTable'
@@ -18,8 +19,9 @@ export default async function ViewScenePage({
     const { id: projectId, sceneId } = await params
 
     // Fetch project for breadcrumb
-    const project = await prisma.project.findUnique({ where: { id: projectId } })
-    if (!project) notFound()
+    const result = await getProject(projectId)
+    if (!result.success) notFound()
+    const project = result.data
 
     // Fetch scene
     const sceneResult = await getSceneById(sceneId)

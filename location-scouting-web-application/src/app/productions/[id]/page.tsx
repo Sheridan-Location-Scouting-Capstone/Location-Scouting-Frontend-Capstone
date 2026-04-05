@@ -4,7 +4,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
 import Link from 'next/link'
 import { prisma } from '@/app/lib/prisma'
-import { getScenesAction } from '@/app/actions/productionActions'
+import {getProject, getScenesAction} from '@/app/actions/productionActions'
 import SceneTable from '@/app/components/SceneTable'
 
 export default async function ProductionDetailPage({
@@ -14,8 +14,10 @@ export default async function ProductionDetailPage({
 }) {
   const { id } = await params
 
-  const project = await prisma.project.findUnique({ where: { id } })
-  if (!project) notFound()
+  const result = await getProject(id)
+  if (!result.success) notFound()
+
+  const project = result.data
 
   const scenes = await getScenesAction(id)
 

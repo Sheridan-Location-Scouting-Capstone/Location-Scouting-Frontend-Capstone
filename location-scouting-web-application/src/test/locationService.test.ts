@@ -373,10 +373,10 @@ describe('Location Services', () => {
             }
 
             const photoInput = [{
-                buffer: Buffer.from('89504e470d0a1a0a', 'hex'),
-                filename: 'test.jpg',
-                mimeType: 'image/jpeg',
-            },
+                    buffer: Buffer.from('89504e470d0a1a0a', 'hex'),
+                    filename: 'test.jpg',
+                    mimeType: 'image/jpeg',
+                },
                 {
                     buffer: Buffer.from('89504e470d0a1a0a', 'hex'),
                     filename: 'test2.jpg',
