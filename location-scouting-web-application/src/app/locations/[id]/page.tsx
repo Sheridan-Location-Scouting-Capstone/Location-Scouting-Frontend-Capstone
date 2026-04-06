@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { getLocationAction } from '@/app/actions/locationActions'
 import LocationPhotoGallery from '@/app/components/LocationPhotoGallery'
 import LocationStatusActions from '@/app/components/LocationStatusActions'
+import KeywordChips from '@/app/components/KeywordChips'
 
 export default async function LocationDetailPage({
   params,
@@ -15,6 +16,11 @@ export default async function LocationDetailPage({
 }) {
   const { id } = await params
   const location = await getLocationAction(id)
+  // const [keywords, setKeywords] = useState<string[]>([])
+
+  // const removeKeyword = (kw: string) => {
+  //   setKeywords(keywords.filter((k) => k !== kw))
+  // }
 
   if (!location) {
     notFound()
@@ -84,9 +90,10 @@ export default async function LocationDetailPage({
               </Typography>
               <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
                 {location.keywords.length > 0 ? (
-                  location.keywords.map((kw) => (
-                    <Chip key={kw} label={kw} size="small" variant="outlined" />
-                  ))
+                  // location.keywords.map((kw) => (
+                  // <Chip key={kw} label={kw} size="small" variant="outlined" onDelete={() => removeKeyword(kw)} />
+                  // ))
+                  <KeywordChips locationId={location.id} initialKeywords={location.keywords} />
                 ) : (
                   <Typography variant="body2" color="text.secondary">
                     No tags

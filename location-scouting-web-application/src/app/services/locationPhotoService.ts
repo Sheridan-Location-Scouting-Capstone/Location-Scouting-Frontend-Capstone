@@ -12,7 +12,7 @@ export async function addPhotosToLocation(
     Promise<Result<Photo[]>>
 {
     const db = options?.db ?? prisma
-    const bucket = options?.bucket ??  defaultBucket
+    const bucket = options?.bucket ?? defaultBucket
 
     const uploadedPhotos = await uploadPhotos(photoInput, bucket)
 
@@ -29,6 +29,19 @@ export async function addPhotosToLocation(
             displayOrder: photoInput[index].displayOrder ?? (existingCount + index)
         }))
     })
+
+    const newKeywords = uploadedPhotos.flatMap(photo => photo.keywords ?? [])
+    if (newKeywords.length > 0) {
+        const existing = await db.location.findUnique({
+            where: { id: locationId },
+            select: { keywords: true }
+        })
+        const mergedKeywords = [...new Set([...existing?.keywords ?? [], ...newKeywords])].slice(0, 15)
+        await db.location.update({
+            where: { id: locationId },
+            data: { keywords: mergedKeywords }
+        })
+    }
 
     return { success: true, data: result }
 }
