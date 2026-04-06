@@ -98,6 +98,17 @@ export async function updateLocationAction(id: string, formData: FormData) {
   redirect(`/locations/${id}`)
 }
 
+export async function removeKeywordAction(id: string, keyword: string) {
+    const locations = await getLocations()
+    const location = locations.find((l: any) => l.id === id)
+    const updatedKeywords = location.keywords.filter((k: string) => k !== keyword)
+
+    await updateLocation(id, { keywords: updatedKeywords })
+
+    revalidatePath('/locations')
+    revalidatePath(`/locations/${id}`)
+}
+
 // ─── Status ─────────────────────────────────────────────────
 
 export async function updateLocationStatusAction(id: string, status: 'ACTIVE' | 'ARCHIVED' | 'DELETED') {
