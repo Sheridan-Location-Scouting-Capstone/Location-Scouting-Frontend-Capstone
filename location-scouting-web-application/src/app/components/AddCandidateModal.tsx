@@ -48,7 +48,7 @@ type PhotoForSelector = {
 
 type AddCandidateModalProps = {
     open: boolean
-    onClose: () => void
+    onCloseAction: () => void
     locations: LocationForPicker[]
     candidatedLocationIds: string[]
     sceneId: string
@@ -63,7 +63,7 @@ const STEPS = ['Select Location', 'Select Photos']
 
 export default function AddCandidateModal({
                                               open,
-                                              onClose,
+                                              onCloseAction,
                                               locations,
                                               candidatedLocationIds,
                                               sceneId,
@@ -85,7 +85,7 @@ export default function AddCandidateModal({
         setSelectedPhotoIds([])
         setLoadingPhotos(false)
         setSubmitting(false)
-        onClose()
+        onCloseAction()
     }
 
     // ── Step 1: Location selected ──
@@ -105,7 +105,16 @@ export default function AddCandidateModal({
         }))
         setLocationPhotos(photos)
         setLoadingPhotos(false)
-        setActiveStep(1)
+
+        if(photos.length === 0) {
+            // No photos in the location to select? Submit immediately
+            setSubmitting(true)
+            await addCandidateAction(sceneId, location.id, projectId, [])
+            setSubmitting(false)
+            handleClose()
+        } else {
+            setActiveStep(1)
+        }
     }
 
     // ── Step 2: Photo toggling ──
@@ -156,7 +165,7 @@ export default function AddCandidateModal({
         >
             {/* ── Header ── */}
             <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-                <Typography variant="h6" fontWeight={700}>
+                <Typography component="span" variant="h6" fontWeight={700}>
                     Add Candidate
                 </Typography>
                 <IconButton onClick={handleClose} size="small">

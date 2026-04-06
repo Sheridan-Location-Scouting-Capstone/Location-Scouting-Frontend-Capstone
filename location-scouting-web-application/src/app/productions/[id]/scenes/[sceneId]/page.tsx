@@ -1,14 +1,14 @@
 import { notFound } from 'next/navigation'
 import { Box, Typography, Button } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import EditIcon from '@mui/icons-material/Edit'
-import AddIcon from '@mui/icons-material/Add'
 import Link from 'next/link'
 import { getSceneById } from '@/app/services/sceneService'
 import {getProject} from "@/app/actions/productionActions";
 import {getCandidatesForScene} from "@/app/services/candidateService";
 import SceneDetailCard from "@/app/components/SceneDetailCard";
 import CandidateTable, {CandidateRow} from "@/app/components/CandidateTable";
+import {getLocationsAction} from "@/app/actions/locationActions";
+import ViewSceneClientWrapper from "@/app/components/ViewSceneClientWrapper";
 
 
 export default async function ViewScenePage({
@@ -32,6 +32,10 @@ export default async function ViewScenePage({
     const candidatesResult = await getCandidatesForScene(sceneId)
     if(!candidatesResult.success) notFound()
     const candidates = candidatesResult.data
+
+    // Fetch locations to feed into the add candidate modal
+    const locations = await getLocationsAction()
+    const candidatedLocationIds = candidates.map(c => c.locationId)
 
     const rows: CandidateRow[] = candidates.map(c => ({
         id: c.id,
@@ -80,21 +84,6 @@ export default async function ViewScenePage({
                         </Box>
                     </Typography>
                 </Box>
-
-                <Box sx={{ display: 'flex', gap: 1.5 }}>
-                    <Link
-                        href={`/productions/${projectId}/scenes/${sceneId}/edit`}
-                        style={{ textDecoration: 'none' }}
-                    >
-                        <Button variant="contained" color="secondary" startIcon={<EditIcon />}>
-                            Edit Scene
-                        </Button>
-                    </Link>
-                    {/* TODO: Wire to location picker dialog or redirect to location search with "add as candidate" mode */}
-                    <Button variant="contained" startIcon={<AddIcon />}>
-                        Add Candidate
-                    </Button>
-                </Box>
             </Box>
 
             {/* Page title */}
@@ -105,9 +94,11 @@ export default async function ViewScenePage({
             {/* Scene summary card */}
             <SceneDetailCard scene={scene} />
 
-            {/* Candidates section */}
-            <CandidateTable
-                candidates={rows}
+            {/* Client-managed: action buttons + candidates table + modal */}
+            <ViewSceneClientWrapper
+                rows={rows}
+                locations={locations}
+                candidatedLocationIds={candidatedLocationIds}
                 sceneId={sceneId}
                 projectId={projectId}
             />

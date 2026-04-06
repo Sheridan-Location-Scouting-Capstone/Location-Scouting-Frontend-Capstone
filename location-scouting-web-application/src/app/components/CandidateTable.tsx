@@ -56,10 +56,12 @@ export default function CandidateTable({
     candidates,
     sceneId,
     projectId,
+    onAddCandidateAction,
 }: {
     candidates: CandidateRow[]
     sceneId: string
     projectId: string
+    onAddCandidateAction?: () => void
 }) {
     const router = useRouter()
     const [search, setSearch] = useState('')
@@ -141,6 +143,7 @@ export default function CandidateTable({
                         <Button
                             variant="contained"
                             startIcon={<AddIcon />}
+                            onClick={onAddCandidateAction}
                         >
                             Add Candidate
                         </Button>
