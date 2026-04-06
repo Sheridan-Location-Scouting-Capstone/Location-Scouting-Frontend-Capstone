@@ -136,7 +136,7 @@ model CandidatePhoto {
   name         String?
   displayOrder Int     @default(0)
 
-  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   candidateId String
 
   photo   Photo  @relation(fields: [photoId], references: [id])
@@ -156,7 +156,7 @@ model CandidatePhotoGroup {
 
   displayOrder Int @default(0)
 
-  candidate       Candidate        @relation(fields: [candidateId], references: [id])
+  candidate       Candidate        @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   candidatePhotos CandidatePhoto[]
 
   candidateId String

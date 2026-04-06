@@ -34,9 +34,10 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { toggleCandidateSelectedAction, removeCandidateAction } from '@/app/actions/candidateActions'
 
-type CandidateRow = {
+export type CandidateRow = {
     id: string
     selected: boolean
+    thumbnailUrl: string | null
     location: {
         id: string
         name: string
@@ -46,7 +47,6 @@ type CandidateRow = {
         keywords: string[]
         latitude: number | null
         longitude: number | null
-        photos: { url: string }[]
     }
     // matchScore and distance are not in schema yet — will come from recommendation algorithm
     // Rendering them as optional so the UI is ready when the service is wired
@@ -285,9 +285,9 @@ export default function CandidateTable({
                                                         bgcolor: '#E0E0E0',
                                                     }}
                                                 >
-                                                    {loc.photos?.[0]?.url ? (
+                                                    {candidate.thumbnailUrl ? (
                                                         <img
-                                                            src={loc.photos[0].url}
+                                                            src={candidate.thumbnailUrl}
                                                             alt={loc.name}
                                                             style={{
                                                                 width: '100%',

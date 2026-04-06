@@ -4,15 +4,12 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
 import Link from 'next/link'
-import { prisma } from '@/app/lib/prisma'
 import { getSceneById } from '@/app/services/sceneService'
 import {getProject} from "@/app/actions/productionActions";
 import {getCandidatesForScene} from "@/app/services/candidateService";
 import SceneDetailCard from "@/app/components/SceneDetailCard";
-import CandidateTable from "@/app/components/CandidateTable";
-// import { getCandidatesForScene } from '@/app/services/candidateService'
-// import SceneDetailCard from '@/app/components/SceneDetailCard'
-// import CandidateTable from '@/app/components/CandidateTable'
+import CandidateTable, {CandidateRow} from "@/app/components/CandidateTable";
+
 
 export default async function ViewScenePage({
     params,
@@ -35,6 +32,22 @@ export default async function ViewScenePage({
     const candidatesResult = await getCandidatesForScene(sceneId)
     if(!candidatesResult.success) notFound()
     const candidates = candidatesResult.data
+
+    const rows: CandidateRow[] = candidates.map(c => ({
+        id: c.id,
+        selected: c.selected,
+        thumbnailUrl: c.photos[0]?.photo.url ?? null,
+        location: {
+            id: c.location.id,
+            name: c.location.name,
+            address: c.location.address,
+            city: c.location.city,
+            province: c.location.province,
+            keywords: c.location.keywords,
+            latitude: c.location.latitude,
+            longitude: c.location.longitude,
+        }
+    }))
 
     // Build slug-line display: "INT. KITCHEN - DAY"
     const slugParts = []
@@ -94,7 +107,7 @@ export default async function ViewScenePage({
 
             {/* Candidates section */}
             <CandidateTable
-                candidates={candidates}
+                candidates={rows}
                 sceneId={sceneId}
                 projectId={projectId}
             />

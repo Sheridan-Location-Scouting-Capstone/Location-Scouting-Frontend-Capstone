@@ -5,9 +5,16 @@ import {createProject} from "@/app/services/productionService";
 import {IntExt} from "@prisma/client";
 import {KeywordGenerator} from "@/app/services/keywordGenerator";
 import {createScene} from "@/app/services/sceneService";
-import {createCandidate, getCandidatesForScene} from "@/app/services/candidateService";
+import {
+    createCandidate,
+    getCandidatesForScene,
+    removeCandidateFromScene,
+    toggleCandidateSelected
+} from "@/app/services/candidateService";
 import {addPhotosToLocation} from "@/app/services/locationPhotoService";
 import {Geocoder} from "@/app/schemas/geocoder";
+import {PhotoUploadInput} from "@/app/schemas/photoUploadInput";
+import {getCandidatesAction} from "@/app/actions/candidateActions";
 
 const dummyKeyWordGen: KeywordGenerator = async() => ({ success: true, data: ['house', 'generated', 'gothic'] })
 
@@ -291,14 +298,102 @@ describe('Candidate Services', () => {
             }
         })
 
-        it('')
+        it(' should include the locations', async() => {
+            // Act
+            const result = await getCandidatesForScene(sceneId, { db: prisma })
+
+            // Assert
+            expect(result).toBeDefined()
+            expect(result.success).toBe(true)
+            if(result.success) {
+                expect(result.data.length).toBeGreaterThanOrEqual(candidateIds.length)
+                // @ts-ignore
+                expect(result.data[0].location).toBeDefined()
+                // @ts-ignore
+                expect(result.data[0].location.id).toBeDefined()
+            }
+        })
+
+        it(' should only include the selected location photos', async() => {
+            // Arrange - associate some photos with one of the locations
+            const photoInput: PhotoUploadInput[] = [{
+                    locationId: locationId,
+                    buffer: Buffer.from('this is some really fake image data for a candidate'),
+                    filename: 'candidatephoto.jpg',
+                    mimeType: 'image/jpg'
+                },
+                {
+                    locationId: locationId,
+                    buffer: Buffer.from('another candidate photo'),
+                    filename: 'candidatephoto2.jpg',
+                    mimeType: 'image/jpg'
+                }]
+
+            // Arrange-Act
+            const photoUploadResult = await addPhotosToLocation(locationId, photoInput, {db: prisma })
+
+            // Arrange-Assert
+            expect(photoUploadResult.success).toBe(true)
+
+        })
     })
 
-    describe('Delete Candidate', () => {
+    describe('Delete Candidate: removeCandidateFromScene', () => {
+        it(' should remove a candidate from a scene', async () => {
+            //Arrange -> Arrange
+            const candidateInput = {
+                sceneId: sceneId,
+                locationId: locationId
+            }
 
+            // Arrange -> Act
+            const candidateCreateResult = await createCandidate(candidateInput, { db: prisma })
+
+            // Arrange -> Assert
+            expect(candidateCreateResult.success).toBe(true)
+            if(!candidateCreateResult.success) return
+
+            // Act
+            const result = await removeCandidateFromScene(candidateCreateResult.data.id, {db: prisma })
+
+            // Assert
+            expect(result.success).toBe(true)
+            const candidatesResult = await getCandidatesForScene(sceneId, { db: prisma })
+            expect(candidatesResult.success).toBe(true)
+            if(!candidatesResult.success) return
+            expect(candidatesResult.data.find(c => c.id === candidateCreateResult.data.id)).toBeUndefined()
+        })
     })
 
-    describe('Change Candidate Status', () => {
+    describe('Change Candidate Status (toggleCandidateSelected)', () => {
+        let candidateId: string
 
+        beforeEach(async() => {
+            const candidateInput = {
+                sceneId: sceneId,
+                locationId: locationId,
+            }
+
+            const candidateResult = await createCandidate(candidateInput, { db: prisma })
+            expect(candidateResult.success).toBe(true)
+            if(!candidateResult.success) return
+
+            expect(candidateResult.data.id).toBeDefined()
+            candidateId = candidateResult.data.id
+        })
+
+        test.each([
+            { selected: true },
+            { selected: false }
+        ])(' should set the candidate status to input: $selected', async ({selected}) => {
+            // Arrange & Act
+            const result = await toggleCandidateSelected(candidateId, selected, { db: prisma })
+
+            // Assert
+            expect(result.success).toBe(true)
+            if(!result.success) return
+            expect(result.data).toBeDefined()
+            expect(result.data!.selected).toBe(selected)
+        })
     })
 })
