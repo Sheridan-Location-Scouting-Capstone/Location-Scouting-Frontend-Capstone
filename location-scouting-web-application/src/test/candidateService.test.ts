@@ -395,5 +395,41 @@ describe('Candidate Services', () => {
             expect(result.data).toBeDefined()
             expect(result.data!.selected).toBe(selected)
         })
+
+        it(' should allow more than one candidate per scene to be selected', async() => {
+            // Arrange - set up a second location & candidate
+            const locationInput = {
+                name: 'Downtown Alley',
+                address: '100 Main St',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 1A2'
+            }
+
+            const locationResult = await createLocation(locationInput, { db: prisma, geocoder: mockGeocoder })
+            const secondLocationId = locationResult.id
+
+            // Arrange set up the candidate
+            const candidateInput = {
+                locationId: secondLocationId,
+                sceneId: sceneId,
+            }
+
+            const arrangeResult = await createCandidate(candidateInput, { db: prisma })
+            expect(arrangeResult.success).toBe(true)
+            if(!arrangeResult.success) return
+            const secondCandidateId = arrangeResult.data.id
+
+            // Arrange - set other candidate as selected
+            const selectedResult = await toggleCandidateSelected(candidateId, true, { db: prisma })
+
+            // Act - set newly generated candidate as selected
+            const result = await toggleCandidateSelected(secondCandidateId, true, { db: prisma })
+
+            // Assert
+            expect(result.success).toBe(true)
+            if(!result.success) return
+            expect(result.data!.selected).toBe(true)
+        })
     })
 })
