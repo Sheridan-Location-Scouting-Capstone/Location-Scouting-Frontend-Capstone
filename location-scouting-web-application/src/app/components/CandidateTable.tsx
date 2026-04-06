@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import {useState, useMemo, useOptimistic, useTransition} from 'react'
 import { useRouter } from 'next/navigation'
 import {
     Box,
@@ -70,31 +70,48 @@ export default function CandidateTable({
     const [rowsPerPage, setRowsPerPage] = useState(10)
     const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
     const [menuCandidateId, setMenuCandidateId] = useState<string | null>(null)
+    const [highlightedId, setHighlightedId] = useState<string | null>(null)
+
+    // ─── Optimistic State ───────────────────────────────────
+    const [isPending, startTransition] = useTransition()
+
+    const [optimisticCandidates, applyOptimisticToggle] = useOptimistic(
+        candidates,
+        (state, candidateId: string) =>
+            state.map((c) =>
+                c.id === candidateId ? { ...c, selected: !c.selected } : c
+            )
+    )
+
+    // ─── Derived Data ───────────────────────────────────────
 
     // Collect all keywords from candidate locations for filter dropdown
     const allKeywords = useMemo(() => {
         const set = new Set<string>()
-        candidates.forEach((c) => c.location.keywords.forEach((k) => set.add(k)))
+        optimisticCandidates.forEach((c) => c.location.keywords.forEach((k) => set.add(k)))
         return Array.from(set).sort()
-    }, [candidates])
+    }, [optimisticCandidates])
 
     // Client-side filtering
     const filtered = useMemo(() => {
-        return candidates.filter((c) => {
-            const loc = c.location
-            const matchesSearch =
-                !search ||
-                loc.name.toLowerCase().includes(search.toLowerCase()) ||
-                loc.address.toLowerCase().includes(search.toLowerCase()) ||
-                loc.city.toLowerCase().includes(search.toLowerCase())
+        return optimisticCandidates
+            .filter((c) => {
+                const loc = c.location
+                const matchesSearch =
+                    !search ||
+                    loc.name.toLowerCase().includes(search.toLowerCase()) ||
+                    loc.address.toLowerCase().includes(search.toLowerCase()) ||
+                    loc.city.toLowerCase().includes(search.toLowerCase())
 
-            const matchesKeywords =
-                selectedKeywords.length === 0 ||
-                selectedKeywords.some((kw) => loc.keywords.includes(kw))
+                const matchesKeywords =
+                    selectedKeywords.length === 0 ||
+                    selectedKeywords.some((kw) => loc.keywords.includes(kw))
 
             return matchesSearch && matchesKeywords
         })
-    }, [candidates, search, selectedKeywords])
+        // Selected candidates 'float' to the top
+        .sort((a,b) => Number(b.selected) - Number(a.selected))
+    }, [optimisticCandidates, search, selectedKeywords])
 
     const paged = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
 
@@ -110,8 +127,12 @@ export default function CandidateTable({
     }
 
     const handleToggleSelected = async (candidateId: string, currentlySelected: boolean) => {
-        await toggleCandidateSelectedAction(candidateId, !currentlySelected, sceneId, projectId)
-        handleMenuClose()
+        setHighlightedId(candidateId)
+        startTransition(async() => {
+            applyOptimisticToggle(candidateId)
+            await toggleCandidateSelectedAction(candidateId, !currentlySelected, sceneId, projectId)
+        })
+        setTimeout(() => setHighlightedId(null), 1000)
     }
 
     const handleRemove = async (candidateId: string) => {
@@ -270,11 +291,28 @@ export default function CandidateTable({
                             ) : (
                                 paged.map((candidate) => {
                                     const loc = candidate.location
+                                    const isHighlighted = highlightedId === candidate.id
+
                                     return (
                                         <TableRow
                                             key={candidate.id}
                                             hover
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={{
+                                                cursor: 'pointer',
+                                                ...(isHighlighted && {
+                                                    animation: 'candidateHighlight 1s ease-out',
+                                                    '@keyframes candidateHighlight': {
+                                                        '0%': {
+                                                            backgroundColor: candidate.selected
+                                                                ? 'rgba(102, 187, 106, 0.25)'
+                                                                : 'rgba(0,0,0,0.06)',
+                                                        },
+                                                        '100%': {
+                                                            backgroundColor: 'transparent',
+                                                        },
+                                                    },
+                                                }),
+                                            }}
                                             onClick={() => router.push(`/locations/${loc.id}`)}
                                         >
                                             {/* Thumbnail */}
@@ -357,23 +395,26 @@ export default function CandidateTable({
                                                 </Box>
                                             </TableCell>
 
-                                            {/* Status */}
-                                            <TableCell>
-                                                {candidate.selected ? (
-                                                    <Chip
-                                                        icon={<CheckCircleIcon />}
-                                                        label="Selected"
-                                                        size="small"
-                                                        color="success"
-                                                        variant="outlined"
-                                                    />
-                                                ) : (
-                                                    <Chip
-                                                        label="Candidate"
-                                                        size="small"
-                                                        variant="outlined"
-                                                    />
-                                                )}
+                                            {/* Status - clickable to toggle */}
+                                            <TableCell
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <Chip
+                                                    icon={candidate.selected ? <CheckCircleIcon /> : <CheckCircleOutlineIcon />}
+                                                    label={candidate.selected ? 'Selected' : 'Candidate'}
+                                                    size="small"
+                                                    color={candidate.selected ? 'success' : 'default'}
+                                                    variant={candidate.selected ? 'filled' : 'outlined'}
+                                                    onClick={() => handleToggleSelected(candidate.id, candidate.selected)}
+                                                    disabled={isPending}
+                                                    sx={{
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s ease',
+                                                        '&:hover': {
+                                                            transform: isPending ? 'none' : 'scale(1.05)',
+                                                        },
+                                                    }}
+                                                />
                                             </TableCell>
 
                                             {/* Actions */}
@@ -421,12 +462,15 @@ export default function CandidateTable({
             {/* Context menu */}
             <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={handleMenuClose}>
                 {menuCandidateId && (() => {
-                    const candidate = candidates.find((c) => c.id === menuCandidateId)
+                    const candidate = optimisticCandidates.find((c) => c.id === menuCandidateId)
                     if (!candidate) return null
                     return [
                         <MenuItem
                             key="toggle"
-                            onClick={() => handleToggleSelected(menuCandidateId, candidate.selected)}
+                            onClick={() => {
+                                handleToggleSelected(menuCandidateId, candidate.selected)
+                                handleMenuClose()
+                            }}
                         >
                             {candidate.selected ? (
                                 <>
