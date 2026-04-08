@@ -92,12 +92,6 @@ export async function uploadPhotos(
     return await Promise.all(inputs.map(input => uploadPhoto(input, bucketName)))
 }
 
-// export async function getPhoto(
-//     key: string,
-//
-// ): Promise<>
-
-
 export async function deletePhoto(key: string, bucketName = defaultBucket) {
     await minioClient.removeObject(bucketName, key)
 }

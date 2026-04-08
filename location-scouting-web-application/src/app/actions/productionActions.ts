@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createProject, getProjects, getProjectById } from '@/app/services/productionService'
+import {createProject, getProjects, getProjectById, updateProject} from '@/app/services/productionService'
 import { createScene, getScenesForProject } from '@/app/services/sceneService'
 
 // ─── Projects ───────────────────────────────────────────────
@@ -25,7 +25,7 @@ export async function createProjectAction(formData: FormData) {
   const result = await createProject(raw)
 
   revalidatePath('/productions')
-  redirect(`/productions/${result.data.id}`)
+  redirect(`/productions/${result.data!.id}`)
 }
 
 
@@ -55,4 +55,20 @@ export async function createSceneAction(formData: FormData) {
 
   revalidatePath(`/productions/${raw.projectId}`)
   redirect(`/productions/${raw.projectId}`)
+}
+
+export async function updateProjectAction(projectId: string, formData: FormData) {
+  const raw = {
+    name: formData.get('name') as string,
+    address: formData.get('address') as string,
+    city: formData.get('city') as string,
+    province: formData.get('province') as string,
+    postalCode: formData.get('postalCode') as string,
+    country: (formData.get('country') as string) || 'Canada',
+  }
+
+  await updateProject(projectId, raw)
+
+  revalidatePath(`/productions/${projectId}`)
+  redirect(`/productions/${projectId}`)
 }
