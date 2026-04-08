@@ -1,6 +1,11 @@
 import {prisma} from '@/test/setup'
 import {describe, expect, it, test, vi} from 'vitest'
 import {createProject, getProjectById, getProjects} from "@/app/services/productionService";
+import {Geocoder} from "@/app/schemas/geocoder";
+
+const mockLat = 43.6532
+const mockLong = -79.3832
+const mockGeocoder: Geocoder = async () => ({lat: mockLat, lng: mockLong})
 
 describe('Production Service', () => {
     describe('createProject', () => {
@@ -39,6 +44,36 @@ describe('Production Service', () => {
 
             // Act & Assert
             await expect(createProject(productionInput as any, {db: prisma})).rejects.toThrow()
+        })
+
+        it(' should geocode the the studio address on creation', async () => {
+            // Arrange
+            const productionInput = {
+                name: 'Test Production',
+                address: '456 Film St',
+                city: 'Trenton',
+                province: 'ON',
+                postalCode: 'L6H 0Y1',
+                country: 'Canada'
+            }
+
+            // Act
+            const result = await createProject(productionInput, {db: prisma, geocoder: mockGeocoder})
+
+            // Assert
+            expect(result.success).toBe(true)
+            if(!result.success) return
+
+            // Assert - refetch because the pattern is fire and forget
+            await vi.waitFor(async () => {
+                const savedProject = await getProjectById(result.data.id, {db: prisma})
+                expect(savedProject.success).toBe(true)
+                if(!savedProject.success) return
+
+                expect(savedProject!.data.latitude).not.toBeNull()
+                expect(savedProject!.data.longitude).not.toBeNull()
+                console.log(savedProject)
+            })
         })
     })
 

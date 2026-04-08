@@ -11,6 +11,8 @@ import {Geocoder} from "@/app/schemas/geocoder";
 import {addPhotosToLocation} from "@/app/services/locationPhotoService";
 // @ts-ignore
 import { LocationStatus } from "@prisma/client";
+
+
 describe('Location Services', () => {
     describe('createLocation', () => {
         it('should save a location with minimum required fields and return it with an id', async () => {

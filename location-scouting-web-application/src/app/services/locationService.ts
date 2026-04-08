@@ -7,7 +7,7 @@ import { uploadPhotos, defaultBucket } from "@/app/services/photoService";
 import LocationStatus = $Enums.LocationStatus;
 import {addPhotosToLocation, removePhotosFromLocation} from "@/app/services/locationPhotoService";
 
-const defaultGeocoder: Geocoder = async (address: string) => {
+export const defaultGeocoder: Geocoder = async (address: string) => {
     const encoded = encodeURIComponent(address)
     const res = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1`,
