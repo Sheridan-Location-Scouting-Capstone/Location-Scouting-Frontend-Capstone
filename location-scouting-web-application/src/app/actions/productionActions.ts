@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import {createProject, getProjects, getProjectById, updateProject} from '@/app/services/productionService'
-import { createScene, getScenesForProject } from '@/app/services/sceneService'
+import {createScene, deleteScene, getScenesForProject} from '@/app/services/sceneService'
+import {raw} from "@prisma/client/runtime/edge";
 
 // ─── Projects ───────────────────────────────────────────────
 
@@ -55,6 +56,13 @@ export async function createSceneAction(formData: FormData) {
 
   revalidatePath(`/productions/${raw.projectId}`)
   redirect(`/productions/${raw.projectId}`)
+}
+
+export async function deleteSceneAction(sceneId: string, projectId: string) {
+  await deleteScene(sceneId)
+
+  revalidatePath(`/productions/${projectId}`)
+  redirect(`/productions/${projectId}`)
 }
 
 export async function updateProjectAction(projectId: string, formData: FormData) {

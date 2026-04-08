@@ -61,3 +61,14 @@ export async function updateScene(sceneId: string, input: Partial<z.infer<typeof
     return { success: true, data: updatedScene }
 }
 
+export async function deleteScene(sceneId: string, options?: { db?: typeof defaultPrisma}) {
+    const db = options?.db ?? defaultPrisma
+    try {
+        await db.scene.delete({ where: { id: sceneId } })
+        return { success: true, data: undefined }
+    } catch (error) {
+        console.log(`Failed to delete scene: ${sceneId}. Due to: ${error}`)
+        return { success: false, error: `Failed to delete scene: ${sceneId}` }
+    }
+}
+
