@@ -2,8 +2,9 @@ import {Result} from "@/app/schemas/result";
 import {Candidate, Prisma} from "@prisma/client";
 import { prisma as defaultPrisma } from '@/app/lib/prisma'
 import { z } from 'zod'
-import CandidateCreateInput = Prisma.CandidateCreateInput
 import {CreateCandidateSchema} from "@/app/schemas/candidateSchema"
+
+export const HISTORICAL_THRESHOLD: number = 5
 
 const candidateInclude = {
     location: true,
@@ -48,7 +49,7 @@ export async function createCandidate(input: z.infer<typeof CreateCandidateSchem
     }
 }
 
-export async function getCandidatesForScene(sceneId: string, options?: {db: typeof defaultPrisma}) : Promise<Result<CandidateWithDetails[]>> {
+export async function getCandidatesForScene(sceneId: string, options?: {db?: typeof defaultPrisma}) : Promise<Result<CandidateWithDetails[]>> {
     const db = options?.db ?? defaultPrisma
 
     try {
@@ -64,7 +65,7 @@ export async function getCandidatesForScene(sceneId: string, options?: {db: type
     }
 }
 
-export async function removeCandidateFromScene(candidateId: string, options?: {db: typeof defaultPrisma}) {
+export async function removeCandidateFromScene(candidateId: string, options?: {db?: typeof defaultPrisma}) {
     const db = options?.db ?? defaultPrisma
     try {
         const result = await db.candidate.delete({
@@ -77,7 +78,7 @@ export async function removeCandidateFromScene(candidateId: string, options?: {d
     }
 }
 
-export async function toggleCandidateSelected(candidateId: string, selected: boolean, options?: { db: typeof defaultPrisma}) {
+export async function toggleCandidateSelected(candidateId: string, selected: boolean, options?: { db?: typeof defaultPrisma}) {
     const db = options?.db ?? defaultPrisma
 
     try {
@@ -91,3 +92,28 @@ export async function toggleCandidateSelected(candidateId: string, selected: boo
         return { success: false, error: `Failed to update candidate: ${candidateId}` }
     }
 }
+//
+// export async function getHistoricalScore(candidateId: string, options?: { db?: typeof defaultPrisma, historicalThreshold?: number }) : Promise<Result<number>> {
+//     const db = options?.db ?? defaultPrisma
+//     const threshold = options?.historicalThreshold ?? HISTORICAL_THRESHOLD
+//     // 1. get the location id of the candidate
+//     // 2. get all candidates with a shared location id and also selected
+//     const locationIdResult = await db.candidate.findUnique({
+//         where: {id: candidateId},
+//         select: {locationId: true}
+//     })
+//
+//     if (!locationIdResult) {
+//         return {success: false, error: "Candidate not found"}
+//     }
+//     const count = await db.candidate.count({
+//         where: {
+//             locationId: locationIdResult.locationId,
+//             selected: true
+//         }
+//     })
+//
+//     // 3. Calculate the score using a logarithmic normalized score, as being chosen more often has less significance
+//     const historicalScore = Math.min(1, Math.log(count + 1) / Math.log(HISTORICAL_THRESHOLD + 1))
+//     return { success: true, data: historicalScore }
+//

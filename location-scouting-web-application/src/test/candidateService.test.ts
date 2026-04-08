@@ -14,16 +14,14 @@ import {
 import {addPhotosToLocation} from "@/app/services/locationPhotoService";
 import {Geocoder} from "@/app/schemas/geocoder";
 import {PhotoUploadInput} from "@/app/schemas/photoUploadInput";
-import {getCandidatesAction} from "@/app/actions/candidateActions";
 
 const dummyKeyWordGen: KeywordGenerator = async() => ({ success: true, data: ['house', 'generated', 'gothic'] })
+const mockGeocoder: Geocoder = async () => ({ lat: 43.6532, lng: -79.3832 })
 
 describe('Candidate Services', () => {
     let locationId: string
     let projectId: string
     let sceneId: string
-
-    const mockGeocoder: Geocoder = async () => ({ lat: 43.6532, lng: -79.3832 })
 
 
     beforeEach(async() => {
@@ -431,5 +429,126 @@ describe('Candidate Services', () => {
             if(!result.success) return
             expect(result.data!.selected).toBe(true)
         })
+    })
+
+    describe('Candidate Historical Score, calculateHistoricalCandidateScore', async () => {
+        let secondSceneId:string
+        let thirdSceneId:string
+
+        beforeEach(async() => {
+            // Arrange
+            // Set up several scenes
+            // Scene Arrange
+            const sceneInput = [{
+                    sceneNumber: 3,
+                    intExt: IntExt.EXT,
+                    sceneLocation: 'CURTIS HOME - YARD - MIAMI FL',
+                    sceneTimeOfDay: 'Day',
+                    scriptSection: ' ELWOOD (6-8ish) POV of the middle of the day sky where the moon is\n' +
+                        '     visible against its blue hue. The underside of a lemon tree\n' +
+                        '     with lemons is also in view.\n' +
+                        '\n' +
+                        '                         EVELYN (O.S.)\n' +
+                        '                   (calling out)\n' +
+                        '               Elwood? Elwood! (louder) El!\n' +
+                        '\n' +
+                        '     He tilts his head toward the tall house, his arm outstretched in\n' +
+                        '     the same direction in the unruly tropical backyard of the\n' +
+                        '     family house.\n' +
+                        '\n' +
+                        '                         HATTIE (O.S.)\n' +
+                        '               He\'s out back, looking like he fell\n' +
+                        '               out.\n',
+                    projectId: projectId
+                },
+                {
+                    sceneNumber: 3,
+                    intExt: IntExt.EXT,
+                    sceneLocation: 'CURTIS HOME - FRONTYARD - MIAMI FL',
+                    sceneTimeOfDay: 'Day',
+                    scriptSection: ' ELWOOD (6-8ish) POV of the middle of the day sky where the moon is\n' +
+                        '     visible against its blue hue. The underside of a lemon tree\n' +
+                        '     with lemons is also in view.\n' +
+                        '\n' +
+                        '                         EVELYN (O.S.)\n' +
+                        '                   (calling out)\n' +
+                        '               Elwood? Elwood! (louder) El!\n' +
+                        '\n' +
+                        '     He slightly tilts his head toward the tall house, his arm outstretched in\n' +
+                        '     the same direction in the unruly tropical backyard of the\n' +
+                        '     family house.\n' +
+                        '\n' +
+                        '                         HATTIE (O.S.)\n' +
+                        '               He\'s out back, looking like he fell\n' +
+                        '               out.\n',
+                    projectId: projectId
+                }
+            ]
+
+            const sceneCreationResult1 = await createScene(sceneInput[0], { db: prisma, keywordGenerator: dummyKeyWordGen })
+            const sceneCreationResult2 = await createScene(sceneInput[1], { db: prisma, keywordGenerator: dummyKeyWordGen })
+
+            expect(sceneCreationResult1.success).toBe(true)
+            expect(sceneCreationResult2.success).toBe(true)
+            if(!sceneCreationResult2.success) return
+            if(!sceneCreationResult1.success) return
+
+            secondSceneId = sceneCreationResult1.data!.id
+            thirdSceneId = sceneCreationResult2.data!.id
+        })
+
+
+        // This test needs to be refactored to score 1 when it's the max threshold
+        it('should return the score of a candidate based on how many times the location has been selected, between 0 and 1', async () => {
+            // Arrange - isolated location
+            const historicalLocationInput = {
+                name: 'Downtown Alley',
+                address: '123 Main St',
+                city: 'Toronto',
+                province: 'ON',
+                postalCode: 'M5V 1A1'
+            }
+
+            const historicalLocation = await createLocation(historicalLocationInput, { db: prisma, geocoder: mockGeocoder })
+            expect(historicalLocation).toBeDefined()
+            const historicalLocationId = historicalLocation.id
+
+            const firstCandidateInput = {
+                sceneId: secondSceneId,
+                locationId: historicalLocationId,
+                selected: true
+            }
+
+            const secondCandidateInput = {
+                sceneId: thirdSceneId,
+                locationId: historicalLocationId,
+                selected: true
+            }
+
+            const thirdCandidateInput = {
+                sceneId: sceneId,
+                locationId: historicalLocationId,
+                selected: true
+            }
+
+            const firstCandidateResult = await createCandidate(firstCandidateInput, { db: prisma })
+            const secondCandidateResult = await createCandidate(secondCandidateInput, { db: prisma })
+            const thirdCandidateResult = await createCandidate(thirdCandidateInput, { db: prisma })
+            if(!thirdCandidateResult.success) return
+            if(!secondCandidateResult.success) return
+            if(!firstCandidateResult.success) return
+
+            // Location now has been selected across multiple candidates.
+            // Use the third one as the sut
+            const systemUnderTest = firstCandidateResult.data!.id
+
+            // Act
+            const result = await getHistoricalScore(systemUnderTest, { db: prisma })
+
+            // Assert
+            expect(result.success).toBe(true)
+            if(!result.success) return
+            expect(result.data).toBe(0.7737056144690831)
+        });
     })
 })
