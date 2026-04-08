@@ -9,6 +9,7 @@ import CandidateTable from '@/app/components/CandidateTable'
 import { CandidateRow } from '@/app/components/CandidateTable'
 import Link from "next/link";
 import EditIcon from "@mui/icons-material/Edit";
+import RecommendationsModal from "@/app/components/RecommendationsModal";
 
 export default function ViewSceneClientWrapper({
    rows,
@@ -24,6 +25,7 @@ export default function ViewSceneClientWrapper({
     projectId: string
 }) {
     const [addModalOpen, setAddModalOpen] = useState(false)
+    const [recsModalOpen, setRecsModalOpen] = useState(false)
 
     return (
         <>
@@ -52,6 +54,7 @@ export default function ViewSceneClientWrapper({
                 sceneId={sceneId}
                 projectId={projectId}
                 onAddCandidateAction={() => setAddModalOpen(true)}
+                onGetRecommendations={() => setRecsModalOpen(true)}
             />
 
             {/* Add Candidate modal */}
@@ -62,6 +65,15 @@ export default function ViewSceneClientWrapper({
                 candidatedLocationIds={candidatedLocationIds}
                 sceneId={sceneId}
                 projectId={projectId}
+            />
+
+            {/* Get Recommendations Modal */}
+            <RecommendationsModal
+                open={recsModalOpen}
+                onCloseAction={() => setRecsModalOpen(false)}
+                sceneId={sceneId}
+                projectId={projectId}
+                candidatedLocationIds={candidatedLocationIds}
             />
         </>
     )

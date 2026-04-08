@@ -38,6 +38,7 @@ export type CandidateRow = {
     id: string
     selected: boolean
     thumbnailUrl: string | null
+    matchScore: number | null
     location: {
         id: string
         name: string
@@ -48,8 +49,38 @@ export type CandidateRow = {
         latitude: number | null
         longitude: number | null
     }
-    // matchScore and distance are not in schema yet — will come from recommendation algorithm
-    // Rendering them as optional so the UI is ready when the service is wired
+}
+
+function MatchScoreBar({ score }: { score: number | null }) {
+    if (score == null) {
+        return (
+            <Typography variant="body2" color="text.secondary" fontSize="0.8rem">
+                Manual
+            </Typography>
+        )
+    }
+
+    const pct = Math.round(score * 100)
+    const color = pct >= 80 ? 'success.main' : pct >= 60 ? 'warning.main' : 'text.disabled'
+
+    return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ width: 48, height: 6, borderRadius: 3, bgcolor: 'grey.200', overflow: 'hidden' }}>
+                <Box
+                    sx={{
+                        width: `${pct}%`,
+                        height: '100%',
+                        borderRadius: 3,
+                        bgcolor: color,
+                        transition: 'width 0.3s ease',
+                    }}
+                />
+            </Box>
+            <Typography variant="body2" fontWeight={500} fontSize="0.8rem">
+                {pct}%
+            </Typography>
+        </Box>
+    )
 }
 
 export default function CandidateTable({
@@ -57,11 +88,13 @@ export default function CandidateTable({
     sceneId,
     projectId,
     onAddCandidateAction,
+    onGetRecommendations
 }: {
     candidates: CandidateRow[]
     sceneId: string
     projectId: string
     onAddCandidateAction?: () => void
+    onGetRecommendations?: () => void
 }) {
     const router = useRouter()
     const [search, setSearch] = useState('')
@@ -171,6 +204,7 @@ export default function CandidateTable({
                         <Button
                             variant="outlined"
                             startIcon={<AutoAwesomeIcon />}
+                            onClick={onGetRecommendations}
                         >
                             Get Recommendations
                         </Button>
@@ -199,6 +233,7 @@ export default function CandidateTable({
                     variant="outlined"
                     size="small"
                     startIcon={<AutoAwesomeIcon />}
+                    onClick={onGetRecommendations}
                 >
                     Get Recommendations
                 </Button>
@@ -271,8 +306,7 @@ export default function CandidateTable({
                                 <TableCell>Location Name</TableCell>
                                 <TableCell>Address</TableCell>
                                 <TableCell>Tags</TableCell>
-                                {/* TODO: Match Score column — wire to recommendation algorithm */}
-                                {/* <TableCell>Match</TableCell> */}
+                                <TableCell>Match</TableCell>
                                 {/* TODO: Distance column — wire to Haversine service */}
                                 {/* <TableCell>Distance</TableCell> */}
                                 <TableCell>Status</TableCell>
@@ -282,7 +316,7 @@ export default function CandidateTable({
                         <TableBody>
                             {paged.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                                    <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                                         <Typography color="text.secondary">
                                             No candidates match your search.
                                         </Typography>
@@ -394,6 +428,9 @@ export default function CandidateTable({
                                                     )}
                                                 </Box>
                                             </TableCell>
+
+                                            {/* Match Score */}
+                                            <TableCell><MatchScoreBar score={candidate.matchScore}/> </TableCell>
 
                                             {/* Status - clickable to toggle */}
                                             <TableCell

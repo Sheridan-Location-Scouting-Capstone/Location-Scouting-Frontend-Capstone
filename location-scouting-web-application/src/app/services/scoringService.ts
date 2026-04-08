@@ -6,6 +6,13 @@ export const MAX_PROXIMITY_SCORE = 1.0
 export const MIN_PROXIMITY_SCORE = 0
 export const DEFAULT_PHOTO_THRESHOLD = 25 // based on average number of photos in real estate listings
 
+const WEIGHTS = {
+    keyword: 0.5,
+    proximity: 0.2,
+    historical: 0.2,
+    photo: 0.1,
+}
+
 
 // ------ Scoring Functions ----------------------------
 
@@ -39,8 +46,9 @@ export function calculateProximityScore(distance: number, maxDistance?: number) 
     return Math.round(((maxDistance - distance) / (maxDistance - DEFAULT_MIN_DISTANCE_KM)) * 100) / 100;
 }
 
-export function proximityScore(lat1: number, lng1: number, lat2: number, lng2: number, maxDistance: number) {
+export function proximityScore(lat1: number, lng1: number, lat2: number, lng2: number, maxDistance?: number) {
     const distance = haversineDistance(lat1, lng1, lat2, lng2);
+    const distanceThreshold = maxDistance ?? DEFAULT_MAX_DISTANCE_KM;
     return calculateProximityScore(distance, maxDistance);
 }
 
@@ -72,4 +80,29 @@ export function jaccardSimilarity(a: string[], b: string[]): number {
     if (union.size === 0) return 0
 
     return intersection.size / union.size
+}
+
+export function scoreLocation(
+    sceneKeywords: string[],
+    locationKeywords: string[],
+    projectCoords: { lat: number; lng: number } | null,
+    locationCoords: { lat: number; lng: number } | null,
+    candidateCount: number,
+    photoCount: number,
+): number {
+    const keyword = jaccardSimilarity(sceneKeywords, locationKeywords)
+
+    const proximity = projectCoords && locationCoords
+        ? proximityScore(projectCoords.lat, projectCoords.lng, locationCoords.lat, locationCoords.lng)
+        : 0
+
+    const historical = historicalScore(candidateCount)
+    const photo = photoCoverageScore(photoCount)
+
+    return (
+        keyword   * WEIGHTS.keyword +
+        proximity * WEIGHTS.proximity +
+        historical * WEIGHTS.historical +
+        photo     * WEIGHTS.photo
+    )
 }

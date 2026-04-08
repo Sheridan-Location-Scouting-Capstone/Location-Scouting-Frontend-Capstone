@@ -7,6 +7,7 @@ import {
     removeCandidateFromScene,
     toggleCandidateSelected,
 } from '@/app/services/candidateService'
+import {getRecommendations} from "@/app/services/recommendationService";
 
 // ─── Candidates ─────────────────────────────────────────────
 
@@ -40,5 +41,7 @@ export async function toggleCandidateSelectedAction(
     return result
 }
 
-// TODO: getRecommendationsAction — will connect to recommendation algorithm service
-// export async function getRecommendationsAction(sceneId: string) { ... }
+export async function getRecommendationsAction(sceneId: string) {
+    const result = await getRecommendations(sceneId)
+    return result
+}

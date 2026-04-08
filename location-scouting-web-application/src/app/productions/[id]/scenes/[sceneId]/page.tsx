@@ -9,6 +9,7 @@ import SceneDetailCard from "@/app/components/SceneDetailCard";
 import CandidateTable, {CandidateRow} from "@/app/components/CandidateTable";
 import {getLocationsAction} from "@/app/actions/locationActions";
 import ViewSceneClientWrapper from "@/app/components/ViewSceneClientWrapper";
+import { scoreCandidates } from '@/app/services/recommendationService'
 
 
 export default async function ViewScenePage({
@@ -36,11 +37,13 @@ export default async function ViewScenePage({
     // Fetch locations to feed into the add candidate modal
     const locations = await getLocationsAction()
     const candidatedLocationIds = candidates.map(c => c.locationId)
+    const scoresResult = await scoreCandidates(sceneId)
 
     const rows: CandidateRow[] = candidates.map(c => ({
         id: c.id,
         selected: c.selected,
         thumbnailUrl: c.photos[0]?.photo.url ?? null,
+        matchScore: scoresResult.success ? scoresResult.data.get(c.id) ?? null : null,
         location: {
             id: c.location.id,
             name: c.location.name,
