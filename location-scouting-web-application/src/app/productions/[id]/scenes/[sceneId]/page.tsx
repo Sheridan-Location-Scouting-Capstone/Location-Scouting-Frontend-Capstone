@@ -1,15 +1,16 @@
 import { notFound } from 'next/navigation'
 import { Box, Typography, Button } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import EditIcon from '@mui/icons-material/Edit'
-import AddIcon from '@mui/icons-material/Add'
 import Link from 'next/link'
-import { prisma } from '@/app/lib/prisma'
 import { getSceneById } from '@/app/services/sceneService'
 import {getProject} from "@/app/actions/productionActions";
-// import { getCandidatesForScene } from '@/app/services/candidateService'
-// import SceneDetailCard from '@/app/components/SceneDetailCard'
-// import CandidateTable from '@/app/components/CandidateTable'
+import {getCandidatesForScene} from "@/app/services/candidateService";
+import SceneDetailCard from "@/app/components/SceneDetailCard";
+import CandidateTable, {CandidateRow} from "@/app/components/CandidateTable";
+import {getLocationsAction} from "@/app/actions/locationActions";
+import ViewSceneClientWrapper from "@/app/components/ViewSceneClientWrapper";
+import { scoreCandidates } from '@/app/services/recommendationService'
+
 
 export default async function ViewScenePage({
     params,
@@ -30,7 +31,30 @@ export default async function ViewScenePage({
 
     // Fetch candidates with their locations and photos
     const candidatesResult = await getCandidatesForScene(sceneId)
+    if(!candidatesResult.success) notFound()
     const candidates = candidatesResult.data
+
+    // Fetch locations to feed into the add candidate modal
+    const locations = await getLocationsAction()
+    const candidatedLocationIds = candidates.map(c => c.locationId)
+    const scoresResult = await scoreCandidates(sceneId)
+
+    const rows: CandidateRow[] = candidates.map(c => ({
+        id: c.id,
+        selected: c.selected,
+        thumbnailUrl: c.photos[0]?.photo.url ?? null,
+        matchScore: scoresResult.success ? scoresResult.data.get(c.id) ?? null : null,
+        location: {
+            id: c.location.id,
+            name: c.location.name,
+            address: c.location.address,
+            city: c.location.city,
+            province: c.location.province,
+            keywords: c.location.keywords,
+            latitude: c.location.latitude,
+            longitude: c.location.longitude,
+        }
+    }))
 
     // Build slug-line display: "INT. KITCHEN - DAY"
     const slugParts = []
@@ -63,21 +87,6 @@ export default async function ViewScenePage({
                         </Box>
                     </Typography>
                 </Box>
-
-                <Box sx={{ display: 'flex', gap: 1.5 }}>
-                    <Link
-                        href={`/productions/${projectId}/scenes/${sceneId}/edit`}
-                        style={{ textDecoration: 'none' }}
-                    >
-                        <Button variant="contained" color="secondary" startIcon={<EditIcon />}>
-                            Edit Scene
-                        </Button>
-                    </Link>
-                    {/* TODO: Wire to location picker dialog or redirect to location search with "add as candidate" mode */}
-                    <Button variant="contained" startIcon={<AddIcon />}>
-                        Add Candidate
-                    </Button>
-                </Box>
             </Box>
 
             {/* Page title */}
@@ -88,9 +97,11 @@ export default async function ViewScenePage({
             {/* Scene summary card */}
             <SceneDetailCard scene={scene} />
 
-            {/* Candidates section */}
-            <CandidateTable
-                candidates={candidates}
+            {/* Client-managed: action buttons + candidates table + modal */}
+            <ViewSceneClientWrapper
+                rows={rows}
+                locations={locations}
+                candidatedLocationIds={candidatedLocationIds}
                 sceneId={sceneId}
                 projectId={projectId}
             />

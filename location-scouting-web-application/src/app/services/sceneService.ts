@@ -2,6 +2,8 @@ import { prisma as defaultPrisma} from '@/app/lib/prisma'
 import { z } from 'zod'
 import {CreateSceneSchema} from "@/app/schemas/sceneSchema";
 import {getKeywords, KeywordGenerator} from "@/app/services/keywordGenerator";
+import {Result} from "@/app/schemas/result";
+import {Scene} from "@prisma/client";
 
 const defaultKeywordGenerator: KeywordGenerator = async (scriptContent: string) => {
     return getKeywords(scriptContent)
@@ -35,7 +37,7 @@ export async function getScenesForProject(projectId: string, options?: { db?: ty
     return { success: true, data: scenes }
 }
 
-export async function getSceneById(sceneId: string, options?: { db?: typeof defaultPrisma }) {
+export async function getSceneById(sceneId: string, options?: { db?: typeof defaultPrisma }) : Promise<Result<Scene>> {
     const db = options?.db ?? defaultPrisma
 
     const scene = await db.scene.findUnique({
