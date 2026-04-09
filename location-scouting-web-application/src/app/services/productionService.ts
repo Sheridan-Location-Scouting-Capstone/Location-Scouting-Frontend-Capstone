@@ -4,7 +4,53 @@ import { z } from 'zod';
 import {Project} from "@prisma/client";
 import {Result} from "@/app/schemas/result";
 
+export async function getLocationsByProject(
+  input: { projectId: string },
+  options?: { db?: typeof defaultPrisma }
+) {
+  const db = options?.db ?? defaultPrisma;
 
+  const scenes = await db.scene.findMany({
+    where: {
+      projectId: input.projectId,
+    },
+    include: {
+      candidates: {
+        include: {
+          location: true,
+        },
+      },
+    },
+  });
+
+  const locationMap = new Map<string, {
+    locationId: string;
+    address: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    latitude?: number;
+    longitude?: number;
+  }>();
+
+  for (const scene of scenes) {
+    for (const candidate of scene.candidates) {
+      if (!locationMap.has(candidate.locationId)) {
+        locationMap.set(candidate.locationId, {
+          locationId: candidate.location.id,
+          address: candidate.location.address,
+          city: candidate.location.city,
+          province: candidate.location.province,
+          postalCode: candidate.location.postalCode,
+          latitude: candidate.location.latitude ?? undefined,
+          longitude: candidate.location.longitude ?? undefined,
+        });
+      }
+    }
+  }
+
+  return { success: true, data: Array.from(locationMap.values()) };
+}
 
 export async function createProject(input: z.infer<typeof CreateProjectSchema>, options?: { db?: typeof defaultPrisma }) {
     const db = options?.db ?? defaultPrisma

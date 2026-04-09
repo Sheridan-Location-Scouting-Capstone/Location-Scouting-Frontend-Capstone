@@ -1,43 +1,82 @@
-import { useEffect, useRef } from "react";
-import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
+'use client'
 
-type HeatPoint = { lat: number; lng: number; weight?: number };
+import { useEffect, useRef, useMemo } from "react";
+import { APIProvider, Map, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
+
+export type HeatPointType = {
+  locationId: string;
+  address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  latitude?: number;
+  longitude?: number;
+};
 
 interface HeatmapProps {
-  points: HeatPoint[];
+  points: HeatPointType[];
 }
 
-export function Heatmap({ points }: HeatmapProps) {
+const WEIGHT = 3;
+
+function HeatmapLayer({ points }: HeatmapProps) {
   const map = useMap();
   const visualization = useMapsLibrary("visualization");
-  const heatmapRef = useRef<google.maps.visualization.HeatmapLayer | null>(null);
+  
+  const heatmapLayer = useRef<google.maps.visualization.HeatmapLayer | null>(null);
+
+  const heatmapData = useMemo(() => {
+    if (!visualization) return [];
+    
+    return points
+      .filter((p) => p.latitude !== undefined && p.longitude !== undefined)
+      .map((p) => ({
+        location: new google.maps.LatLng(p.latitude!, p.longitude!),
+        weight: WEIGHT,
+      }));
+  }, [points, visualization]);
 
   useEffect(() => {
     if (!map || !visualization) return;
-    const google = window.google;
 
-    const data = points.map((p) =>
-      p.weight != null
-        ? { location: new google.maps.LatLng(p.lat, p.lng), weight: p.weight }
-        : new google.maps.LatLng(p.lat, p.lng)
-    );
-
-    if (!heatmapRef.current) {
-      heatmapRef.current = new visualization.HeatmapLayer({
+    if (!heatmapLayer.current) {
+      heatmapLayer.current = new visualization.HeatmapLayer({
         map,
-        data,
-        radius: 30, 
-        opacity: 0.7,   
+        data: heatmapData,
+        radius: 30,
+        opacity: 0.7,
       });
     } else {
-      heatmapRef.current.setData(data as any);
+      heatmapLayer.current.setData(heatmapData);
     }
 
     return () => {
-      heatmapRef.current?.setMap(null);
-      heatmapRef.current = null;
+      if (heatmapLayer.current) {
+        heatmapLayer.current.setMap(null);
+        heatmapLayer.current = null;
+      }
     };
-  }, [map, visualization, points]);
+  }, [map, visualization, heatmapData]);
 
   return null;
+}
+
+export function Heatmap({ points }: HeatmapProps) {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+
+  return (
+    <div className="rounded-lg overflow-hidden border border-gray-200">
+      <APIProvider apiKey={apiKey}>
+        <Map
+          style={{ width: "100%", height: "400px" }}
+          defaultCenter={{ lat: 43.45, lng: -80.49 }}
+          defaultZoom={10}
+          gestureHandling={'greedy'}
+          disableDefaultUI={false}
+        >
+          <HeatmapLayer points={points} />
+        </Map>
+      </APIProvider>
+    </div>
+  );
 }
