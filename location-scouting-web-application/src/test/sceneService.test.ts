@@ -7,7 +7,7 @@ import {createProject} from "@/app/services/productionService";
 import {KeywordGenerator} from "@/app/services/keywordGenerator";
 import {createLocation} from "@/app/services/locationService";
 import {Geocoder} from "@/app/schemas/geocoder";
-import {createCandidate} from "@/app/services/candidateService";
+import {createCandidate, getCandidateById, getCandidatesForScene} from "@/app/services/candidateService";
 
 
 const dummyKeyWordGen: KeywordGenerator = async() => ({ success: true, data: ['generated', 'keywords']})
@@ -353,6 +353,19 @@ describe('Scene Service', () => {
             // Assert again to verify scene no longer exists
             const findSceneResult = await getSceneById( sceneId, { db: prisma })
             expect(findSceneResult.success).toBe(false)
+        })
+
+        it(' should delete associated candidate(s)', async () => {
+            // Arrange
+            const deleteResult = await deleteScene(sceneId, { db: prisma })
+            expect(deleteResult.success).toBe(true)
+            if(!deleteResult.success) return
+
+            // Act
+            const findCandidateResult = await getCandidateById(candidateId, { db: prisma })
+
+            // Assert
+            expect(findCandidateResult.success).toBe(false)
         })
     })
 })
