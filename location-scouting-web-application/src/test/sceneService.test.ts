@@ -7,7 +7,7 @@ import {createProject} from "@/app/services/productionService";
 import {KeywordGenerator} from "@/app/services/keywordGenerator";
 import {createLocation} from "@/app/services/locationService";
 import {Geocoder} from "@/app/schemas/geocoder";
-import {createCandidate, getCandidateById, getCandidatesForScene} from "@/app/services/candidateService";
+import {createCandidate, getCandidateById} from "@/app/services/candidateService";
 
 
 const dummyKeyWordGen: KeywordGenerator = async() => ({ success: true, data: ['generated', 'keywords']})
