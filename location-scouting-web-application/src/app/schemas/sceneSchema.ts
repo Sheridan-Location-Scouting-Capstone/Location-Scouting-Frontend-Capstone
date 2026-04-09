@@ -7,6 +7,15 @@ export const CreateSceneSchema = z.object({
     sceneLocation: z.string().min(1, "Scene location is required"),
     sceneTimeOfDay: z.string().min(1, "Scene time of day is required"),
     scriptSection: z.string().min(1, "Script content is required"),
+    projectId: z.string()
+})
+
+export const UpdateSceneSchema = z.object({
+    sceneNumber: z.number(),
+    intExt: z.enum(IntExt),
+    sceneLocation: z.string().min(1, "Scene location is required"),
+    sceneTimeOfDay: z.string().min(1, "Scene time of day is required"),
+    scriptSection: z.string().min(1, "Script content is required"),
     projectId: z.string(),
     keywords: z.array(z.string()).optional().default([]),
 })
