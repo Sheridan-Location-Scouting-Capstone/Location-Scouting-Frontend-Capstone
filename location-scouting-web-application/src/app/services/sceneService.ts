@@ -1,6 +1,6 @@
 import { prisma as defaultPrisma} from '@/app/lib/prisma'
 import { z } from 'zod'
-import {CreateSceneSchema} from "@/app/schemas/sceneSchema";
+import {CreateSceneSchema, UpdateSceneSchema} from "@/app/schemas/sceneSchema";
 import {getKeywords, KeywordGenerator} from "@/app/services/keywordGenerator";
 import {Result} from "@/app/schemas/result";
 import {Scene} from "@prisma/client";
@@ -52,15 +52,12 @@ export async function getSceneById(sceneId: string, options?: { db?: typeof defa
 export async function updateScene(sceneId: string, input: Partial<z.infer<typeof CreateSceneSchema>>, options?: { db?: typeof defaultPrisma, keywordGenerator: KeywordGenerator }) {
     const db = options?.db ?? defaultPrisma
 
-    const validated = CreateSceneSchema.partial().parse(input)
+    const validated = UpdateSceneSchema.partial().parse(input)
 
     const updatedScene = await db.scene.update({
         where: { id: sceneId },
         data: validated
     })
-
-
-
 
     return { success: true, data: updatedScene }
 }
