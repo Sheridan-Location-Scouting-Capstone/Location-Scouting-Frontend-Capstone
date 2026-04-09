@@ -92,6 +92,25 @@ export async function toggleCandidateSelected(candidateId: string, selected: boo
         return { success: false, error: `Failed to update candidate: ${candidateId}` }
     }
 }
+
+export async function getCandidateById(candidateId: string, options?: { db?: typeof defaultPrisma }) {
+    const db = options?.db ?? defaultPrisma
+
+    try{
+        const result = await db.candidate.findUnique({
+            where: { id: candidateId }
+        })
+
+        if(!result){
+            return {success: false, error: `Failed to get candidate with id ${candidateId}` }
+        }
+
+        return {success: true, data: result }
+    } catch (error) {
+        console.log(`Error when finding candidate: ${candidateId}`)
+        return { success: false, error: `Failed to get candidate with id ${candidateId}` }
+    }
+}
 //
 // export async function getHistoricalScore(candidateId: string, options?: { db?: typeof defaultPrisma, historicalThreshold?: number }) : Promise<Result<number>> {
 //     const db = options?.db ?? defaultPrisma

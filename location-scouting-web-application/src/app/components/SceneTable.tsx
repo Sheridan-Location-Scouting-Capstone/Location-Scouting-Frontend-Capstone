@@ -16,11 +16,14 @@ import {
   TablePagination,
   IconButton,
   Typography,
-  Chip,
+  Chip, Menu, MenuItem,
 } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import EditIcon from '@mui/icons-material/Edit'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
+import ArchiveIcon from "@mui/icons-material/Archive";
+import DeleteIcon from "@mui/icons-material/Delete";
+import {deleteSceneAction} from "@/app/actions/productionActions";
 
 type Scene = {
   id: string
@@ -38,6 +41,8 @@ export default function SceneTable({ scenes, projectId }: { scenes: Scene[]; pro
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
+  const [menuSceneId, setMenuSceneId] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
     if (!search) return scenes
@@ -51,6 +56,23 @@ export default function SceneTable({ scenes, projectId }: { scenes: Scene[]; pro
   }, [scenes, search])
 
   const paged = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, sceneId: string) => {
+    event.stopPropagation()
+    setMenuAnchor(event.currentTarget)
+    setMenuSceneId(sceneId)
+  }
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null)
+    setMenuSceneId(null)
+  }
+
+  const handleDelete =  async () => {
+    if(menuSceneId) {
+      await deleteSceneAction(menuSceneId, projectId)
+    }
+    handleMenuClose()
+  }
 
   return (
     <Box>
@@ -151,8 +173,10 @@ export default function SceneTable({ scenes, projectId }: { scenes: Scene[]; pro
                     </TableCell>
 
                     <TableCell align="right">
-                      <IconButton size="small">
-                        <MoreVertIcon fontSize="small" />
+                      <IconButton
+                          size="small"
+                          onClick={(e) => handleMenuOpen(e, scene.id)}>
+                        <MoreVertIcon fontSize="small"/>
                       </IconButton>
                       <IconButton
                         size="small"
@@ -186,6 +210,13 @@ export default function SceneTable({ scenes, projectId }: { scenes: Scene[]; pro
           />
         )}
       </Card>
+
+      {/* Context menu */}
+      <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={handleMenuClose}>
+        <MenuItem onClick={() => handleDelete()}>
+          <DeleteIcon fontSize="small" sx={{ mr: 1 }} /> Delete
+        </MenuItem>
+      </Menu>
     </Box>
   )
 }

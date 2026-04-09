@@ -7,7 +7,7 @@ import { uploadPhotos, defaultBucket } from "@/app/services/photoService";
 import LocationStatus = $Enums.LocationStatus;
 import {addPhotosToLocation, removePhotosFromLocation} from "@/app/services/locationPhotoService";
 
-const defaultGeocoder: Geocoder = async (address: string) => {
+export const defaultGeocoder: Geocoder = async (address: string) => {
     const encoded = encodeURIComponent(address)
     const res = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1`,
@@ -90,7 +90,7 @@ export async function updateLocation(id: string, data: Prisma.LocationUpdateInpu
 
     const address = `${validated.address}, ${validated.city}, ${validated.province}, ${validated.postalCode}, ${validated.country}`
 
-    const updatedLocation = db.location.update({ where: { id },  data: validated });
+    const updatedLocation = await db.location.update({ where: { id },  data: validated });
 
     geocoder(address)
         .then(async coords => {
@@ -103,10 +103,14 @@ export async function updateLocation(id: string, data: Prisma.LocationUpdateInpu
             }
         }) // If geocoding fails, set the values to null in order to avoid old address being valid, and pointing to the wrong area on a map
         .catch(async() => {
-            await db.location.update({
-                where: { id: id},
-                data: { latitude: null, longitude: null }
-            })
+            try {
+                await db.location.update({
+                    where: {id: id},
+                    data: {latitude: null, longitude: null}
+                })
+            } catch (error){
+                console.log(error)
+            }
         })
 
     return updatedLocation;

@@ -49,7 +49,7 @@ export async function getSceneById(sceneId: string, options?: { db?: typeof defa
     return { success: true, data: scene }
 }
 
-export async function updateScene(sceneId: string, input: Partial<z.infer<typeof CreateSceneSchema>>, options?: { db?: typeof defaultPrisma }) {
+export async function updateScene(sceneId: string, input: Partial<z.infer<typeof CreateSceneSchema>>, options?: { db?: typeof defaultPrisma, keywordGenerator: KeywordGenerator }) {
     const db = options?.db ?? defaultPrisma
 
     const validated = CreateSceneSchema.partial().parse(input)
@@ -58,6 +58,21 @@ export async function updateScene(sceneId: string, input: Partial<z.infer<typeof
         where: { id: sceneId },
         data: validated
     })
+
+
+
+
     return { success: true, data: updatedScene }
+}
+
+export async function deleteScene(sceneId: string, options?: { db?: typeof defaultPrisma}) {
+    const db = options?.db ?? defaultPrisma
+    try {
+        await db.scene.delete({ where: { id: sceneId } })
+        return { success: true, data: undefined }
+    } catch (error) {
+        console.log(`Failed to delete scene: ${sceneId}. Due to: ${error}`)
+        return { success: false, error: `Failed to delete scene: ${sceneId}` }
+    }
 }
 

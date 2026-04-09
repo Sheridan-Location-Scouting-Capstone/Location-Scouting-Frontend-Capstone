@@ -76,12 +76,4 @@ describe('Scoring Service ', () => {
             })
         })
     })
-
-    describe('photoCoverageScore', () => {
-        it('should gradually increase on an exponential curve', () => {
-            // Arrange
-            const count = 5
-            const
-        });
-    })
 })
