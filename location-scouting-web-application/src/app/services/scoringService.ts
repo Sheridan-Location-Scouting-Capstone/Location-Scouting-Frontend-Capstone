@@ -71,8 +71,8 @@ export function photoCoverageScore(photoCount : number,threshold?: number) : num
 }
 
 export function jaccardSimilarity(a: string[], b: string[]): number {
-    const setA = new Set(a)
-    const setB = new Set(b)
+    const setA = new Set(a.map(s => s.toLowerCase()))
+    const setB = new Set(b.map(s => s.toLowerCase()))
 
     const intersection = new Set([...setA].filter(x => setB.has(x)))
     const union = new Set([...setA, ...setB])

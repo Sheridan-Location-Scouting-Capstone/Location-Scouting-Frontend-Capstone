@@ -101,7 +101,7 @@ export async function updateLocationAction(id: string, formData: FormData) {
 export async function removeKeywordAction(id: string, keyword: string) {
     const locations = await getLocations()
     const location = locations.find((l: any) => l.id === id)
-    const updatedKeywords = location.keywords.filter((k: string) => k !== keyword)
+    const updatedKeywords = location!.keywords.filter((k: string) => k !== keyword)
 
     await updateLocation(id, { keywords: updatedKeywords })
 
