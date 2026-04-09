@@ -49,7 +49,7 @@ export async function getSceneById(sceneId: string, options?: { db?: typeof defa
     return { success: true, data: scene }
 }
 
-export async function updateScene(sceneId: string, input: Partial<z.infer<typeof CreateSceneSchema>>, options?: { db?: typeof defaultPrisma }) {
+export async function updateScene(sceneId: string, input: Partial<z.infer<typeof CreateSceneSchema>>, options?: { db?: typeof defaultPrisma, keywordGenerator: KeywordGenerator }) {
     const db = options?.db ?? defaultPrisma
 
     const validated = CreateSceneSchema.partial().parse(input)
@@ -58,6 +58,10 @@ export async function updateScene(sceneId: string, input: Partial<z.infer<typeof
         where: { id: sceneId },
         data: validated
     })
+
+
+
+
     return { success: true, data: updatedScene }
 }
 

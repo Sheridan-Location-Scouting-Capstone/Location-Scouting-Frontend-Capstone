@@ -368,4 +368,8 @@ describe('Scene Service', () => {
             expect(findCandidateResult.success).toBe(false)
         })
     })
+
+    describe('Update Scene', async()=>{
+        it('should ')
+    })
 })

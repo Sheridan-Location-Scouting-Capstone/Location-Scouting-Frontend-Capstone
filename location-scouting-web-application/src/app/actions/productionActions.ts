@@ -3,8 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import {createProject, getProjects, getProjectById, updateProject} from '@/app/services/productionService'
-import {createScene, deleteScene, getScenesForProject} from '@/app/services/sceneService'
-import {raw} from "@prisma/client/runtime/edge";
+import {createScene, deleteScene, getScenesForProject, updateScene} from '@/app/services/sceneService'
 
 // ─── Projects ───────────────────────────────────────────────
 
@@ -63,6 +62,23 @@ export async function deleteSceneAction(sceneId: string, projectId: string) {
 
   revalidatePath(`/productions/${projectId}`)
   redirect(`/productions/${projectId}`)
+}
+
+export async function updateSceneAction(sceneId: string, projectId: string, formData: FormData) {
+  const raw = {
+    sceneNumber: parseInt(formData.get('sceneNumber') as string, 10),
+    intExt: formData.get('intExt') as 'INT' | 'EXT' | 'INT_EXT',
+    sceneLocation: formData.get('sceneLocation') as string,
+    sceneTimeOfDay: formData.get('sceneTimeOfDay') as string,
+    scriptSection: formData.get('scriptSection') as string,
+    keywords: JSON.parse(formData.get('keywords') as string || '[]'),
+    projectId,
+  }
+
+  await updateScene(sceneId, raw)
+
+  revalidatePath(`/productions/${projectId}/scenes/${sceneId}`)
+  redirect(`/productions/${projectId}/scenes/${sceneId}`)
 }
 
 export async function updateProjectAction(projectId: string, formData: FormData) {
