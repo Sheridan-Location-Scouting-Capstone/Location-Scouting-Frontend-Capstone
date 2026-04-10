@@ -8,6 +8,7 @@ import { getLocationAction } from '@/app/actions/locationActions'
 import LocationPhotoGallery from '@/app/components/LocationPhotoGallery'
 import LocationStatusActions from '@/app/components/LocationStatusActions'
 import KeywordChips from '@/app/components/KeywordChips'
+import { GoogleMap } from '@/app/components/GoogleMap'
 
 export default async function LocationDetailPage({
   params,
@@ -21,7 +22,6 @@ export default async function LocationDetailPage({
   // const removeKeyword = (kw: string) => {
   //   setKeywords(keywords.filter((k) => k !== kw))
   // }
-
   if (!location) {
     notFound()
   }
@@ -149,6 +149,7 @@ export default async function LocationDetailPage({
         photos={location.photos}
         locationId={location.id}
       />
+      <GoogleMap {...location} />
     </Box>
   )
 }

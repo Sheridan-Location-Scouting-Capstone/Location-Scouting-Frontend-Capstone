@@ -29,7 +29,7 @@ import ArchiveIcon from '@mui/icons-material/Archive'
 import DeleteIcon from '@mui/icons-material/Delete'
 import { updateLocationStatusAction } from '@/app/actions/locationActions'
 
-type LocationRow = {
+export type LocationRow = {
   id: string
   name: string
   address: string
