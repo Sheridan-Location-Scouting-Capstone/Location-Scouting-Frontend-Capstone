@@ -54,3 +54,9 @@ Note: schemas in Next/React.Js are equivalent to DOAs (Data Objects), and they a
 - `npx prisma migrate deploy`
 - `npx prisma deploy`
 - `npm run test:db:push`
+
+# rebuild database (after a pull)
+- `npm run migrate:all`
+
+# Running automated tests
+- `npx vitest run`
