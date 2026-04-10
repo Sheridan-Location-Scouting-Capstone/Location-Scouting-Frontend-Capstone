@@ -13,7 +13,7 @@ export type HeatPointType = {
   longitude?: number;
 };
 
-interface HeatmapProps {
+export interface HeatmapProps {
   points: HeatPointType[];
 }
 
