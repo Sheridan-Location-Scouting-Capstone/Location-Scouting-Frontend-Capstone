@@ -6,6 +6,54 @@ import {Result} from "@/app/schemas/result";
 import {Geocoder} from "@/app/schemas/geocoder";
 import {defaultGeocoder} from "@/app/services/locationService";
 
+export async function getLocationsByProject(
+  input: { projectId: string },
+  options?: { db?: typeof defaultPrisma }
+) {
+  const db = options?.db ?? defaultPrisma;
+
+  const scenes = await db.scene.findMany({
+    where: {
+      projectId: input.projectId,
+    },
+    include: {
+      candidates: {
+        include: {
+          location: true,
+        },
+      },
+    },
+  });
+
+  const locationMap = new Map<string, {
+    locationId: string,
+    address: string,
+    city: string,
+    province: string,
+    postalCode: string,
+    latitude?: number,
+    longitude?: number,
+  }>();
+
+  for (const scene of scenes) {
+    for (const candidate of scene.candidates) {
+      if (!locationMap.has(candidate.locationId)) {
+        locationMap.set(candidate.locationId, {
+          locationId: candidate.locationId,
+          address: candidate.location.address,
+          city: candidate.location.city,
+          province: candidate.location.province,
+          postalCode: candidate.location.postalCode,
+          latitude: candidate.location.latitude ?? undefined,
+          longitude: candidate.location.longitude ?? undefined,
+        });
+      }
+    }
+  }
+
+  return { success: true, data: Array.from(locationMap.values()) };
+}
+
 const dGeocoder = defaultGeocoder;
 
 export async function createProject(input: z.infer<typeof CreateProjectSchema>, options?: { db?: typeof defaultPrisma, geocoder?: Geocoder }) {

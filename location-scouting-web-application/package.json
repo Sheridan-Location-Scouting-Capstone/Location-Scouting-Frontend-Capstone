@@ -33,6 +33,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4.1.14",
+    "@types/googlemaps": "^3.43.3",
     "@types/node": "^20",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
