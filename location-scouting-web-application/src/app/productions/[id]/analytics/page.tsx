@@ -3,6 +3,13 @@ import {notFound} from "next/navigation";
 import {Box, Button, Typography} from "@mui/material";
 import Link from "next/link";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import AnalyticsDashboard from "@/app/productions/[id]/analytics/AnalyticsDashboard";
+import {
+    getAnalyticsSummary, getKeywordDistribution,
+    getKeywordGaps,
+    getLocationPoints,
+    getSceneCoverage
+} from "@/app/services/analyticsService";
 
 const KEYWORD_DISTRIBUTION_LIMIT = 10
 
@@ -39,7 +46,7 @@ export default async function ProjectAnalyticsPage({
     return (
         <Box>
             {/*Navigation*/}
-            <Box sx={{ display: flex, alignItems: 'center', gap: 2, mb: 1}}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1}}>
                 <Link href={`/productions/${projectId}`} style={{ textDecoration: 'none' }}>
                     <Button startIcon={<ArrowBackIcon />} variant = "outlined" size = "small">
                         Back
@@ -61,6 +68,14 @@ export default async function ProjectAnalyticsPage({
 
             {/* Client dashboard receives all pre-fetched data */}
             <AnalyticsDashboard
+                projectName={project.name}
+                projectId={projectId}
+                summary={summary}
+                locationPoints={locationPoints}
+                sceneCoverage={sceneCoverage}
+                keywordGaps={keywordGaps}
+                keywordDistribution={keywordDistribution}
+            />
         </Box>
     )
 

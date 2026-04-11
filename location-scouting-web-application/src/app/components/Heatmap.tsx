@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useMemo } from "react";
 import { APIProvider, Map, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
+import {LocationPoint} from "@/app/productions/[id]/analytics/analytics.types";
 
 export type HeatPointType = {
   locationId: string;
@@ -14,7 +15,7 @@ export type HeatPointType = {
 };
 
 export interface HeatmapProps {
-  points: HeatPointType[];
+  points: LocationPoint[];
 }
 
 const WEIGHT = 3;
