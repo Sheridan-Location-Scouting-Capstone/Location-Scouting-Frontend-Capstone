@@ -59,6 +59,29 @@ function HeatmapLayer({ points }: HeatmapProps) {
     };
   }, [map, visualization, heatmapData]);
 
+  useEffect(() => {
+    if (!map || points.length === 0) return;
+
+    const validPoints = points.filter(
+        (p) => p.latitude !== undefined && p.longitude !== undefined
+    );
+    if (validPoints.length === 0) return;
+
+    const bounds = new google.maps.LatLngBounds();
+    validPoints.forEach((p) => {
+      bounds.extend({ lat: p.latitude!, lng: p.longitude! });
+    });
+
+    map.fitBounds(bounds, 60);
+
+    // Clamp zoom for single-point case so it doesn't zoom in to street level
+    if (validPoints.length === 1) {
+      const listener = google.maps.event.addListenerOnce(map, 'idle', () => {
+        if ((map.getZoom() ?? 0) > 13) map.setZoom(13);
+      });
+      return () => google.maps.event.removeListener(listener);
+    }
+  }, [map, points]);
   return null;
 }
 

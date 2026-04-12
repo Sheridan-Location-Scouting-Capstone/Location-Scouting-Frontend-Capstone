@@ -6,6 +6,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
 import Link from "next/link";
 import SceneTable from '@/app/components/SceneTable'
+import AnalyticsIcon from '@mui/icons-material/Analytics'
 
 export default async function ProductionDetailPage({
   params,
@@ -38,12 +39,14 @@ export default async function ProductionDetailPage({
         </Link>
         <Box sx={{ display: 'flex', gap: 1.5 }}>
             <Link href={`/productions/${projectId}/edit`} style={{ textDecoration: 'none' }}>
-            <Button variant="contained" color="secondary">Manage Production</Button>
+                <Button variant="contained" color="secondary">Manage Production</Button>
+            </Link>
+            <Link href={`/productions/${projectId}/analytics`} style={{ textDecoration: 'none' }}>
+                <Button variant="outlined" startIcon={<AnalyticsIcon />}>Analytics</Button>
             </Link>
             <Link href={`/productions/${projectId}/scenes/new`} style={{ textDecoration: 'none' }}>
-            <Button variant="contained" startIcon={<AddIcon />}>Add New Scene</Button>
+                <Button variant="contained" startIcon={<AddIcon />}>Add New Scene</Button>
             </Link>
- 
         </Box>
     </Box>
 

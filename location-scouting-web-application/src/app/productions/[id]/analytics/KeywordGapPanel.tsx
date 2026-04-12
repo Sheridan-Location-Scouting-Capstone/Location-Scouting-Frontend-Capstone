@@ -56,7 +56,9 @@ export default function KeywordGapPanel({ gaps }: { gaps: KeywordGap[] }) {
                                 justifyContent: 'space-between',
                                 px: 1.5,
                                 py: 1,
-                                bgcolor: 'error.light',
+                                bgcolor: 'rgba(211, 47, 47, 0.08)',
+                                border: '1px solid',
+                                borderColor: 'rgba(211, 47, 47, 0.2)',
                                 borderRadius: 1,
                             }}
                         >
