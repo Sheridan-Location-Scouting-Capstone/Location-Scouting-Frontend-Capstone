@@ -72,8 +72,8 @@ export default function SceneCoverageChart({ coverage }: { coverage: SceneCovera
                     <XAxis type="number" domain={[0, total]} hide />
                     <YAxis type="category" dataKey="name" hide />
                     <Tooltip
-                        formatter={(value: number, name: string) => {
-                            const label = segments.find((s) => s.key === name)?.label ?? name
+                        formatter={(value , name ) => {
+                            const label = segments.find((s) => s.key === name)?.label ?? String(name)
                             return [`${value} scenes`, label]
                         }}
                     />

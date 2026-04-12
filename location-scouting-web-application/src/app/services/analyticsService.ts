@@ -10,6 +10,7 @@ import type {
     KeywordGap,
     KeywordFrequency,
 } from "@/app/productions/[id]/analytics/analytics.types";
+import {IntExt} from "@prisma/client";
 
 type Options = { db?: typeof defaultPrisma }
 
@@ -29,8 +30,69 @@ export async function getAnalyticsSummary(
     projectId: string,
     options?: Options
 ): Promise<{ success: true; data: AnalyticsSummary } | { success: false; error: string }> {
-    // TODO: Implement Prisma aggregation queries
-    throw new Error('Not implemented')
+    const db = options?.db ?? defaultPrisma
+
+    try {
+
+        const scenes = await db.scene.findMany({
+            where: {projectId: projectId}
+        })
+
+        const totalScenes = scenes.length
+        const intCount = scenes.filter((e) => e.intExt === IntExt.INT).length
+        const extCount = scenes.filter((e) => e.intExt === IntExt.EXT).length
+        const intExtCount = scenes.filter((e) => e.intExt === IntExt.INT_EXT).length
+
+        const scenesWithCandidates = await db.scene.count({
+            where: {
+                projectId: projectId,
+                candidates: {
+                    some: {}
+                }
+            }
+        })
+
+        const scenesWithSelected = await db.scene.count({
+            where: {
+                projectId: projectId,
+                candidates: {
+                    some: {selected: true}
+                }
+            }
+        })
+
+        const locationKeywords = await db.location.findMany({
+            select: {
+                keywords: true
+            }
+        })
+
+        // Flatten all location keywords into one big set (case-insensitive)
+        const normalizedLocationKeywords = new Set(locationKeywords.flatMap((kSet) => kSet.keywords.map((k) => k.toLowerCase())))
+
+        // For each unique scene keyword, check if it exists in the library set
+        const sceneKeywords = new Set(scenes.flatMap((s) => s.keywords.map((k) => k.toLowerCase())))
+
+        const unmatchedKeywords = [...sceneKeywords].filter((kw) => !normalizedLocationKeywords.has(kw)).length
+        const matchedKeywords = [...sceneKeywords].filter((kw) => normalizedLocationKeywords.has(kw)).length
+        const uniqueKeywords = sceneKeywords.size
+
+        return { success: true, data: {
+                totalScenes,
+                intCount,
+                extCount,
+                intExtCount,
+                scenesWithCandidates,
+                scenesWithSelected,
+                uniqueKeywords,
+                matchedKeywords,
+                unmatchedKeywords
+        }}
+    } catch (error) {
+        console.error(error)
+        return { success: false, error: "Failed to load analytics" }
+    }
+
 }
 
 /**
