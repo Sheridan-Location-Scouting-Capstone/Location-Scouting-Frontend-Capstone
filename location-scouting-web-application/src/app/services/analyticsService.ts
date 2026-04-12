@@ -107,8 +107,28 @@ export async function getLocationPoints(
     projectId: string,
     options?: Options
 ): Promise<{ success: true; data: LocationPoint[] } | { success: false; error: string }> {
-    // TODO: Implement — join Scene → Candidate → Location, select distinct lat/lng
-    throw new Error('Not implemented')
+    const db = options?.db ?? defaultPrisma
+
+    const locations = await db.location.findMany({
+        where: {
+            status: 'ACTIVE',
+            latitude: { not: null },
+            longitude: { not: null },
+            candidates: {
+                some: {
+                    scene: { projectId },
+                },
+            },
+        },
+        select: { latitude: true, longitude: true },
+    })
+
+    const data = locations.map((l) => ({
+        latitude: l.latitude as number,
+        longitude: l.longitude as number,
+    }))
+
+    return { success: true, data }
 }
 
 /**
@@ -123,9 +143,24 @@ export async function getSceneCoverage(
     projectId: string,
     options?: Options
 ): Promise<{ success: true; data: SceneCoverage } | { success: false; error: string }> {
-    // TODO: Implement — could do this with a single query using Prisma's _count
-    // on the candidates relation, then bucket in JS
-    throw new Error('Not implemented')
+    const db = options?.db ?? defaultPrisma
+
+    const [selected, candidateOnly, noCandidates] = await Promise.all([
+        db.scene.count({
+            where: { projectId, candidates: { some: { selected: true } } },
+        }),
+        db.scene.count({
+            where: {
+                projectId,
+                candidates: { some: {}, none: { selected: true } },
+            },
+        }),
+        db.scene.count({
+            where: { projectId, candidates: { none: {} } },
+        }),
+    ])
+
+    return { success: true, data: { selected, candidateOnly, noCandidates } }
 }
 
 /**
@@ -145,8 +180,51 @@ export async function getKeywordGaps(
     projectId: string,
     options?: Options
 ): Promise<{ success: true; data: KeywordGap[] } | { success: false; error: string }> {
-    // TODO: Implement
-    throw new Error('Not implemented')
+    const db = options?.db ?? defaultPrisma
+
+    const [scenes, locations] = await Promise.all([
+        db.scene.findMany({
+            where: { projectId },
+            select: { keywords: true },
+        }),
+        db.location.findMany({
+            where: { status: 'ACTIVE' },
+            select: { keywords: true },
+        }),
+    ])
+
+    // Build a case-insensitive set of all keywords in the library
+    const libraryKeywords = new Set(
+        locations.flatMap((l) => l.keywords.map((k) => k.toLowerCase()))
+    )
+
+    // Count scene occurrences for each unmatched keyword
+    // Map preserves the original casing of the first occurrence for display
+    const gapCounts = new Map<string, { display: string; count: number }>()
+
+    for (const scene of scenes) {
+        // Dedupe within a single scene so one scene = one count per keyword
+        const seenInScene = new Set<string>()
+        for (const kw of scene.keywords) {
+            const normalized = kw.toLowerCase()
+            if (libraryKeywords.has(normalized)) continue
+            if (seenInScene.has(normalized)) continue
+            seenInScene.add(normalized)
+
+            const existing = gapCounts.get(normalized)
+            if (existing) {
+                existing.count += 1
+            } else {
+                gapCounts.set(normalized, { display: kw, count: 1 })
+            }
+        }
+    }
+
+    const data: KeywordGap[] = Array.from(gapCounts.values())
+        .map((v) => ({ keyword: v.display, sceneCount: v.count }))
+        .sort((a, b) => b.sceneCount - a.sceneCount)
+
+    return { success: true, data }
 }
 
 /**
@@ -166,6 +244,36 @@ export async function getKeywordDistribution(
     limit?: number,
     options?: Options
 ): Promise<{ success: true; data: KeywordFrequency[] } | { success: false; error: string }> {
-    // TODO: Implement
-    throw new Error('Not implemented')
+    const db = options?.db ?? defaultPrisma
+
+    const scenes = await db.scene.findMany({
+        where: { projectId },
+        select: { keywords: true },
+    })
+
+    // Count how many scenes contain each keyword (case-insensitive)
+    const counts = new Map<string, { display: string; count: number }>()
+
+    for (const scene of scenes) {
+        const seenInScene = new Set<string>()
+        for (const kw of scene.keywords) {
+            const normalized = kw.toLowerCase()
+            if (seenInScene.has(normalized)) continue
+            seenInScene.add(normalized)
+
+            const existing = counts.get(normalized)
+            if (existing) {
+                existing.count += 1
+            } else {
+                counts.set(normalized, { display: kw, count: 1 })
+            }
+        }
+    }
+
+    const data: KeywordFrequency[] = Array.from(counts.values())
+        .map((v) => ({ keyword: v.display, sceneCount: v.count }))
+        .sort((a, b) => b.sceneCount - a.sceneCount)
+        .slice(0, limit)
+
+    return { success: true, data }
 }
