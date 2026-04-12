@@ -2,13 +2,12 @@ import { PhotoUpdateInput } from "../schemas/photoUpdateInput"
 import { PhotoUploadInput } from "../schemas/photoUploadInput"
 
 export type KeywordGenerator = (content : string) => Promise<{ success: true, data: string[] } | { success : false, error: string }>
-export type PhotoKeywordGenerator = (content : PhotoUploadInput) => Promise<{ success: true, data: string[] } | { success : false, error: string }>
 
 export async function getKeywords(content: string): Promise<{ success: true, data: string[] } | { success : false, error: string }> {
     const url = process.env.KEYWORD_GENERATION_API_URL
     if(!url) {
         console.warn('[KeywordGeneration] No API URL configured')
-        return { success: false}
+        return { success: false, error: 'No API URL configured' }
     }
 
     try {
@@ -21,7 +20,7 @@ export async function getKeywords(content: string): Promise<{ success: true, dat
 
         if (!response.ok) {
             console.error(`[KeywordGeneration] API returned ${ response.status }`)
-            return { success: false }
+            return { success: false, error: `${response.status}` }
         }
 
         const keywords: string[] = await response.json()
