@@ -79,7 +79,7 @@ export async function uploadPhoto(
         ?.slice(0, 3)
         ?.map((label: any) => label.description) ?? []
 
-    console.log("Keywords:", keywords)
+    // console.log("Keywords:", keywords)
 
     return { url, key, keywords }
 }

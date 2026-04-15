@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import {useState, useRef, useEffect} from 'react'
 import {
     Box,
     Typography,
@@ -113,6 +113,10 @@ export default function LocationPhotoGallery({
     const [nameValue, setNameValue] = useState('')
     const [orderedPhotos, setOrderedPhotos] = useState(photos)
 
+    useEffect(() => {
+        setOrderedPhotos(photos)
+    }, [photos])
+
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: { distance: 8 },
@@ -218,7 +222,7 @@ export default function LocationPhotoGallery({
 
       <Box sx={{ display: 'flex', gap: 2 }}>
         {/* Thumbnail grid — left side */}
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext id="photo-gallery-dnd" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={orderedPhotos.map(p => p.id)} strategy={rectSortingStrategy}>
         <Box
           sx={{

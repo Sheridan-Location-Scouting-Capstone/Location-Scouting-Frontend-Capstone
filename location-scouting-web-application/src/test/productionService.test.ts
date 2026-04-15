@@ -77,7 +77,7 @@ describe('Production Service', () => {
 
                 expect(savedProject!.data.latitude).not.toBeNull()
                 expect(savedProject!.data.longitude).not.toBeNull()
-                console.log(savedProject)
+
             })
         })
     })

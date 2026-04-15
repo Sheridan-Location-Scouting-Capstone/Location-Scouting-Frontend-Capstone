@@ -51,7 +51,6 @@ export async function createLocation(
     geocoder(address)
         .then(async coords => {
             if (coords) {
-                console.log(coords)
                 await db.location.update({
                     where: { id: location.id},
                     data: { latitude: coords.lat, longitude: coords.lng }

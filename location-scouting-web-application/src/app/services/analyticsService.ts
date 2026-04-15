@@ -26,9 +26,7 @@ type Options = { db?: typeof defaultPrisma }
  *   all unique keywords across locations that are candidates in this project
  *   to get matched vs unmatched counts
  */
-export async function getAnalyticsSummary(
-    projectId: string,
-    options?: Options
+export async function getAnalyticsSummary(projectId: string, options?: Options
 ): Promise<{ success: true; data: AnalyticsSummary } | { success: false; error: string }> {
     const db = options?.db ?? defaultPrisma
 
@@ -103,8 +101,7 @@ export async function getAnalyticsSummary(
  * filter out locations where latitude or longitude is null,
  * deduplicate by location ID (same location can be candidate for multiple scenes)
  */
-export async function getLocationPoints(
-    projectId: string,
+export async function getLocationPoints( projectId: string,
     options?: Options
 ): Promise<{ success: true; data: LocationPoint[] } | { success: false; error: string }> {
     const db = options?.db ?? defaultPrisma
@@ -139,8 +136,7 @@ export async function getLocationPoints(
  *
  * These three should sum to totalScenes.
  */
-export async function getSceneCoverage(
-    projectId: string,
+export async function getSceneCoverage( projectId: string,
     options?: Options
 ): Promise<{ success: true; data: SceneCoverage } | { success: false; error: string }> {
     const db = options?.db ?? defaultPrisma
@@ -176,8 +172,7 @@ export async function getSceneCoverage(
  *
  * Note: keyword matching should be case-insensitive (same as Jaccard in scoring)
  */
-export async function getKeywordGaps(
-    projectId: string,
+export async function getKeywordGaps(projectId: string,
     options?: Options
 ): Promise<{ success: true; data: KeywordGap[] } | { success: false; error: string }> {
     const db = options?.db ?? defaultPrisma
@@ -239,8 +234,7 @@ export async function getKeywordGaps(
  * The "Other" bucket aggregation happens at the page level, not here —
  * this just returns the sorted list and the page truncates + groups.
  */
-export async function getKeywordDistribution(
-    projectId: string,
+export async function getKeywordDistribution(projectId: string,
     limit?: number,
     options?: Options
 ): Promise<{ success: true; data: KeywordFrequency[] } | { success: false; error: string }> {

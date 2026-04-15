@@ -107,7 +107,7 @@ describe('Scene Service', () => {
             if (!project.success) {
                 throw new Error('Failed to create project for test setup')
             }
-            console.log("created project for scene test:", project.data)
+
 
             const sceneInput = {
                 sceneNumber: 2,
@@ -191,7 +191,7 @@ describe('Scene Service', () => {
             if(createdScene.success) {
                 expect(createdScene.data).not.toBeNull()
                 expect(createdScene.data.keywords).toBeDefined()
-                console.log(createdScene.data.keywords)
+
             }
         }, 10000)
     })
@@ -347,7 +347,7 @@ describe('Scene Service', () => {
             const result = await deleteScene(sceneId, { db: prisma })
 
             // Assert
-            console.log('Deleting Scene')
+
             expect(result.success).toBe(true)
 
             // Assert again to verify scene no longer exists

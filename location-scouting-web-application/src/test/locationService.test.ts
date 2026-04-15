@@ -191,7 +191,7 @@ describe('Location Services', () => {
                 const savedLocation = await prisma.location.findFirst({where: {id: result.id}});
                 expect(savedLocation!.latitude).not.toBeNull()
                 expect(savedLocation!.longitude).not.toBeNull()
-                console.log(savedLocation)
+
             })
         })
 
@@ -213,7 +213,7 @@ describe('Location Services', () => {
                 const savedLocation = await prisma.location.findFirst({where: {id: result.id}})
                 expect(savedLocation!.latitude).not.toBeNull()
                 expect(savedLocation!.longitude).not.toBeNull()
-                console.log(savedLocation)
+
             }, {timeout: 10000}) // give it 10 seconds for the real network call
         })
 
@@ -237,7 +237,7 @@ describe('Location Services', () => {
                 const savedLocation = await prisma.location.findFirst({where: {id: result.id}});
                 expect(savedLocation!.latitude).toBeNull()
                 expect(savedLocation!.longitude).toBeNull()
-                console.log(savedLocation)
+
             }, {timeout: 10000})
         })
 
@@ -263,7 +263,7 @@ describe('Location Services', () => {
                 const savedLocation = await prisma.location.findFirst({where: {id: result.id}});
                 expect(savedLocation!.latitude).toBeNull()
                 expect(savedLocation!.longitude).toBeNull()
-                console.log(savedLocation)
+
             }, {timeout: 10000})
         })
 

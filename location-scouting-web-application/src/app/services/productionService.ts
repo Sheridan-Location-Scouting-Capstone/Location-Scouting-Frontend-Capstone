@@ -70,7 +70,6 @@ export async function createProject(input: z.infer<typeof CreateProjectSchema>, 
         gc(address)
             .then(async coords => {
                 if (coords) {
-                    console.log(`Setting coords for production: ${coords}`)
                     await db.project.update({
                         where: {id: project.id},
                         data: {latitude: coords.lat, longitude: coords.lng}

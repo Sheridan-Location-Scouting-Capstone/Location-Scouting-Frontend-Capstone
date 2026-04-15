@@ -21,8 +21,8 @@ const DRAWER_WIDTH = 220
 const navItems = [
   { label: 'Productions', href: '/productions', icon: <MovieIcon /> },
   { label: 'Locations', href: '/locations', icon: <LocationOnIcon /> },
-  { label: 'Contacts', href: '/contacts', icon: <PeopleIcon /> },
-  { label: 'Calendar', href: '/calendar', icon: <CalendarMonthIcon /> },
+  // { label: 'Contacts', href: '/contacts', icon: <PeopleIcon /> },
+  // { label: 'Calendar', href: '/calendar', icon: <CalendarMonthIcon /> },
 ]
 
 export default function Sidebar() {

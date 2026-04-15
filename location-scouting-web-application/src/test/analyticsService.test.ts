@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { prisma } from '@/app/lib/prisma'
+import { prisma } from '@/test/setup'
 import {
     getAnalyticsSummary,
     getLocationPoints,
