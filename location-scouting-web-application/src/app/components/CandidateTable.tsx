@@ -347,7 +347,7 @@ export default function CandidateTable({
                                                     },
                                                 }),
                                             }}
-                                            onClick={() => router.push(`/locations/${loc.id}`)}
+                                            onClick={() => router.push(`/productions/${projectId}/scenes/${sceneId}/candidate/${candidate.id}`)}
                                         >
                                             {/* Thumbnail */}
                                             <TableCell sx={{ width: 80 }}>
