@@ -16,7 +16,7 @@ import {
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import CloseIcon from '@mui/icons-material/Close'
 import ImageIcon from '@mui/icons-material/Image'
-import { createLocationAction } from '@/app/actions/locationActions'
+import { createLocationAction } from '@/actions/locationActions'
 
 export default function NewLocationPage() {
   const router = useRouter()

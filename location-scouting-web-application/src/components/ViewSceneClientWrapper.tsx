@@ -4,12 +4,12 @@
 import { useState } from 'react'
 import { Box, Button } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
-import AddCandidateModal from '@/app/components/AddCandidateModal'
-import CandidateTable from '@/app/components/CandidateTable'
-import { CandidateRow } from '@/app/components/CandidateTable'
+import AddCandidateModal from '@/components/AddCandidateModal'
+import CandidateTable from '@/components/CandidateTable'
+import { CandidateRow } from '@/components/CandidateTable'
 import Link from "next/link";
 import EditIcon from "@mui/icons-material/Edit";
-import RecommendationsModal from "@/app/components/RecommendationsModal";
+import RecommendationsModal from "@/components/RecommendationsModal";
 
 export default function ViewSceneClientWrapper({
    rows,

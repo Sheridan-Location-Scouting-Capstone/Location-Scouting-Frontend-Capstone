@@ -6,7 +6,7 @@ import {
     getSceneCoverage,
     getKeywordGaps,
     getKeywordDistribution,
-} from '@/app/services/analyticsService'
+} from '@/services/analyticsService'
 
 // ─── Fixture ────────────────────────────────────────────────
 // Creates a known dataset:

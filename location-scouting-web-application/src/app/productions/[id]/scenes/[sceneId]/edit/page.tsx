@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
-import { getSceneById } from '@/app/services/sceneService'
-import { getProjectById } from '@/app/services/productionService'
+import { getSceneById } from '@/services/sceneService'
+import { getProjectById } from '@/services/productionService'
 import EditSceneForm from './EditSceneForm'
 
 export default async function EditScenePage({

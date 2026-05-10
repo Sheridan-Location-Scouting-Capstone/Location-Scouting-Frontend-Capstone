@@ -1,8 +1,8 @@
-import {Result} from "@/app/schemas/result";
+import {Result} from "@/schemas/result";
 import {Candidate, Prisma} from "@prisma/client";
 import { prisma as defaultPrisma } from '@/lib/prisma'
 import { z } from 'zod'
-import {CreateCandidateSchema} from "@/app/schemas/candidateSchema"
+import {CreateCandidateSchema} from "@/schemas/candidateSchema"
 
 export const HISTORICAL_THRESHOLD: number = 5
 

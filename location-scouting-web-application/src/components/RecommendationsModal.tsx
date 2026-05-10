@@ -14,8 +14,8 @@ import {
 } from '@mui/material'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import AddIcon from '@mui/icons-material/Add'
-import { getRecommendationsAction } from '@/app/actions/candidateActions'
-import { addCandidateAction } from '@/app/actions/candidateActions'
+import { getRecommendationsAction } from '@/actions/candidateActions'
+import { addCandidateAction } from '@/actions/candidateActions'
 
 type ScoredLocation = {
     locationId: string

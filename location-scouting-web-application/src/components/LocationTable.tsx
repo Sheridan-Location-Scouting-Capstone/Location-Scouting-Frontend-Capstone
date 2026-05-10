@@ -27,7 +27,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import ArchiveIcon from '@mui/icons-material/Archive'
 import DeleteIcon from '@mui/icons-material/Delete'
-import { updateLocationStatusAction } from '@/app/actions/locationActions'
+import { updateLocationStatusAction } from '@/actions/locationActions'
 
 export type LocationRow = {
   id: string

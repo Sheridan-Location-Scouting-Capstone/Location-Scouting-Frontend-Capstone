@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { Box, Avatar, IconButton } from '@mui/material'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
-import ThemeRegistry from '@/app/components/ThemeRegistry'
-import Sidebar, { DRAWER_WIDTH } from '@/app/components/Sidebar'
+import ThemeRegistry from '@/components/ThemeRegistry'
+import Sidebar, { DRAWER_WIDTH } from '@/components/Sidebar'
 
 export const metadata: Metadata = {
   title: 'LocusPoint - Location Scouting',

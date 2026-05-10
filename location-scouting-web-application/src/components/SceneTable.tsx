@@ -23,7 +23,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import ArchiveIcon from "@mui/icons-material/Archive";
 import DeleteIcon from "@mui/icons-material/Delete";
-import {deleteSceneAction} from "@/app/actions/productionActions";
+import {deleteSceneAction} from "@/actions/productionActions";
 
 type Scene = {
   id: string

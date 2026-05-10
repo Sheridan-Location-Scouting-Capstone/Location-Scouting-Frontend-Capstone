@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import { PrismaClient } from "@prisma/client"
 import { beforeAll, beforeEach, afterAll } from 'vitest'
-import {ensureBucketExists} from "@/app/services/photoService";
+import {ensureBucketExists} from "@/services/photoService";
 import * as Minio from 'minio'
 
 const prisma = new PrismaClient({

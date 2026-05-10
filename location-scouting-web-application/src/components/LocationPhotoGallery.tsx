@@ -26,7 +26,7 @@ import {
     deletePhotoAction,
     updatePhotoDisplayOrderAction,
     updatePhotoNameAction
-} from '@/app/actions/locationActions'
+} from '@/actions/locationActions'
 import EditIcon from "@mui/icons-material/Edit";
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'

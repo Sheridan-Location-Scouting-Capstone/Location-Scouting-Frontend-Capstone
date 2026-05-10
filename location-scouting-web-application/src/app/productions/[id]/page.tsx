@@ -1,11 +1,11 @@
 import { notFound } from 'next/navigation'
 import { Box, Typography, Button } from '@mui/material'
-import {getProject, getScenesAction} from '@/app/actions/productionActions'
-import { getLocationsByProject } from '@/app/services/productionService'
+import {getProject, getScenesAction} from '@/actions/productionActions'
+import { getLocationsByProject } from '@/services/productionService'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
 import Link from "next/link";
-import SceneTable from '@/app/components/SceneTable'
+import SceneTable from '@/components/SceneTable'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
 
 export default async function ProductionDetailPage({

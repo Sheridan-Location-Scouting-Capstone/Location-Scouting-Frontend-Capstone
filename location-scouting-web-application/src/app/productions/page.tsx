@@ -1,8 +1,8 @@
 import { Box, Typography, Button } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import Link from 'next/link'
-import { getProjectsAction } from '@/app/actions/productionActions'
-import ProductionGrid from '@/app/components/ProductionGrid'
+import { getProjectsAction } from '@/actions/productionActions'
+import ProductionGrid from '@/components/ProductionGrid'
 
 export default async function ProductionsPage() {
   const projects = await getProjectsAction()

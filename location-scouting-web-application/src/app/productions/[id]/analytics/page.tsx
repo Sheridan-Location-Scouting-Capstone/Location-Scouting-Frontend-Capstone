@@ -1,4 +1,4 @@
-import {getProject} from "@/app/actions/productionActions";
+import {getProject} from "@/actions/productionActions";
 import {notFound} from "next/navigation";
 import {Box, Button, Typography} from "@mui/material";
 import Link from "next/link";
@@ -9,7 +9,7 @@ import {
     getKeywordGaps,
     getLocationPoints,
     getSceneCoverage
-} from "@/app/services/analyticsService";
+} from "@/services/analyticsService";
 
 const KEYWORD_DISTRIBUTION_LIMIT = 10
 

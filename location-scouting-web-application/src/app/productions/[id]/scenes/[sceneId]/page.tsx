@@ -2,14 +2,14 @@ import { notFound } from 'next/navigation'
 import { Box, Typography, Button } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Link from 'next/link'
-import { getSceneById } from '@/app/services/sceneService'
-import {getProject} from "@/app/actions/productionActions";
-import {getCandidatesForScene} from "@/app/services/candidateService";
-import SceneDetailCard from "@/app/components/SceneDetailCard";
-import CandidateTable, {CandidateRow} from "@/app/components/CandidateTable";
-import {getLocationsAction} from "@/app/actions/locationActions";
-import ViewSceneClientWrapper from "@/app/components/ViewSceneClientWrapper";
-import { scoreCandidates } from '@/app/services/recommendationService'
+import { getSceneById } from '@/services/sceneService'
+import {getProject} from "@/actions/productionActions";
+import {getCandidatesForScene} from "@/services/candidateService";
+import SceneDetailCard from "@/components/SceneDetailCard";
+import CandidateTable, {CandidateRow} from "@/components/CandidateTable";
+import {getLocationsAction} from "@/actions/locationActions";
+import ViewSceneClientWrapper from "@/components/ViewSceneClientWrapper";
+import { scoreCandidates } from '@/services/recommendationService'
 
 
 export default async function ViewScenePage({

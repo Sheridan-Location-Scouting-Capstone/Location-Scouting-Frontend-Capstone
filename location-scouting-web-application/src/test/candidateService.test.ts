@@ -1,19 +1,19 @@
 import {beforeEach, expect, describe, it, test} from "vitest";
-import {createLocation} from "@/app/services/locationService";
+import {createLocation} from "@/services/locationService";
 import { prisma } from '@/test/setup'
-import {createProject} from "@/app/services/productionService";
+import {createProject} from "@/services/productionService";
 import {IntExt} from "@prisma/client";
-import {KeywordGenerator} from "@/app/services/keywordGenerator";
-import {createScene} from "@/app/services/sceneService";
+import {KeywordGenerator} from "@/services/keywordGenerator";
+import {createScene} from "@/services/sceneService";
 import {
     createCandidate,
     getCandidatesForScene,
     removeCandidateFromScene,
     toggleCandidateSelected
-} from "@/app/services/candidateService";
-import {addPhotosToLocation} from "@/app/services/locationPhotoService";
-import {Geocoder} from "@/app/schemas/geocoder";
-import {PhotoUploadInput} from "@/app/schemas/photoUploadInput";
+} from "@/services/candidateService";
+import {addPhotosToLocation} from "@/services/locationPhotoService";
+import {Geocoder} from "@/schemas/geocoder";
+import {PhotoUploadInput} from "@/schemas/photoUploadInput";
 
 const dummyKeyWordGen: KeywordGenerator = async() => ({ success: true, data: ['house', 'generated', 'gothic'] })
 const mockGeocoder: Geocoder = async () => ({ lat: 43.6532, lng: -79.3832 })

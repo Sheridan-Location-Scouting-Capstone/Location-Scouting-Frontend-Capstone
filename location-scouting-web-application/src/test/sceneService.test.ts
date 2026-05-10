@@ -2,12 +2,12 @@ import {prisma} from '@/test/setup'
 import {beforeEach, describe, expect, it, test, vi} from 'vitest'
 // @ts-ignore
 import {IntExt} from "@prisma/client";
-import {createScene, deleteScene, getSceneById, getScenesForProject} from "@/app/services/sceneService";
-import {createProject} from "@/app/services/productionService";
-import {KeywordGenerator} from "@/app/services/keywordGenerator";
-import {createLocation} from "@/app/services/locationService";
-import {Geocoder} from "@/app/schemas/geocoder";
-import {createCandidate, getCandidateById} from "@/app/services/candidateService";
+import {createScene, deleteScene, getSceneById, getScenesForProject} from "@/services/sceneService";
+import {createProject} from "@/services/productionService";
+import {KeywordGenerator} from "@/services/keywordGenerator";
+import {createLocation} from "@/services/locationService";
+import {Geocoder} from "@/schemas/geocoder";
+import {createCandidate, getCandidateById} from "@/services/candidateService";
 
 
 const dummyKeyWordGen: KeywordGenerator = async() => ({ success: true, data: ['generated', 'keywords']})

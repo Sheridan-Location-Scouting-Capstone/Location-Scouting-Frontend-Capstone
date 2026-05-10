@@ -1,5 +1,5 @@
 import * as Minio from 'minio'
-import { PhotoUploadInput} from "@/app/schemas/photoUploadInput";
+import { PhotoUploadInput} from "@/schemas/photoUploadInput";
 import vision from '@google-cloud/vision'
 
 export type PhotoUploadResult = {

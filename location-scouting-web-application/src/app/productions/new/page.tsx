@@ -12,7 +12,7 @@ import {
   Grid,
 } from '@mui/material'
 import ImageIcon from '@mui/icons-material/Image'
-import { createProjectAction } from '@/app/actions/productionActions'
+import { createProjectAction } from '@/actions/productionActions'
 
 export default function NewProductionPage() {
   const router = useRouter()

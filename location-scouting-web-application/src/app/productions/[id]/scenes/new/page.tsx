@@ -16,7 +16,7 @@ import {
     Grid,
 } from '@mui/material'
 import MovieIcon from '@mui/icons-material/Movie'
-import { createSceneAction } from '@/app/actions/productionActions'
+import { createSceneAction } from '@/actions/productionActions'
 
 export default function NewScenePage() {
     const router = useRouter()

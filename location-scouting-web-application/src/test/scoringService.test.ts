@@ -4,7 +4,7 @@ import {
     DEFAULT_MAX_DISTANCE_KM, DEFAULT_MIN_DISTANCE_KM,
     haversineDistance,
     MAX_PROXIMITY_SCORE, MIN_PROXIMITY_SCORE
-} from "@/app/services/scoringService";
+} from "@/services/scoringService";
 
 describe('Scoring Service ', () => {
     describe('proximityScore', () => {

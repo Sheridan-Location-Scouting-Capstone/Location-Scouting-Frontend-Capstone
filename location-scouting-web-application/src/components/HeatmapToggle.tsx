@@ -6,7 +6,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { Heatmap, HeatPointType } from "./Heatmap";
 import {Box} from "@mui/material";
 import Link from "next/link";
-import SceneTable from '@/app/components/SceneTable'
+import SceneTable from '@/components/SceneTable'
 
 interface ProductionsBodyProps {
     points: HeatPointType[];

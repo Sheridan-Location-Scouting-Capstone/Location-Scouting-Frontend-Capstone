@@ -1,8 +1,8 @@
 import { prisma as defaultPrisma} from '@/lib/prisma'
 import { z } from 'zod'
-import {CreateSceneSchema, UpdateSceneSchema} from "@/app/schemas/sceneSchema";
-import {getKeywords, KeywordGenerator} from "@/app/services/keywordGenerator";
-import {Result} from "@/app/schemas/result";
+import {CreateSceneSchema, UpdateSceneSchema} from "@/schemas/sceneSchema";
+import {getKeywords, KeywordGenerator} from "@/services/keywordGenerator";
+import {Result} from "@/schemas/result";
 import {Scene} from "@prisma/client";
 
 const defaultKeywordGenerator: KeywordGenerator = async (scriptContent: string) => {

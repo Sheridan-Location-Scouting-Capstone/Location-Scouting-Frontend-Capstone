@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import {createProject, getProjects, getProjectById, updateProject} from '@/app/services/productionService'
-import {createScene, deleteScene, getScenesForProject, updateScene} from '@/app/services/sceneService'
+import {createProject, getProjects, getProjectById, updateProject} from '@/services/productionService'
+import {createScene, deleteScene, getScenesForProject, updateScene} from '@/services/sceneService'
 
 // ─── Projects ───────────────────────────────────────────────
 

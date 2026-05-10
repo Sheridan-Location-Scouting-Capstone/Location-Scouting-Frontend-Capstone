@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import {uploadPhoto, uploadPhotos, deletePhoto} from '@/app/services/photoService'
-import {PhotoUploadInput} from "@/app/schemas/photoUploadInput";
+import {uploadPhoto, uploadPhotos, deletePhoto} from '@/services/photoService'
+import {PhotoUploadInput} from "@/schemas/photoUploadInput";
 
 const testBucket = process.env.MINIO_TEST_BUCKET || 'location-photos-test'
 

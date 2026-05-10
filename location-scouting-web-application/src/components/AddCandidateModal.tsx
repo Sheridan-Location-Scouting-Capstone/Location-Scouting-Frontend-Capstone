@@ -21,8 +21,8 @@ import {
 import SearchIcon from '@mui/icons-material/Search'
 import CloseIcon from '@mui/icons-material/Close'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import { getLocationAction } from '@/app/actions/locationActions'
-import { addCandidateAction } from '@/app/actions/candidateActions'
+import { getLocationAction } from '@/actions/locationActions'
+import { addCandidateAction } from '@/actions/candidateActions'
 
 // ─── Types ──────────────────────────────────────────────────
 

@@ -13,7 +13,7 @@ import {
   Grid,
 } from '@mui/material'
 import ImageIcon from '@mui/icons-material/Image'
-import { updateLocationAction } from '@/app/actions/locationActions'
+import { updateLocationAction } from '@/actions/locationActions'
 import { isValidPhoneNumber } from "libphonenumber-js"
 
 type LocationData = {

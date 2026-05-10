@@ -11,11 +11,11 @@ import {
   // updateLocationStatus,
   // searchLocations,
   // filterByKeywords,
-} from '@/app/services/locationService'
+} from '@/services/locationService'
 import {
   addPhotosToLocation,
   removePhotosFromLocation, updatePhoto, updatePhotoDisplayOrder
-} from '@/app/services/locationPhotoService'
+} from '@/services/locationPhotoService'
 
 // ─── List / Search ──────────────────────────────────────────
 

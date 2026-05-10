@@ -32,7 +32,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import { toggleCandidateSelectedAction, removeCandidateAction } from '@/app/actions/candidateActions'
+import { toggleCandidateSelectedAction, removeCandidateAction } from '@/actions/candidateActions'
 
 export type CandidateRow = {
     id: string

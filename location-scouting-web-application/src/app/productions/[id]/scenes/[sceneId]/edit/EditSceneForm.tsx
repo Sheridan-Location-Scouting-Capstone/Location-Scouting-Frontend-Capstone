@@ -16,7 +16,7 @@ import {
     Grid, Autocomplete, Chip,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
-import { updateSceneAction } from '@/app/actions/productionActions'
+import { updateSceneAction } from '@/actions/productionActions'
 import { Scene } from '@prisma/client'
 
 export default function EditSceneForm({

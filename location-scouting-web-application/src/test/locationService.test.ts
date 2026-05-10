@@ -5,10 +5,10 @@ import {
     getLocationById, getLocations,
     getLocationWithPhotos,
     updateLocation
-} from "@/app/services/locationService";
+} from "@/services/locationService";
 import {prisma} from '@/test/setup'
-import {Geocoder} from "@/app/schemas/geocoder";
-import {addPhotosToLocation} from "@/app/services/locationPhotoService";
+import {Geocoder} from "@/schemas/geocoder";
+import {addPhotosToLocation} from "@/services/locationPhotoService";
 // @ts-ignore
 import { LocationStatus } from "@prisma/client";
 

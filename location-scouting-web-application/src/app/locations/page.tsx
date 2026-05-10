@@ -2,8 +2,8 @@ import { Suspense } from 'react'
 import { Box, Typography, Button, CircularProgress } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import Link from 'next/link'
-import LocationTable from '@/app/components/LocationTable'
-import { getLocationsAction } from '@/app/actions/locationActions'
+import LocationTable from '@/components/LocationTable'
+import { getLocationsAction } from '@/actions/locationActions'
 
 export default async function LocationsPage({
                                               searchParams,

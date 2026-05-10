@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Box, Chip, Typography } from '@mui/material'
-import { removeKeywordAction } from '@/app/actions/locationActions'
+import { removeKeywordAction } from '@/actions/locationActions'
 
 export default function KeywordChips({ locationId, initialKeywords }: {
     locationId: string

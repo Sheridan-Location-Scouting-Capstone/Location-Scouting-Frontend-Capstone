@@ -1,7 +1,7 @@
 import {prisma} from '@/test/setup'
 import {describe, expect, it, vi} from 'vitest'
-import {createProject, getProjectById, getProjects} from "@/app/services/productionService";
-import {Geocoder} from "@/app/schemas/geocoder";
+import {createProject, getProjectById, getProjects} from "@/services/productionService";
+import {Geocoder} from "@/schemas/geocoder";
 
 const mockLat = 43.6532
 const mockLong = -79.3832

@@ -4,11 +4,11 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import EditIcon from '@mui/icons-material/Edit'
 import ShareIcon from '@mui/icons-material/Share'
 import Link from 'next/link'
-import { getLocationAction } from '@/app/actions/locationActions'
-import LocationPhotoGallery from '@/app/components/LocationPhotoGallery'
-import LocationStatusActions from '@/app/components/LocationStatusActions'
-import KeywordChips from '@/app/components/KeywordChips'
-import { GoogleMap } from '@/app/components/GoogleMap'
+import { getLocationAction } from '@/actions/locationActions'
+import LocationPhotoGallery from '@/components/LocationPhotoGallery'
+import LocationStatusActions from '@/components/LocationStatusActions'
+import KeywordChips from '@/components/KeywordChips'
+import { GoogleMap } from '@/components/GoogleMap'
 
 export default async function LocationDetailPage({
   params,

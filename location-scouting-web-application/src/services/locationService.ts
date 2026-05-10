@@ -1,11 +1,11 @@
 import { prisma as defaultPrisma} from '@/lib/prisma'
 import {$Enums, Location, Prisma, PrismaClient} from "@prisma/client";
-import {CreateLocationScheme, UpdateLocationScheme} from "@/app/schemas/locationSchema";
-import {Geocoder} from "@/app/schemas/geocoder";
-import {PhotoUploadInput} from "@/app/schemas/photoUploadInput";
-import { uploadPhotos, defaultBucket } from "@/app/services/photoService";
+import {CreateLocationScheme, UpdateLocationScheme} from "@/schemas/locationSchema";
+import {Geocoder} from "@/schemas/geocoder";
+import {PhotoUploadInput} from "@/schemas/photoUploadInput";
+import { uploadPhotos, defaultBucket } from "@/services/photoService";
 import LocationStatus = $Enums.LocationStatus;
-import {addPhotosToLocation, removePhotosFromLocation} from "@/app/services/locationPhotoService";
+import {addPhotosToLocation, removePhotosFromLocation} from "@/services/locationPhotoService";
 
 export const defaultGeocoder: Geocoder = async (address: string) => {
     const encoded = encodeURIComponent(address)

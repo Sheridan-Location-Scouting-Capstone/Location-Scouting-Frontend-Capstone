@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getProjectById } from '@/app/services/productionService'
+import { getProjectById } from '@/services/productionService'
 import EditProductionForm from './EditProductionForm'
 
 export default async function EditProductionPage({params}: {

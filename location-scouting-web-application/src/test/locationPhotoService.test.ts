@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, it } from 'vitest'
-import {createLocation} from "@/app/services/locationService";
+import {createLocation} from "@/services/locationService";
 import {prisma} from "@/test/setup";
-import {addPhotosToLocation, updatePhoto, updatePhotoDisplayOrder} from "@/app/services/locationPhotoService";
+import {addPhotosToLocation, updatePhoto, updatePhotoDisplayOrder} from "@/services/locationPhotoService";
 
 describe('Location Photo Service', () => {
     describe('addPhotosToLocation', async() => {

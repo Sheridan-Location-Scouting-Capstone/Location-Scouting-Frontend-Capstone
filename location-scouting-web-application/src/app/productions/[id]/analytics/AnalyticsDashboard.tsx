@@ -9,7 +9,7 @@ import {
 } from "@/app/productions/[id]/analytics/analytics.types";
 import {Box} from "@mui/material";
 import StatCards from "@/app/productions/[id]/analytics/StatCards";
-import { Heatmap } from "@/app/components/Heatmap";
+import { Heatmap } from "@/components/Heatmap";
 import SceneCoverageChart from "@/app/productions/[id]/analytics/SceneCoverageChart";
 import KeywordGapPanel from "@/app/productions/[id]/analytics/KeywordGapPanel";
 import KeywordDistributionChart from "@/app/productions/[id]/analytics/KeywordDistributionChart";

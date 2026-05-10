@@ -12,7 +12,7 @@ import {
     Grid,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
-import { updateProjectAction } from '@/app/actions/productionActions'
+import { updateProjectAction } from '@/actions/productionActions'
 import { Project } from '@prisma/client'
 
 export default function EditProductionForm({ project }: { project: Project }) {

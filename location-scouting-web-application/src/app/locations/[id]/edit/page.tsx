@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
-import { getLocationAction } from '@/app/actions/locationActions'
-import EditLocationForm from '@/app/components/EditLocationForm'
+import { getLocationAction } from '@/actions/locationActions'
+import EditLocationForm from '@/components/EditLocationForm'
 
 export default async function EditLocationPage({
   params,

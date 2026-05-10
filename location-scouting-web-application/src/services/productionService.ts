@@ -1,10 +1,10 @@
 import { prisma as defaultPrisma} from '@/lib/prisma'
-import { CreateProjectSchema } from "@/app/schemas/projectSchema";
+import { CreateProjectSchema } from "@/schemas/projectSchema";
 import { z } from 'zod';
 import {Project} from "@prisma/client";
-import {Result} from "@/app/schemas/result";
-import {Geocoder} from "@/app/schemas/geocoder";
-import {defaultGeocoder} from "@/app/services/locationService";
+import {Result} from "@/schemas/result";
+import {Geocoder} from "@/schemas/geocoder";
+import {defaultGeocoder} from "@/services/locationService";
 
 export async function getLocationsByProject(
   input: { projectId: string },

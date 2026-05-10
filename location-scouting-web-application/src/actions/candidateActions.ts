@@ -6,8 +6,8 @@ import {
     createCandidate,
     removeCandidateFromScene,
     toggleCandidateSelected,
-} from '@/app/services/candidateService'
-import {getRecommendations} from "@/app/services/recommendationService";
+} from '@/services/candidateService'
+import {getRecommendations} from "@/services/recommendationService";
 
 // ─── Candidates ─────────────────────────────────────────────
 

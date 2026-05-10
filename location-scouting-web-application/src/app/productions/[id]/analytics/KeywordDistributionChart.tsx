@@ -10,7 +10,7 @@ import {
     ResponsiveContainer,
 } from 'recharts'
 import { useTheme } from '@mui/material/styles'
-import type { KeywordFrequency } from '@/app/services/analytics.types'
+import type { KeywordFrequency } from '@/services/analytics.types'
 
 export default function KeywordDistributionChart({
                                                      distribution,

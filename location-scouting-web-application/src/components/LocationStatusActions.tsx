@@ -6,7 +6,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ArchiveIcon from '@mui/icons-material/Archive'
 import DeleteIcon from '@mui/icons-material/Delete'
 import RestoreIcon from '@mui/icons-material/Restore'
-import { updateLocationStatusAction } from '@/app/actions/locationActions'
+import { updateLocationStatusAction } from '@/actions/locationActions'
 
 export default function LocationStatusActions({
   locationId,

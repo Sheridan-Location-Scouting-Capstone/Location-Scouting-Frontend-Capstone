@@ -1,7 +1,7 @@
-import {getCandidateById} from "@/app/services/candidateService";
+import {getCandidateById} from "@/services/candidateService";
 import {notFound} from "next/navigation";
 import {Box, Typography} from "@mui/material";
-import {getSceneById} from "@/app/services/sceneService";
+import {getSceneById} from "@/services/sceneService";
 
 export default async function CandidateDetailPage({ params }: { params: Promise<{ candidateId: string }> }) {
     const { candidateId } = await params
