@@ -3,7 +3,7 @@ import {notFound} from "next/navigation";
 import {Box, Button, Typography} from "@mui/material";
 import Link from "next/link";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import AnalyticsDashboard from "@/app/productions/[id]/analytics/AnalyticsDashboard";
+import AnalyticsDashboard from "@/app/(protected)/productions/[id]/analytics/AnalyticsDashboard";
 import {
     getAnalyticsSummary, getKeywordDistribution,
     getKeywordGaps,
@@ -47,7 +47,7 @@ export default async function ProjectAnalyticsPage({
         <Box>
             {/*Navigation*/}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1}}>
-                <Link href={`/productions/${projectId}`} style={{ textDecoration: 'none' }}>
+                <Link href={`/location-scouting-web-application/src/app/(protected)/productions/${projectId}`} style={{ textDecoration: 'none' }}>
                     <Button startIcon={<ArrowBackIcon />} variant = "outlined" size = "small">
                         Back
                     </Button>

@@ -6,13 +6,13 @@ import {
     KeywordGap,
     KeywordFrequency,
     AnalyticsDashboardProps,
-} from "@/app/productions/[id]/analytics/analytics.types";
+} from "@/app/(protected)/productions/[id]/analytics/analytics.types";
 import {Box} from "@mui/material";
-import StatCards from "@/app/productions/[id]/analytics/StatCards";
+import StatCards from "@/app/(protected)/productions/[id]/analytics/StatCards";
 import { Heatmap } from "@/components/Heatmap";
-import SceneCoverageChart from "@/app/productions/[id]/analytics/SceneCoverageChart";
-import KeywordGapPanel from "@/app/productions/[id]/analytics/KeywordGapPanel";
-import KeywordDistributionChart from "@/app/productions/[id]/analytics/KeywordDistributionChart";
+import SceneCoverageChart from "@/app/(protected)/productions/[id]/analytics/SceneCoverageChart";
+import KeywordGapPanel from "@/app/(protected)/productions/[id]/analytics/KeywordGapPanel";
+import KeywordDistributionChart from "@/app/(protected)/productions/[id]/analytics/KeywordDistributionChart";
 
 export default function AnalyticsDashboard({
     summary,

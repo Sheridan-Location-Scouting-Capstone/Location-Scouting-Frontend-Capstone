@@ -72,7 +72,7 @@ export default async function ViewScenePage({
             {/* Breadcrumb + Actions */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Link href={`/productions/${projectId}`} style={{ textDecoration: 'none' }}>
+                    <Link href={`/location-scouting-web-application/src/app/(protected)/productions/${projectId}`} style={{ textDecoration: 'none' }}>
                         <Button startIcon={<ArrowBackIcon />} variant="outlined" size="small">
                             Back
                         </Button>

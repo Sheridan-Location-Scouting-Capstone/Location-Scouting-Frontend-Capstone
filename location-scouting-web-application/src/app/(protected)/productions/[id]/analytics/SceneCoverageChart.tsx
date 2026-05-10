@@ -12,7 +12,7 @@ import {
     Cell,
 } from "recharts";
 import { useTheme } from '@mui/material/styles'
-import type { SceneCoverage } from "@/app/productions/[id]/analytics/analytics.types"
+import type { SceneCoverage } from "@/app/(protected)/productions/[id]/analytics/analytics.types"
 
 export default function SceneCoverageChart({ coverage }: { coverage: SceneCoverage }) {
     const theme = useTheme()

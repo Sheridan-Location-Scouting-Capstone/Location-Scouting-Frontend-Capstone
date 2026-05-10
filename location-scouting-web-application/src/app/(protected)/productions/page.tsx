@@ -12,7 +12,7 @@ export default async function ProductionsPage() {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Productions</Typography>
-        <Link href="/productions/new" style={{ textDecoration: 'none' }}>
+        <Link href="/location-scouting-web-application/src/app/(protected)/productions/new" style={{ textDecoration: 'none' }}>
           <Button variant="contained" startIcon={<AddIcon />} size="large">
             Create New Production
           </Button>

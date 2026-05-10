@@ -52,7 +52,7 @@ export default async function LocationDetailPage({
           >
             Share
           </Button>
-          <Link href={`/locations/${location.id}/edit`} style={{ textDecoration: 'none' }}>
+          <Link href={`/location-scouting-web-application/src/app/(protected)/locations/${location.id}/edit`} style={{ textDecoration: 'none' }}>
           <Button
             variant="contained"
             startIcon={<EditIcon />}

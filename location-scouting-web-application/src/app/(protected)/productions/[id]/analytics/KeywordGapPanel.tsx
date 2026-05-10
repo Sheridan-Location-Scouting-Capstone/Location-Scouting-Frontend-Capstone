@@ -1,7 +1,7 @@
 import { Box, Card, Typography, Chip } from '@mui/material'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined'
-import type { KeywordGap } from "@/app/productions/[id]/analytics/analytics.types"
+import type { KeywordGap } from "@/app/(protected)/productions/[id]/analytics/analytics.types"
 
 export default function KeywordGapPanel({ gaps }: { gaps: KeywordGap[] }) {
     return (

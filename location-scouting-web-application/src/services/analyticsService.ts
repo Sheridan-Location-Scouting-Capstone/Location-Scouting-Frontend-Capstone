@@ -9,7 +9,7 @@ import type {
     SceneCoverage,
     KeywordGap,
     KeywordFrequency,
-} from "@/app/productions/[id]/analytics/analytics.types";
+} from "@/app/(protected)/productions/[id]/analytics/analytics.types";
 import {IntExt} from "@prisma/client";
 
 type Options = { db?: typeof defaultPrisma }

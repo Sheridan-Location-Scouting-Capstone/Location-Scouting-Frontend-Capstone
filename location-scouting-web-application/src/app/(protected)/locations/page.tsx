@@ -21,7 +21,7 @@ export default async function LocationsPage({
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4">Locations</Typography>
-            <Link href="/locations/new" style={{ textDecoration: 'none' }}>
+            <Link href="/location-scouting-web-application/src/app/(protected)/locations/new" style={{ textDecoration: 'none' }}>
                 <Button
                     variant="contained"
                     startIcon={<AddIcon />}

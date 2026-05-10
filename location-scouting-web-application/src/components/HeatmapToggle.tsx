@@ -27,10 +27,10 @@ export function ProductionsBody({ points, scenes, projectId }: ProductionsBodyPr
                 </Button>
             </Link>
             <Box sx={{ display: 'flex', gap: 1.5 }}>
-                <Link href={`/productions/${projectId}/edit`} style={{ textDecoration: 'none' }}>
+                <Link href={`/location-scouting-web-application/src/app/(protected)/productions/${projectId}/edit`} style={{ textDecoration: 'none' }}>
                 <Button variant="contained" color="secondary">Manage Production</Button>
                 </Link>
-                <Link href={`/productions/${projectId}/scenes/new`} style={{ textDecoration: 'none' }}>
+                <Link href={`/location-scouting-web-application/src/app/(protected)/productions/${projectId}/scenes/new`} style={{ textDecoration: 'none' }}>
                 <Button variant="contained" startIcon={<AddIcon />}>Add New Scene</Button>
                 </Link>
                 {/* <Button variant="contained" onClick={() => setShowHeatmap(!showHeatmap)}>

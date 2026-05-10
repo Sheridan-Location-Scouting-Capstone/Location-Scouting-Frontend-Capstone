@@ -32,7 +32,7 @@ export default function ViewSceneClientWrapper({
             {/* Action buttons — aligned right */}
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mb: 2 }}>
                 <Link
-                    href={`/productions/${projectId}/scenes/${sceneId}/edit`}
+                    href={`/location-scouting-web-application/src/app/(protected)/productions/${projectId}/scenes/${sceneId}/edit`}
                     style={{ textDecoration: 'none' }}
                 >
                     <Button variant="contained" color="secondary" startIcon={<EditIcon />}>

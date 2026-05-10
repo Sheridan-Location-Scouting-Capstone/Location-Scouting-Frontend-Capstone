@@ -1,5 +1,5 @@
 import { Box, Card, Typography } from '@mui/material'
-import type { AnalyticsSummary} from "@/app/productions/[id]/analytics/analytics.types";
+import type { AnalyticsSummary} from "@/app/(protected)/productions/[id]/analytics/analytics.types";
 
 export default function StatCards({ summary }: { summary: AnalyticsSummary }) {
     const {
