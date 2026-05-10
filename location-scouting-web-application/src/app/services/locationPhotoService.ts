@@ -2,7 +2,7 @@ import {Photo, Prisma, PrismaClient} from "@prisma/client";
 import {defaultBucket, deletePhoto, PhotoUploadResult, uploadPhoto, uploadPhotos} from "@/app/services/photoService";
 import {Result} from "@/app/schemas/result";
 import {PhotoUploadInput} from "@/app/schemas/photoUploadInput";
-import {prisma} from "@/app/lib/prisma";
+import {prisma} from "@/lib/prisma";
 import { PhotoUpdateInput } from "@/app/schemas/photoUpdateInput";
 
 export async function addPhotosToLocation(

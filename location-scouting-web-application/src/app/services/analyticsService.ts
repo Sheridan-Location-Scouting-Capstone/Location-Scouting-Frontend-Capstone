@@ -2,7 +2,7 @@ import {prisma} from '@/test/setup'
 import {beforeEach, describe, expect, it, test, vi} from 'vitest'
 
 
-import { prisma as defaultPrisma } from '@/app/lib/prisma'
+import { prisma as defaultPrisma } from '@/lib/prisma'
 import type {
     AnalyticsSummary,
     LocationPoint,

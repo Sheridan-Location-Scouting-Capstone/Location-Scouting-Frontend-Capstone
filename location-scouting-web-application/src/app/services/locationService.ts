@@ -1,4 +1,4 @@
-import { prisma as defaultPrisma} from '@/app/lib/prisma'
+import { prisma as defaultPrisma} from '@/lib/prisma'
 import {$Enums, Location, Prisma, PrismaClient} from "@prisma/client";
 import {CreateLocationScheme, UpdateLocationScheme} from "@/app/schemas/locationSchema";
 import {Geocoder} from "@/app/schemas/geocoder";

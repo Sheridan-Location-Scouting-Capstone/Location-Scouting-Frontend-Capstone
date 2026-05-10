@@ -1,6 +1,6 @@
 // src/app/services/recommendationService.ts
 
-import { prisma as defaultPrisma } from '@/app/lib/prisma'
+import { prisma as defaultPrisma } from '@/lib/prisma'
 import { PrismaClient, LocationStatus } from '@prisma/client'
 import { scoreLocation } from '@/app/services/scoringService'
 import { Result } from '@/app/schemas/result'

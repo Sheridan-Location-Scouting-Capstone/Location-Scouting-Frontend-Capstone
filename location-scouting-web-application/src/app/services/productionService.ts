@@ -1,4 +1,4 @@
-import { prisma as defaultPrisma} from '@/app/lib/prisma'
+import { prisma as defaultPrisma} from '@/lib/prisma'
 import { CreateProjectSchema } from "@/app/schemas/projectSchema";
 import { z } from 'zod';
 import {Project} from "@prisma/client";

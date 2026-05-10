@@ -1,4 +1,4 @@
-import { prisma as defaultPrisma} from '@/app/lib/prisma'
+import { prisma as defaultPrisma} from '@/lib/prisma'
 import { z } from 'zod'
 import {CreateSceneSchema, UpdateSceneSchema} from "@/app/schemas/sceneSchema";
 import {getKeywords, KeywordGenerator} from "@/app/services/keywordGenerator";
