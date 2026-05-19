@@ -10,7 +10,7 @@ import {
     ResponsiveContainer,
 } from 'recharts'
 import { useTheme } from '@mui/material/styles'
-import type { KeywordFrequency } from '@/services/analytics.types'
+import type { KeywordFrequency } from './analytics.types'
 
 export default function KeywordDistributionChart({
                                                      distribution,
@@ -61,7 +61,7 @@ export default function KeywordDistributionChart({
                             tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
                         />
                         <Tooltip
-                            formatter={(value: number) => [`${value} scenes`, 'Appears in']}
+                            formatter={(value) => [`${value} scenes`, 'Appears in']}
                             cursor={{ fill: theme.palette.action.hover }}
                         />
                         <Bar

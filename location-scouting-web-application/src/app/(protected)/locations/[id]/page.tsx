@@ -8,7 +8,6 @@ import { getLocationAction } from '@/actions/locationActions'
 import LocationPhotoGallery from '@/components/LocationPhotoGallery'
 import LocationStatusActions from '@/components/LocationStatusActions'
 import KeywordChips from '@/components/KeywordChips'
-import { GoogleMap } from '@/components/GoogleMap'
 
 export default async function LocationDetailPage({
   params,
@@ -149,7 +148,6 @@ export default async function LocationDetailPage({
         photos={location.photos}
         locationId={location.id}
       />
-      <GoogleMap {...location} />
     </Box>
   )
 }

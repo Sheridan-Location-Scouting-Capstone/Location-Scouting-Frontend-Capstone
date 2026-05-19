@@ -7,22 +7,14 @@ export default async function Home() {
     const session = await auth.api.getSession({
         headers: await headers()
     })
-
-    if (!session) {
+    if(session) redirect("/locations")
         return (
             <div className="flex flex-col items-center justify-center w-full">
                 <h1 className="text-4xl font-bold text-gray-900">Locus Point</h1>
                 <div className="flex gap-4 mt-8">
-                    <Button>
-                        <Link href="/signup">Sign Up</Link>
-                    </Button>
-                    <Button>
-                        <Link href="/login">Login</Link>
-                    </Button>
+                    <Button component={Link} href={"/sign-up"} variant="outlined">Sign Up</Button>
+                    <Button component={Link} href="/sign-in" variant="contained">Login</Button>
                 </div>
             </div>
         )
-    }
-
-    redirect('/locations')
 }
