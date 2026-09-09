@@ -1,5 +1,7 @@
 'use client'
 
+/* eslint-disable react-hooks/set-state-in-effect */
+
 import {useState, useRef, useEffect} from 'react'
 import {
     Box,

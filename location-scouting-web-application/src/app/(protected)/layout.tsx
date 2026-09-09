@@ -1,6 +1,7 @@
-import { Box, Avatar } from '@mui/material'
+import { Box } from '@mui/material'
 //import StarBorderIcon from '@mui/icons-material/StarBorder'
 import Sidebar, { DRAWER_WIDTH } from '@/components/Sidebar'
+import UserMenu from '@/components/UserMenu'
 import { requireUser } from '@/lib/auth-session'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -23,11 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                   py: 1.5,
                 }}
             >
-              <Avatar
-                  sx={{ width: 36, height: 36, bgcolor: 'primary.main', ml: 1 }}
-              >
-                U
-              </Avatar>
+              <UserMenu name={user.name} email={user.email} />
             </Box>
 
             {/* Page content */}

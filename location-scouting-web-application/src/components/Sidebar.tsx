@@ -59,7 +59,7 @@ export default function Sidebar() {
             fontSize: '1.1rem',
           }}
         >
-          M
+          L
         </Box>
         <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
           LocusPoint
