@@ -1,13 +1,10 @@
 import { Box, Avatar } from '@mui/material'
 //import StarBorderIcon from '@mui/icons-material/StarBorder'
 import Sidebar, { DRAWER_WIDTH } from '@/components/Sidebar'
-import { auth } from "@/lib/auth"
-import {headers} from "next/headers";
-import {redirect} from "next/navigation";
+import { requireUser } from '@/lib/auth-session'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session) redirect("/")
+    const user = await requireUser()
 
     return (
         <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>

@@ -1,13 +1,12 @@
 // src/app/(auth)/layout.tsx
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { Box, Container, Paper, Typography } from "@mui/material";
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-session";
 
 export default async function AuthLayout({children,}: { children: React.ReactNode; }) {
-    // Already signed in? Bounce to home
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (session) redirect("/");
+    // Already signed in? Bounce to locations
+    const user = await getCurrentUser();
+    if (user) redirect("/locations");
 
     return (
         <Box

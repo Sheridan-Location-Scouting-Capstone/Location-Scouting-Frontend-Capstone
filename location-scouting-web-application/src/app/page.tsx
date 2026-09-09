@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
-import { auth } from '@/lib/auth'
-import { headers } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth-session'
 import {
   Box,
   Button,
@@ -32,9 +31,7 @@ const featureCards = [
 ]
 
 export default async function Home() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getCurrentUser()
 
   if (session) redirect('/locations')
 
