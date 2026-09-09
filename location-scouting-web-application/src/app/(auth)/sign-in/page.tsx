@@ -70,7 +70,7 @@ export default function SignInPage() {
             return;
         }
 
-        router.push("/");
+        router.push("/locations");
         router.refresh();
     }
 

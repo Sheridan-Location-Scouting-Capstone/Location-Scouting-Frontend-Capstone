@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { prisma } from './setup'
+import { prisma } from '../setup'
 import { getRecommendations, scoreCandidates } from '@/services/recommendationService'
 
 // ─── Helpers ────────────────────────────────────────────────
