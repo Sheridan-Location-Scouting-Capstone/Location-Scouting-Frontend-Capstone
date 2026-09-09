@@ -87,13 +87,13 @@ export default function SignUpPage() {
     }
 
     return (
-        <Box component="form" onSubmit={handleSubmit} noValidate>
-            <Typography variant="h6" fontWeight={600} gutterBottom>
+        <Box component="form" onSubmit={handleSubmit} noValidate data-testid="signup-form">
+            <Typography variant="h6" fontWeight={600} gutterBottom data-testid="signup-title">
                 Create your account
             </Typography>
 
             {formError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
+                <Alert severity="error" sx={{ mb: 2 }} data-testid="signup-form-error">
                     {formError}
                 </Alert>
             )}
@@ -106,6 +106,7 @@ export default function SignUpPage() {
                     fullWidth
                     error={Boolean(fieldErrors.name)}
                     helperText={fieldErrors.name}
+                    inputProps={{ 'data-testid': 'signup-name-input' }}
                 />
                 <TextField
                     name="email"
@@ -115,6 +116,7 @@ export default function SignUpPage() {
                     fullWidth
                     error={Boolean(fieldErrors.email)}
                     helperText={fieldErrors.email}
+                    inputProps={{ 'data-testid': 'signup-email-input' }}
                 />
                 <TextField
                     name="password"
@@ -124,15 +126,23 @@ export default function SignUpPage() {
                     fullWidth
                     error={Boolean(fieldErrors.password)}
                     helperText={fieldErrors.password ?? "At least 8 characters"}
+                    inputProps={{ 'data-testid': 'signup-password-input' }}
                 />
-                <Button type="submit" variant="contained" size="large" disabled={submitting} fullWidth>
+                <Button
+                    type="submit"
+                    variant="contained"
+                    size="large"
+                    disabled={submitting}
+                    fullWidth
+                    data-testid="signup-submit-button"
+                >
                     {submitting ? "Creating account..." : "Sign Up"}
                 </Button>
             </Stack>
 
-            <Typography variant="body2" align="center" sx={{ mt: 3 }}>
+            <Typography variant="body2" align="center" sx={{ mt: 3 }} data-testid="signup-signin-copy">
                 Already have an account?{" "}
-                <Link href="/sign-in">Sign in</Link>
+                <Link href="/sign-in" data-testid="signup-signin-link">Sign in</Link>
             </Typography>
         </Box>
     );
