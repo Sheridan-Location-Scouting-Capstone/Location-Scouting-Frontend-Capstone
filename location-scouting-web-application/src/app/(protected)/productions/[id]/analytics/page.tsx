@@ -47,7 +47,7 @@ export default async function ProjectAnalyticsPage({
         <Box>
             {/*Navigation*/}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1}}>
-                <Link href={`/location-scouting-web-application/src/app/(protected)/productions/${projectId}`} style={{ textDecoration: 'none' }}>
+                <Link href={`/productions/${projectId}`} style={{ textDecoration: 'none' }}>
                     <Button startIcon={<ArrowBackIcon />} variant = "outlined" size = "small">
                         Back
                     </Button>

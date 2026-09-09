@@ -23,6 +23,18 @@ const eslintConfig = [
           message:
             "Use getCurrentUser() or requireUser() from @/lib/auth-session.",
         },
+        {
+          selector:
+            "JSXAttribute[name.name='href'][value.value=/src\\/app|location-scouting-web-application/]",
+          message:
+            "hrefs are routes, not file paths. Drop everything up to and including\n the route group, e.g. /productions/new",
+        },
+        {
+          selector:
+            "JSXAttribute[name.name='href'] > JSXExpressionContainer > TemplateLiteral[quasis.0.value.raw=/src\\/app|location-scouting-web-application/]",
+          message:
+            "hrefs are routes, not file paths. Drop everything up to and including\n the route group, e.g. /productions/new",
+        },
       ],
     },
   },

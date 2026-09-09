@@ -70,9 +70,9 @@ export default function SignUpPage() {
         setSubmitting(true);
         // better-auth returns errors on `res.error` instead of throwing.
         const res = await signUp.email(parsed.data);
-        setSubmitting(false);
 
         if (res.error) {
+            setSubmitting(false);
             const mapped = res.error.code ? SIGN_UP_ERROR_FIELDS[res.error.code] : undefined;
             if (mapped) {
                 setFieldErrors({ [mapped.field]: mapped.message });
