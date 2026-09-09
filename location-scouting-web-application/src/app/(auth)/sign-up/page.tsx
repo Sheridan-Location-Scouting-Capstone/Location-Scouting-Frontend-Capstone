@@ -106,7 +106,7 @@ export default function SignUpPage() {
                     fullWidth
                     error={Boolean(fieldErrors.name)}
                     helperText={fieldErrors.name}
-                    inputProps={{ 'data-testid': 'signup-name-input' }}
+                    slotProps={{ htmlInput: { 'data-testid': 'signup-name-input' } }}
                 />
                 <TextField
                     name="email"
@@ -116,7 +116,7 @@ export default function SignUpPage() {
                     fullWidth
                     error={Boolean(fieldErrors.email)}
                     helperText={fieldErrors.email}
-                    inputProps={{ 'data-testid': 'signup-email-input' }}
+                    slotProps={{ htmlInput: { 'data-testid': 'signup-email-input' } }}
                 />
                 <TextField
                     name="password"
@@ -126,7 +126,7 @@ export default function SignUpPage() {
                     fullWidth
                     error={Boolean(fieldErrors.password)}
                     helperText={fieldErrors.password ?? "At least 8 characters"}
-                    inputProps={{ 'data-testid': 'signup-password-input' }}
+                    slotProps={{ htmlInput: { 'data-testid': 'signup-password-input' } }}
                 />
                 <Button
                     type="submit"

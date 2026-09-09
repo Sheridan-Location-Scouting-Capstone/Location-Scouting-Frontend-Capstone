@@ -1,56 +1,128 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/router";
-import {signIn} from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Alert, Box, Button, Stack, TextField, Typography } from "@mui/material";
+import { signIn } from "@/lib/auth-client";
+import { SignInSchema } from "@/schemas/authSchema";
+
+type FieldName = "email" | "password";
+type FieldErrors = Partial<Record<FieldName, string>>;
+
+const SIGN_IN_ERROR_FIELDS: Record<string, { field: FieldName; message: string }> = {
+    INVALID_EMAIL: {
+        field: "email",
+        message: "Enter a valid email address",
+    },
+    USER_NOT_FOUND: {
+        field: "email",
+        message: "No account found for that email.",
+    },
+    INVALID_PASSWORD: {
+        field: "password",
+        message: "Incorrect password.",
+    },
+    PASSWORD_REQUIRED: {
+        field: "password",
+        message: "Password is required",
+    },
+};
 
 export default function SignInPage() {
     const router = useRouter();
-    const [error, setError] = useState<String | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+    const [formError, setFormError] = useState<string | null>(null);
+    const [submitting, setSubmitting] = useState(false);
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        setError(null);
+        setFieldErrors({});
+        setFormError(null);
+
         const formData = new FormData(e.currentTarget);
-        const res = await signIn.email({
-            email: formData.get("email") as string,
-            password: formData.get("password") as string,
+        const parsed = SignInSchema.safeParse({
+            email: formData.get("email"),
+            password: formData.get("password"),
         });
-        if(res.error) {
-            setError(res.error.message || "Something went wrong.");
-        } else {
-            await router.push("/dashboard");
+
+        if (!parsed.success) {
+            const errors: FieldErrors = {};
+            for (const issue of parsed.error.issues) {
+                const field = issue.path[0] as FieldName | undefined;
+                if (field && !errors[field]) errors[field] = issue.message;
+            }
+            setFieldErrors(errors);
+            return;
         }
+
+        setSubmitting(true);
+        const res = await signIn.email(parsed.data);
+        setSubmitting(false);
+
+        if (res.error) {
+            const mapped = res.error.code ? SIGN_IN_ERROR_FIELDS[res.error.code] : undefined;
+            if (mapped) {
+                setFieldErrors({ [mapped.field]: mapped.message });
+            } else {
+                setFormError(res.error.message || "Something went wrong. Please try again.");
+            }
+            return;
+        }
+
+        router.push("/");
+        router.refresh();
     }
 
     return (
-        <main className="max-w-md h-screen flex items-center justify-center flex-col mx-auto p-6 space-y-4 text-white">
-            <h1 className="text-2xl font-bold">Sign In</h1>
-            {error && <p className="text-red-500">{error}</p>} // [!code ++]
-            <form onSubmit={handleSubmit} className="space-y-4">
-                {" "}
-                <input
+        <Box component="form" onSubmit={handleSubmit} noValidate data-testid="signin-form">
+            <Typography variant="h6" fontWeight={600} gutterBottom data-testid="signin-title">
+                Welcome back
+            </Typography>
+
+            {formError && (
+                <Alert severity="error" sx={{ mb: 2 }} data-testid="signin-form-error">
+                    {formError}
+                </Alert>
+            )}
+
+            <Stack spacing={2}>
+                <TextField
                     name="email"
+                    label="Email"
                     type="email"
-                    placeholder="Email"
-                    required
-                    className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2"
-                />{" "}
-                <input
+                    autoComplete="email"
+                    fullWidth
+                    error={Boolean(fieldErrors.email)}
+                    helperText={fieldErrors.email}
+                    slotProps={{ htmlInput: { 'data-testid': 'signin-email-input' } }}
+                />
+                <TextField
                     name="password"
+                    label="Password"
                     type="password"
-                    placeholder="Password"
-                    required
-                    className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2"
-                />{" "}
-                <button
+                    autoComplete="current-password"
+                    fullWidth
+                    error={Boolean(fieldErrors.password)}
+                    helperText={fieldErrors.password}
+                    slotProps={{ htmlInput: { 'data-testid': 'signin-password-input' } }}
+                />
+                <Button
                     type="submit"
-                    className="w-full bg-white text-black font-medium rounded-md px-4 py-2 hover:bg-gray-200"
+                    variant="contained"
+                    size="large"
+                    disabled={submitting}
+                    fullWidth
+                    data-testid="signin-submit-button"
                 >
-                    {" "}
-                    // [!code ++] Sign In
-                </button>{" "}
-            </form>{" "}
-        </main>
+                    {submitting ? "Signing in..." : "Sign In"}
+                </Button>
+            </Stack>
+
+            <Typography variant="body2" align="center" sx={{ mt: 3 }} data-testid="signin-signup-copy">
+                Don&apos;t have an account? {" "}
+                <Link href="/sign-up" data-testid="signin-signup-link">Sign up</Link>
+            </Typography>
+        </Box>
     );
 }

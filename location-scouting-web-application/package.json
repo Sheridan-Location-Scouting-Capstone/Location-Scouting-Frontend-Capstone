@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
+    "test:unit": "vitest run src/test/unit",
+    "test:integration": "vitest run src/test/integration",
     "test:migrate": "dotenv -e .env -- npx prisma migrate deploy",
     "test:db:push": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5434/location_scouting_test?schema=public prisma migrate deploy",
     "migrate:all": "npx prisma migrate dev && cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5434/location_scouting_test?schema=public prisma migrate deploy"
