@@ -58,9 +58,10 @@ export default function SignInPage() {
 
         setSubmitting(true);
         const res = await signIn.email(parsed.data);
-        setSubmitting(false);
+
 
         if (res.error) {
+            setSubmitting(false);
             const mapped = res.error.code ? SIGN_IN_ERROR_FIELDS[res.error.code] : undefined;
             if (mapped) {
                 setFieldErrors({ [mapped.field]: mapped.message });
@@ -111,11 +112,11 @@ export default function SignInPage() {
                     type="submit"
                     variant="contained"
                     size="large"
-                    disabled={submitting}
+                    loading={submitting}
                     fullWidth
                     data-testid="signin-submit-button"
                 >
-                    {submitting ? "Signing in..." : "Sign In"}
+                    Sign In
                 </Button>
             </Stack>
 
