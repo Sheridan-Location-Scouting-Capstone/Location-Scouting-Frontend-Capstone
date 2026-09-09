@@ -95,7 +95,7 @@ export default function SignInPage() {
                     autoComplete="email"
                     fullWidth
                     error={Boolean(fieldErrors.email)}
-                    helperText={fieldErrors.email}
+                    helperText={fieldErrors.email ? <span data-testid="signin-email-error">{fieldErrors.email}</span> : null}
                     slotProps={{ htmlInput: { 'data-testid': 'signin-email-input' } }}
                 />
                 <TextField
@@ -105,7 +105,7 @@ export default function SignInPage() {
                     autoComplete="current-password"
                     fullWidth
                     error={Boolean(fieldErrors.password)}
-                    helperText={fieldErrors.password}
+                    helperText={fieldErrors.password ? <span data-testid="signin-password-error">{fieldErrors.password}</span> : null}
                     slotProps={{ htmlInput: { 'data-testid': 'signin-password-input' } }}
                 />
                 <Button
