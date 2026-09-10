@@ -8,11 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
-    "test:unit": "vitest run src/test/unit",
-    "test:integration": "vitest run src/test/integration",
-    "test:migrate": "dotenv -e .env -- npx prisma migrate deploy",
-    "test:db:push": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5434/location_scouting_test?schema=public prisma migrate deploy",
-    "migrate:all": "npx prisma migrate dev && cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5434/location_scouting_test?schema=public prisma migrate deploy"
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "migrate": "prisma migrate dev"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -38,6 +36,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4.1.14",
+    "@testcontainers/postgresql": "^12.1.0",
     "@types/googlemaps": "^3.43.3",
     "@types/node": "^20",
     "@types/react": "19.2.2",
@@ -50,6 +49,7 @@
     "eslint-config-next": "16.0.0",
     "prisma": "^6.19.2",
     "tailwindcss": "^4.1.14",
+    "testcontainers": "^12.1.0",
     "typescript": "^5",
     "vitest": "^4.0.18"
   },
