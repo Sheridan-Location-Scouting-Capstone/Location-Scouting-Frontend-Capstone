@@ -10,6 +10,8 @@
     "test": "vitest",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
+    "test:e2e": "next build && playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "migrate": "prisma migrate dev"
   },
   "dependencies": {
@@ -35,6 +37,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.1.14",
     "@testcontainers/postgresql": "^12.1.0",
     "@types/googlemaps": "^3.43.3",

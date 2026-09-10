@@ -7,7 +7,7 @@ let minio: StartedTestContainer
 
 const reuse = process.env.TESTCONTAINERS_REUSE === 'true'
 
-export default async function setup() {
+export async function startContainers() {
     const pgBuilder = new PostgreSqlContainer('postgres:16-alpine')
         .withDatabase('location_scouting_test')
         .withUsername('postgres')
@@ -47,3 +47,5 @@ export default async function setup() {
         await Promise.all([minio.stop(), pg.stop()])
     }
 }
+
+export default startContainers
