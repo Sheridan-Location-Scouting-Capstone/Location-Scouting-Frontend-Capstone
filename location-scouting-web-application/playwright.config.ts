@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const baseURL = process.env.BASE_URL ?? 'http://localhost:3000';
+
 export default defineConfig({
     testDir: './src/test/e2e',
     globalSetup: './src/test/e2e/global-setup.ts',
@@ -10,6 +12,7 @@ export default defineConfig({
     expect: { timeout: 10_000 },
     use: {
         baseURL: 'http://localhost:3000',
+        extraHTTPHeaders: { origin: baseURL },
         trace: 'retain-on-failure',
         screenshot: 'only-on-failure',
     },
