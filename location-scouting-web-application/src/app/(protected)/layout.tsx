@@ -8,7 +8,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const user = await requireUser()
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default'}} data-testid='authenticated-shell'>
           <Sidebar />
 
           {/* Main content area */}

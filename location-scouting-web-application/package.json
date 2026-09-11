@@ -33,6 +33,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "recharts": "^3.8.1",
+    "uuid": "^14.0.2",
     "zod": "^4.5.4"
   },
   "devDependencies": {
