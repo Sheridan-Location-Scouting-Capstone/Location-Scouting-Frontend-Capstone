@@ -19,10 +19,6 @@ const signUpSetup : (user?: any) => Promise<{ name: string; email: string; passw
     await given('a user exists', async() => {
         const { user } = await auth.api.signUpEmail({body: testUser})
         if(!user.id) throw new Error("User not created");
-
-        // diagnostic: can this same process read the user back?
-        const check = await auth.api.signInEmail({ body: { email: testUser.email, password: testUser.password } })
-        console.log('[test proc] signed in as', check.user?.id, '| db =', process.env.DATABASE_URL)
     })
     return testUser
 })
@@ -58,3 +54,31 @@ test('when a user signs in, they are redirected to an authenticated page', async
     await expect(signInPage.form).not.toBeVisible();
     await expect(locationsPage.authenticatedHeader.shell).toBeVisible();
 })
+
+test('when a user attempts to sign with the wrong password, they are shown an error message', async({ page }) => {
+    const user = await signUpSetup()
+
+    // AND is on sign in page
+    const signInPage = new SignInPage(page);
+    await signInPage.goto();
+
+    // WHEN the user logs in with the wrong password
+    await signInPage.signin(user.email, "wrongpassword")
+
+    // THEN they should see an error message
+    await expect(signInPage.formError).toBeVisible();
+    await expect(signInPage.submitButton).toBeEnabled();
+})
+
+test('when a user attempts to sign in with non-existent user, they are shown an error message', async({ page }) => {
+    const user = createDefaultTestUser();
+
+    const signInPage = new SignInPage(page);
+    await signInPage.goto();
+
+    await signInPage.signin(user.email, user.password);
+
+    await expect(signInPage.formError).toBeVisible();
+    await expect(signInPage.submitButton).toBeEnabled();
+})
+
