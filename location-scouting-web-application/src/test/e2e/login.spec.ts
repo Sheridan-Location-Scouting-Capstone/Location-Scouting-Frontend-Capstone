@@ -82,3 +82,19 @@ test('when a user attempts to sign in with non-existent user, they are shown an 
     await expect(signInPage.submitButton).toBeEnabled();
 })
 
+test('when a user attempts to sign in without entering an email, they are shown an error message', async({ page }) => {
+    const signInPage = new SignInPage(page);
+    await signInPage.goto();
+
+    await signInPage.signin('', 'Test@1234');
+    await expect(signInPage.emailInputError).toBeVisible();
+})
+
+test('when a user attempts to sign in without entering a password, they are shown a password error message', async({ page }) => {
+    const signInPage = new SignInPage(page);
+    await signInPage.goto();
+
+    await signInPage.signin('test@example.com', '');
+    await expect(signInPage.passwordError).toBeVisible();
+})
+
