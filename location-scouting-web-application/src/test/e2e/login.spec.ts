@@ -1,41 +1,16 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
 import { SignUpPage } from './pom/sign-up-page';
 import { v4 as uuidv4 } from 'uuid';
 import { LocationsPage } from "@/test/e2e/pom/locations-page";
 import { SignInPage } from "@/test/e2e/pom/sign-in-page";
 import { given } from "@/test/preconditions";
 import { auth } from "@/lib/auth";
+import { createDefaultTestUser, signUpSetup, signInSetup } from "./fixtures"
 
 
-const createDefaultTestUser = () => ({
-    name: "John Doe",
-    email: "test+" + uuidv4().substring(0, 8) + "@example.com",
-    password: "Test@1234",
-});
-
-const signUpSetup : (user?: any) => Promise<{ name: string; email: string; password: string }> = (async(user) => {
-    const testUser = user ?? createDefaultTestUser();
-
-    await given('a user exists', async() => {
-        const { user } = await auth.api.signUpEmail({body: testUser})
-        if(!user.id) throw new Error("User not created");
-    })
-    return testUser
-})
-
-test('unauthenticated user cannot reach a protected route', async ({ page }) => {
+test('when an unauthenticated user attempts to reach a protected route, they are redirected to a guest-only route', async ({ page }) => {
     await page.goto('/locations')
     await expect(page).toHaveURL('/')
-})
-
-test('an unauthenticated user can sign up and is redirected to the locations page', async ({ page }) => {
-    const signUpPage = new SignUpPage(page);
-    const locationsPage = new LocationsPage(page);
-    const testUser = createDefaultTestUser();
-
-    await signUpPage.goto();
-    await signUpPage.signup(testUser.name, testUser.email, testUser.password);
-    await expect(locationsPage.authenticatedHeader.shell).toBeVisible();
 })
 
 test('when a user signs in, they are redirected to an authenticated page', async({ page }) => {
@@ -96,5 +71,22 @@ test('when a user attempts to sign in without entering a password, they are show
 
     await signInPage.signin('test@example.com', '');
     await expect(signInPage.passwordError).toBeVisible();
+})
+
+test('when an authenticated user navigates to a guest-only route, they are redirected to the authenticated screen', async({ page }) => {
+    const testUser = await signUpSetup();
+    await signInSetup({email: testUser.email, password: testUser.password}, page)
+
+    const signInPage = new SignInPage(page);
+    await signInPage.goto();
+
+    const locationsPage = new LocationsPage(page);
+    await expect(locationsPage.authenticatedHeader.shell).toBeVisible();
+    await expect(signInPage.form).not.toBeVisible();
+
+    const signUpPage = new SignUpPage(page);
+    await signUpPage.goto();
+    await expect(locationsPage.authenticatedHeader.shell).toBeVisible();
+    await expect(signUpPage.form).not.toBeVisible();
 })
 

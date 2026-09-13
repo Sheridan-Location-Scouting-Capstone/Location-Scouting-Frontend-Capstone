@@ -105,7 +105,7 @@ export default function SignUpPage() {
                     autoComplete="name"
                     fullWidth
                     error={Boolean(fieldErrors.name)}
-                    helperText={fieldErrors.name}
+                    helperText={fieldErrors.name ? <span data-testid="signup-name-error">{fieldErrors.name}</span> : undefined}
                     slotProps={{ htmlInput: { 'data-testid': 'signup-name-input' } }}
                 />
                 <TextField
@@ -115,7 +115,7 @@ export default function SignUpPage() {
                     autoComplete="email"
                     fullWidth
                     error={Boolean(fieldErrors.email)}
-                    helperText={fieldErrors.email}
+                    helperText={fieldErrors.email ? <span data-testid="signup-email-error">{fieldErrors.email}</span> : undefined}
                     slotProps={{ htmlInput: { 'data-testid': 'signup-email-input' } }}
                 />
                 <TextField
@@ -125,7 +125,7 @@ export default function SignUpPage() {
                     autoComplete="new-password"
                     fullWidth
                     error={Boolean(fieldErrors.password)}
-                    helperText={fieldErrors.password ?? "At least 8 characters"}
+                    helperText={fieldErrors.password ? <span data-testid="signup-password-error">{fieldErrors.password}</span> : undefined}
                     slotProps={{ htmlInput: { 'data-testid': 'signup-password-input' } }}
                 />
                 <Button

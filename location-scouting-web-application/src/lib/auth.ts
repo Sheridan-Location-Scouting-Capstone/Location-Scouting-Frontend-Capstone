@@ -11,4 +11,7 @@ export const auth = betterAuth({
         enabled: true,
     },
     plugins: [nextCookies()],
+    rateLimit: {
+        enabled: process.env.E2E_TESTING !== 'true',
+    },
 })

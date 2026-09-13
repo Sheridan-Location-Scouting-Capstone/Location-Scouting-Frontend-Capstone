@@ -6,9 +6,12 @@ export class SignUpPage {
     readonly page: Page;
     readonly form: Locator;
     readonly nameInput: Locator;
+    readonly nameInputError: Locator;
     readonly emailInput: Locator;
+    readonly emailInputError: Locator;
     readonly formError: Locator;
     readonly passwordInput: Locator;
+    readonly passwordInputError: Locator;
     readonly submitButton: Locator;
     readonly signInLink: Locator;
 
@@ -17,8 +20,11 @@ export class SignUpPage {
         this.form = page.getByTestId('signup-form');
         this.formError = this.form.getByTestId('signup-form-error');
         this.nameInput = this.form.getByTestId('signup-name-input');
+        this.nameInputError = this.form.getByTestId('signup-name-error');
         this.emailInput = this.form.getByTestId('signup-email-input');
+        this.emailInputError = this.form.getByTestId('signup-email-error');
         this.passwordInput = this.form.getByTestId('signup-password-input');
+        this.passwordInputError = this.form.getByTestId('signup-password-error');
         this.submitButton = this.form.getByTestId('signup-submit-button');
         this.signInLink = page.getByTestId('signup-sign-in-link');
     }
