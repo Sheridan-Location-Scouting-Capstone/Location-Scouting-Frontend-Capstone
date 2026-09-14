@@ -17,4 +17,9 @@ export class AuthenticatedHeader {
         this.userMenuEmail = page.getByTestId('user-menu-email');
         this.signOutButton = page.getByTestId('user-menu-signout');
     }
+
+    async signout(){
+        await this.userMenuButton.click();
+        await this.signOutButton.click();
+    }
 }
