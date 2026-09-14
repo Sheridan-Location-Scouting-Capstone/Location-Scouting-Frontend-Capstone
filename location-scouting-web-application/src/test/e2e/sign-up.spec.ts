@@ -23,8 +23,15 @@ test('an unauthenticated user cannot sign up with an existing email', async ({ p
     await expect(signUpPage.emailInputError).toBeVisible();
 })
 
-test('', async({ page }) => {
+test('an unauthenticated user cannot sign up with an invalid password', async ({ page }) => {
+    const signUpPage = new SignUpPage(page);
+    const testUser = createDefaultTestUser();
 
+    const shortPassword = 'a@1e';
+
+    await signUpPage.goto();
+    await signUpPage.signup(testUser.name, testUser.email, shortPassword);
+    await expect(signUpPage.passwordInputError).toBeVisible();
 })
 
 

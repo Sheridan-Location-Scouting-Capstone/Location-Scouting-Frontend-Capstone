@@ -11,5 +11,9 @@ export class LocationsPage {
         this.authenticatedHeader = new AuthenticatedHeader(page);
     }
 
+    async goto() {
+        await this.page.goto('/locations');
+    }
+
 
 }
