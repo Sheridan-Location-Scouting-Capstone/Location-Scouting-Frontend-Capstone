@@ -6,6 +6,7 @@ const phoneRegex = new RegExp(
 );
 
 export const CreateLocationScheme = z.object({
+    userId: z.string(),
     name: z.string().min(1, 'Name is required').max(255),
     address: z.string().min(1, 'Address is required'),
     city: z.string().min(1, 'City is required'),

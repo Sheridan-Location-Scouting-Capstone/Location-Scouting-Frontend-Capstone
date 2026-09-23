@@ -587,8 +587,6 @@ describe('Location Services', () => {
             expect(secondDeletion?.deletedAt?.getDate()).toBe(now.getDate());
             expect(secondDeletion?.deletedAt?.getTime()).toBe(firstDeletion?.deletedAt?.getTime());
         })
-
-
     })
 
     describe('getLocations', () => {

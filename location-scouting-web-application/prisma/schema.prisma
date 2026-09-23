@@ -34,6 +34,8 @@ model Location {
 
   status LocationStatus @default(ACTIVE)
 
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -41,6 +43,8 @@ model Location {
 
   candidates  Candidate[]
   photoGroups PhotoGroup[]
+
+  @@index([userId])
 }
 
 model Photo {
@@ -92,6 +96,9 @@ model Project {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Scene {
@@ -180,15 +187,17 @@ enum IntExt {
 }
 
 model User {
-  id            String    @id
+  id            String     @id
   name          String
   email         String
-  emailVerified Boolean   @default(false)
+  emailVerified Boolean    @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
   sessions      Session[]
   accounts      Account[]
+  locations     Location[]
+  projects      Project[]
 
   @@unique([email])
   @@map("user")
