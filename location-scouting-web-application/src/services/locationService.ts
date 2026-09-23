@@ -39,9 +39,7 @@ export async function createLocation(
     }
 
     if (input.contactPhone) {
-        input.contactPhone = input.contactPhone.replaceAll('-', '')
-        input.contactPhone = input.contactPhone.replaceAll('(', '')
-        input.contactPhone = input.contactPhone.replaceAll(')', '')
+        input.contactPhone = input.contactPhone.replace(/[\s()-]/g, '')
     }
     const validated = CreateLocationScheme.parse(input)
     const address = `${validated.address}, ${validated.city}, ${validated.province}, ${validated.postalCode}, ${validated.country}`
@@ -117,9 +115,12 @@ export async function updateLocation(id: string, data: Prisma.LocationUpdateInpu
 
 export async function deleteLocationById(id: string, options?: { db?: PrismaClient }) {
     const db = options?.db ?? defaultPrisma
-    await db.location.update({
-        where: { id },
-        data: { status: LocationStatus.DELETED }
+    await db.location.updateMany({
+        where: { id, deletedAt: null },
+        data: {
+            status: LocationStatus.DELETED,
+            deletedAt: new Date()
+        }
     })
 }
 

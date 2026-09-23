@@ -12,18 +12,24 @@ import {addPhotosToLocation} from "@/services/locationPhotoService";
 // @ts-ignore
 import { LocationStatus } from "@prisma/client";
 
+function buildLocationInput({
+    name = 'Downtown Alley',
+    address = '123 Main St',
+    city = 'Toronto',
+    province = 'ON',
+    postalCode = 'M5V 1A1',
+    contactPhone = undefined as string | undefined,
+} = {}) {
+    return { name, address, city, province, postalCode, contactPhone }
+}
+
+
 
 describe('Location Services', () => {
     describe('createLocation', () => {
         it('should save a location with minimum required fields and return it with an id', async () => {
             // Arrange
-            const locationInput = {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1'
-            }
+            const locationInput = buildLocationInput();
 
             // Act
             const result = await createLocation(locationInput, {db: prisma});
@@ -39,35 +45,11 @@ describe('Location Services', () => {
         })
 
         test.each([
-            ['empty postal code', {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: ''
-            }],
-            ['empty province', {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: '',
-                postalCode: 'M5V 1A1'
-            }],
-            ['empty city', {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: '',
-                province: '',
-                postalCode: 'M5V 1A1'
-            }],
-            ['empty name', {name: '', address: '123 Main St', city: 'Toronto', province: '', postalCode: 'M5V 1A1'}],
-            ['empty address', {
-                name: 'Downtown Alley',
-                address: '',
-                city: 'Toronto',
-                province: '',
-                postalCode: 'M5V 1A1'
-            }],
+            ['empty postal code', buildLocationInput({postalCode: ''})],
+            ['empty province', buildLocationInput({province: ''})],
+            ['empty city', buildLocationInput({city: ''})],
+            ['empty name', buildLocationInput({name: ''})],
+            ['empty address', buildLocationInput({address: ''})],
         ])('should throw an error when there is an %s', async function (description, input) {
             await expect(() => createLocation(input, {db: prisma})).rejects.toThrow()
         })
@@ -78,22 +60,15 @@ describe('Location Services', () => {
         })
         it('')
         test.each([
-            '(705) 773 3685',
-            '705 773 3685',
-            '(705)7733685',
-            '(905)1124235',
-            '(705)-773-3685',
-            '705-773-3685'
-        ])('should accept various phone numbers formats', async (input) => {
+            { input: '(705) 773 3685', expected: '7057733685' },
+            { input: '705 773 3685', expected: '7057733685' },
+            { input: '(705)7733685', expected: '7057733685' },
+            { input: '(905)1124235', expected: '9051124235' },
+            { input: '(705)-773-3685', expected: '7057733685' },
+            { input: '705-773-3685', expected: '7057733685' }
+        ])('should accept various phone numbers formats', async ({ input, expected }) => {
             // Arrange
-            const locationInput = {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1',
-                contactPhone: input
-            }
+            const locationInput = buildLocationInput({contactPhone: input})
 
             // Act
             const result = await createLocation(locationInput, {db: prisma});
@@ -101,6 +76,7 @@ describe('Location Services', () => {
             // Assert
             expect(result.contactPhone).toBeDefined()
             expect(result.contactPhone).not.toBeNull()
+            expect(result.contactPhone).toBe(expected)
         })
 
         test.each([
@@ -112,14 +88,7 @@ describe('Location Services', () => {
             '()()()()()()()()()()()(242'
         ])('should reject invalid phone numbers', async (input) => {
             // Arrange
-            const locationInput = {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1',
-                contactPhone: input
-            }
+            const locationInput = buildLocationInput({contactPhone: input})
 
             // Act & Assert (Expected Error)
             await expect(createLocation(locationInput, {db: prisma})).rejects.toThrow();
@@ -524,13 +493,7 @@ describe('Location Services', () => {
     describe('deleteLocation', () => {
         it('should mark a location as deleted without actually removing it from the database', async () => {
             // Arrange
-            const locationInput = {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1'
-            }
+            const locationInput = buildLocationInput();
 
             // Act
             const createdLocation = await createLocation(locationInput, {db: prisma})
@@ -547,13 +510,8 @@ describe('Location Services', () => {
 
         it('should not delete associated photos when a location is deleted', async () => {
             // Arrange - Create Location
-            const locationInput = {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1'
-            }
+            const locationInput = buildLocationInput();
+
             const createdLocation = await createLocation(locationInput, {db: prisma})
 
             // Arrange - Add Photos to Location
@@ -592,6 +550,42 @@ describe('Location Services', () => {
 
             // Assert
             expect(associatedPhotos).toHaveLength(numOfPhotos);
+        })
+
+        it('should idempotently delete a location that is already marked as deleted', async () => {
+            // Arrange
+            const locationInput = buildLocationInput();
+            const createdLocation = await createLocation(locationInput, {db: prisma})
+
+            // Act - First deletion
+            await deleteLocationById(createdLocation.id, {db: prisma})
+            const firstDeletion = await prisma.location.findFirst({
+                where: {id: createdLocation.id}
+            })
+
+            expect(firstDeletion).not.toBeNull();
+            expect(firstDeletion?.status).toBe('DELETED');
+            expect(firstDeletion?.deletedAt).not.toBeNull();
+
+            const now = new Date();
+            expect(firstDeletion?.deletedAt?.getFullYear()).toBe(now.getFullYear());
+            expect(firstDeletion?.deletedAt?.getMonth()).toBe(now.getMonth());
+            expect(firstDeletion?.deletedAt?.getDate()).toBe(now.getDate());
+
+            // Act - Second deletion (should be idempotent)
+            await deleteLocationById(createdLocation.id, {db: prisma})
+            const secondDeletion = await prisma.location.findFirst({
+                where: {id: createdLocation.id}
+            })
+
+            // Assert - Verify that the second deletion did not change the status or deletedAt timestamp
+            expect(secondDeletion).not.toBeNull();
+            expect(secondDeletion?.status).toBe('DELETED');
+            expect(secondDeletion?.deletedAt).not.toBeNull();
+            expect(secondDeletion?.deletedAt?.getFullYear()).toBe(now.getFullYear());
+            expect(secondDeletion?.deletedAt?.getMonth()).toBe(now.getMonth());
+            expect(secondDeletion?.deletedAt?.getDate()).toBe(now.getDate());
+            expect(secondDeletion?.deletedAt?.getTime()).toBe(firstDeletion?.deletedAt?.getTime());
         })
 
 
