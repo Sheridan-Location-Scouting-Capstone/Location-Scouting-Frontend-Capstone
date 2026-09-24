@@ -12,6 +12,8 @@ import {addPhotosToLocation} from "@/services/locationPhotoService";
 // @ts-ignore
 import { LocationStatus } from "@prisma/client";
 import {signUpSetup} from "@/test/e2e/fixtures";
+import {expectFailure, expectSuccess} from "@/test/helpers/result";
+import {User} from "better-auth";
 
 function buildLocationInput({
     name = 'Downtown Alley',
@@ -47,11 +49,12 @@ describe('Location Services', () => {
 
             expect(data.id).toBeDefined()
             expect(data.id).not.toBeNull()
+            expect(data.userId).toBe(user.userId)
             expect(data.name).toBe('Downtown Alley')
             expect(data.country).toBe('Canada') // Verify default value applied
             expect(data.status).toBe('ACTIVE')  // Verify default value applied
-            expect(data.createdAt).not.toBeNull()
-            expect(data.updatedAt).not.toBeNull()
+            expect(data.createdAt.getDate()).toBe(new Date().getDate()) // Verify createdAt is set to today
+            expect(data.updatedAt.getDate()).toBe(new Date().getDate()) // Verify updatedAt is set to today
         })
 
         const UNUSED_USER_ID = 'validation-fails-before-db-access'
@@ -61,11 +64,8 @@ describe('Location Services', () => {
             ['empty city', buildLocationInput({city: ''})],
             ['empty name', buildLocationInput({name: ''})],
             ['empty address', buildLocationInput({address: ''})],
-        ])('should throw an error when there is an %s', async function (description: string, input: any) {
-            const result = await createLocation(UNUSED_USER_ID, input, {db: prisma})
-            if(result.success) {
-                throw new Error('Location creation succeeded when it should have failed')
-            }
+        ])('should fail to create a location when there is an %s', async function (description: string, input: any) {
+            const result = expectFailure(await createLocation(UNUSED_USER_ID, input, {db: prisma}))
             expect(result.success).toBe(false)
             expect(result.code).toBe('VALIDATION_FAILED')
             expect(result.error).toBeDefined()
@@ -77,24 +77,32 @@ describe('Location Services', () => {
         it('should geocode an address on creation', async () => {
         })
         it('')
-        test.each([
-            { input: '(705) 773 3685', expected: '7057733685' },
-            { input: '705 773 3685', expected: '7057733685' },
-            { input: '(705)7733685', expected: '7057733685' },
-            { input: '(905)1124235', expected: '9051124235' },
-            { input: '(705)-773-3685', expected: '7057733685' },
-            { input: '705-773-3685', expected: '7057733685' }
-        ])('should accept various phone numbers formats', async ({ input, expected }) => {
-            // Arrange
-            const locationInput = buildLocationInput({contactPhone: input})
+        describe('contact phone number validation', () => {
+            let user: any
 
-            // Act
-            const result = await createLocation(locationInput, {db: prisma});
+            beforeEach(async () => {
+                user = await signUpSetup()
+            })
 
-            // Assert
-            expect(result.contactPhone).toBeDefined()
-            expect(result.contactPhone).not.toBeNull()
-            expect(result.contactPhone).toBe(expected)
+            test.each([
+                { input: '(705) 773 3685', expected: '7057733685' },
+                { input: '705 773 3685', expected: '7057733685' },
+                { input: '(705)7733685', expected: '7057733685' },
+                { input: '(905)1124235', expected: '9051124235' },
+                { input: '(705)-773-3685', expected: '7057733685' },
+                { input: '705-773-3685', expected: '7057733685' }
+            ])('should accept various phone numbers formats', async ({ input, expected }) => {
+                // Arrange
+                const locationInput = buildLocationInput({contactPhone: input})
+
+                // Act
+                const result = expectSuccess(await createLocation(user.userId, locationInput, {db: prisma}));
+
+                // Assert
+                expect(result.contactPhone).toBeDefined()
+                expect(result.contactPhone).not.toBeNull()
+                expect(result.contactPhone).toBe(expected)
+            })
         })
 
         test.each([
@@ -207,16 +215,11 @@ describe('Location Services', () => {
         test('Location should save regardless of geocoding success or failure', async () => {
             // Arrange
             const mockGeocoder: Geocoder = async () => null
-            const locationInput = {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1'
-            }
+            const locationInput = buildLocationInput()
+            const user = await signUpSetup()
 
             // Act
-            const result = await createLocation(locationInput, {db: prisma, geocoder: mockGeocoder});
+            const result = expectSuccess(await createLocation(user.userId, locationInput, {db: prisma, geocoder: mockGeocoder}));
             expect(result.id).toBeDefined()
 
             // Assert
@@ -224,25 +227,19 @@ describe('Location Services', () => {
                 const savedLocation = await prisma.location.findFirst({where: {id: result.id}});
                 expect(savedLocation!.latitude).toBeNull()
                 expect(savedLocation!.longitude).toBeNull()
-
             }, {timeout: 10000})
         })
 
         test('Location should save regardless of geocoding error', async () => {
             // Arrange
+            const testUser = await signUpSetup()
             const mockGeocoder: Geocoder = async () => {
                 throw new Error('Network error')
             }
-            const locationInput = {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1'
-            }
+            const locationInput = buildLocationInput()
 
             // Act
-            const result = await createLocation(locationInput, {db: prisma, geocoder: mockGeocoder});
+            const result = expectSuccess(await createLocation(testUser.userId, locationInput, {db: prisma, geocoder: mockGeocoder}));
             expect(result.id).toBeDefined()
 
             // Assert
@@ -256,13 +253,8 @@ describe('Location Services', () => {
 
         test('Location photos save successfully when creating a new location', async () => {
             // Arrange
-            const locationInput = {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1'
-            }
+            const locationInput = buildLocationInput()
+            const user = await signUpSetup()
 
             const photoInput = [{
                 buffer: Buffer.from('89504e470d0a1a0a', 'hex'),
@@ -271,7 +263,7 @@ describe('Location Services', () => {
             }]
 
             // Act
-            const result = await createLocation(locationInput, {db: prisma, photoInput: photoInput});
+            const result = expectSuccess(await createLocation(user.userId, locationInput, {db: prisma, photoInput: photoInput}));
 
 
             // Assert
@@ -284,13 +276,8 @@ describe('Location Services', () => {
 
         it('should reject photo uploads with more than 500 photos', async () => {
             // Arrange
-            const locationInput = {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1'
-            }
+            const locationInput = buildLocationInput()
+            const user = await signUpSetup()
 
             const photoInput = []
             for (let i = 0; i < 501; i++) {
@@ -302,10 +289,11 @@ describe('Location Services', () => {
             }
 
             // Act
-            const result = createLocation(locationInput, {db: prisma, photoInput: photoInput});
+            const result = expectFailure(await createLocation(user.userId, locationInput, {db: prisma, photoInput: photoInput}));
 
             // Assert
-            await expect(result).rejects.toThrow()
+            await expect(result.success).toBe(false)
+            await expect(result.code).toBe('LIMIT_EXCEEDED')
         }, 20000)
     })
 
