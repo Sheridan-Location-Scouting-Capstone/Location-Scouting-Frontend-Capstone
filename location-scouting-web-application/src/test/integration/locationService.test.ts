@@ -11,6 +11,7 @@ import {Geocoder} from "@/schemas/geocoder";
 import {addPhotosToLocation} from "@/services/locationPhotoService";
 // @ts-ignore
 import { LocationStatus } from "@prisma/client";
+import {signUpSetup} from "@/test/e2e/fixtures";
 
 function buildLocationInput({
     name = 'Downtown Alley',
@@ -20,7 +21,7 @@ function buildLocationInput({
     postalCode = 'M5V 1A1',
     contactPhone = undefined as string | undefined,
 } = {}) {
-    return { name, address, city, province, postalCode, contactPhone }
+    return {name, address, city, province, postalCode, contactPhone }
 }
 
 
@@ -29,29 +30,46 @@ describe('Location Services', () => {
     describe('createLocation', () => {
         it('should save a location with minimum required fields and return it with an id', async () => {
             // Arrange
+            const user = await signUpSetup();
             const locationInput = buildLocationInput();
 
             // Act
-            const result = await createLocation(locationInput, {db: prisma});
+            const result = await createLocation(user.userId, locationInput, {db: prisma});
 
             // Assert
-            expect(result.id).toBeDefined()
-            expect(result.id).not.toBeNull()
-            expect(result.name).toBe('Downtown Alley')
-            expect(result.country).toBe('Canada') // Verify default value applied
-            expect(result.status).toBe('ACTIVE')  // Verify default value applied
-            expect(result.createdAt).not.toBeNull()
-            expect(result.updatedAt).not.toBeNull()
+            expect(result).toBeDefined()
+            expect(result.success).toBe(true)
+            if(!result.success) {
+                throw new Error('Location creation failed')
+            }
+
+            const data = result.data
+
+            expect(data.id).toBeDefined()
+            expect(data.id).not.toBeNull()
+            expect(data.name).toBe('Downtown Alley')
+            expect(data.country).toBe('Canada') // Verify default value applied
+            expect(data.status).toBe('ACTIVE')  // Verify default value applied
+            expect(data.createdAt).not.toBeNull()
+            expect(data.updatedAt).not.toBeNull()
         })
 
+        const UNUSED_USER_ID = 'validation-fails-before-db-access'
         test.each([
             ['empty postal code', buildLocationInput({postalCode: ''})],
             ['empty province', buildLocationInput({province: ''})],
             ['empty city', buildLocationInput({city: ''})],
             ['empty name', buildLocationInput({name: ''})],
             ['empty address', buildLocationInput({address: ''})],
-        ])('should throw an error when there is an %s', async function (description, input) {
-            await expect(() => createLocation(input, {db: prisma})).rejects.toThrow()
+        ])('should throw an error when there is an %s', async function (description: string, input: any) {
+            const result = await createLocation(UNUSED_USER_ID, input, {db: prisma})
+            if(result.success) {
+                throw new Error('Location creation succeeded when it should have failed')
+            }
+            expect(result.success).toBe(false)
+            expect(result.code).toBe('VALIDATION_FAILED')
+            expect(result.error).toBeDefined()
+            expect(result.fieldErrors).toBeDefined()
         })
 
         it('should assign a unique ID to the location', async () => {

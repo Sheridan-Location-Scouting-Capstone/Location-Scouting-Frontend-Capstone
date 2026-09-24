@@ -16,6 +16,7 @@ import {
   addPhotosToLocation,
   removePhotosFromLocation, updatePhoto, updatePhotoDisplayOrder
 } from '@/services/locationPhotoService'
+import {requireUser} from "@/lib/auth-session";
 
 // ─── List / Search ──────────────────────────────────────────
 
@@ -32,6 +33,7 @@ export async function getLocationAction(id: string) {
 // ─── Create ─────────────────────────────────────────────────
 
 export async function createLocationAction(formData: FormData) {
+  const user = await requireUser()
   const raw = {
     name: formData.get('name') as string,
     address: formData.get('address') as string,
@@ -65,12 +67,14 @@ export async function createLocationAction(formData: FormData) {
     }
   }
 
-  const location = await createLocation(raw, {
+  const result = await createLocation(user.id, raw, {
     photoInput: photoInputs.length > 0 ? photoInputs : undefined,
   })
 
+  if(!result.success) return result
+
   revalidatePath('/locations')
-  redirect(`/locations/${location.id}`)
+  redirect(`/locations/${result.data.id}`)
 }
 
 // ─── Update ─────────────────────────────────────────────────

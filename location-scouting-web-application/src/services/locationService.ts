@@ -6,6 +6,9 @@ import {PhotoUploadInput} from "@/schemas/photoUploadInput";
 import { uploadPhotos, defaultBucket } from "@/services/photoService";
 import LocationStatus = $Enums.LocationStatus;
 import {addPhotosToLocation, removePhotosFromLocation} from "@/services/locationPhotoService";
+import {AppError} from "@/server/errors";
+import { z } from 'zod';
+import { Result } from '@/schemas/result';
 
 export const defaultGeocoder: Geocoder = async (address: string) => {
     const encoded = encodeURIComponent(address)
@@ -20,14 +23,15 @@ export const defaultGeocoder: Geocoder = async (address: string) => {
 
 
 export async function createLocation(
-    input: Prisma.LocationCreateInput,
+    userId: string,
+    input: z.input<typeof CreateLocationScheme>,
     options?: {
         db?: PrismaClient
         geocoder?: Geocoder
         photoInput?: PhotoUploadInput[]
         bucket?: string
     }
-) {
+): Promise<Result<Location>> {
     // Default settings
     const db = options?.db ?? defaultPrisma
     const geocoder = options?.geocoder ?? defaultGeocoder
@@ -35,16 +39,33 @@ export async function createLocation(
     const bucket = options?.bucket ?? defaultBucket
 
     if (options?.photoInput && options.photoInput.length > 500) {
-        throw new RangeError('Photo upload limit exceeded: maximum 500 photos per location')
+        return { success: false, code: 'LIMIT_EXCEEDED', error: 'Maximum 500 photos per location' }
     }
 
-    if (input.contactPhone) {
-        input.contactPhone = input.contactPhone.replace(/[\s()-]/g, '')
+    const parsed = CreateLocationScheme.safeParse(input)
+    if (!parsed.success) {
+        return {
+            success: false,
+            code: 'VALIDATION_FAILED',
+            error: 'Invalid Input. Please fix the highlighted fields and try again.',
+            fieldErrors: z.flattenError(parsed.error).fieldErrors
+        }
     }
-    const validated = CreateLocationScheme.parse(input)
-    const address = `${validated.address}, ${validated.city}, ${validated.province}, ${validated.postalCode}, ${validated.country}`
 
-    const location = await db.location.create({ data: validated })
+    if (parsed.data.contactPhone) {
+        parsed.data.contactPhone = parsed.data.contactPhone.replace(/[\s()-]/g, '')
+    }
+    const address = `${parsed.data.address}, ${parsed.data.city}, ${parsed.data.province}, ${parsed.data.postalCode}, ${parsed.data.country}`
+
+    let location
+    try {
+        location = await db.location.create({data: { ...parsed.data, userId }})
+    } catch (error) {
+        if(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+            return { success: false, code: 'ALREADY_EXISTS', error: 'Location already exists' }
+        }
+        throw error
+    }
 
     geocoder(address)
         .then(async coords => {
@@ -61,25 +82,37 @@ export async function createLocation(
         await addPhotosToLocation(location.id, photoInput, { db, bucket })
     }
 
-    return location
+    return { success: true, data: location }
 }
 
 
 
-export async function getLocationById(id: string, options?: { db?: PrismaClient }) {
+export async function getLocationById(userId: string, id: string, options?: { db?: PrismaClient }) : Promise<Result<Location>> {
     const db = options?.db ?? defaultPrisma
-    return db.location.findFirst({ where: { id, status: { not: LocationStatus.DELETED }}});
+    const location = await db.location
+        .findFirst(
+            { where:
+                    {
+                        userId,
+                        id,
+                        status: { not: LocationStatus.DELETED}
+                    }
+            });
+    if (!location) {
+        return { success: false, code: 'NOT_FOUND', error: 'Location not found' }
+    }
+    return { success: true, data: location }
 }
 
-export async function getLocationWithPhotos(id: string, options?: { db?: PrismaClient }) {
+export async function getLocationWithPhotos(userId: string, id: string, options?: { db?: PrismaClient }) {
     const db = options?.db ?? defaultPrisma
     return db.location.findFirst({
-        where: { id, status: { not: LocationStatus.DELETED }},
+        where: { id, userId, status: { not: LocationStatus.DELETED }},
         include: { photos: { orderBy: { displayOrder: 'asc' }}}
     });
 }
 
-export async function updateLocation(id: string, data: Prisma.LocationUpdateInput, options?: { db?: PrismaClient, geocoder?: Geocoder }) {
+export async function updateLocation(userId: string, id: string, data: Prisma.LocationUpdateInput, options?: { db?: PrismaClient, geocoder?: Geocoder }) {
     const db = options?.db ?? defaultPrisma
     const geocoder = options?.geocoder ?? defaultGeocoder
 
@@ -87,7 +120,7 @@ export async function updateLocation(id: string, data: Prisma.LocationUpdateInpu
 
     const address = `${validated.address}, ${validated.city}, ${validated.province}, ${validated.postalCode}, ${validated.country}`
 
-    const updatedLocation = await db.location.update({ where: { id },  data: validated });
+    const updatedLocation = await db.location.update({ where: { id, userId },  data: validated });
 
     geocoder(address)
         .then(async coords => {
@@ -113,10 +146,10 @@ export async function updateLocation(id: string, data: Prisma.LocationUpdateInpu
     return updatedLocation;
 }
 
-export async function deleteLocationById(id: string, options?: { db?: PrismaClient }) {
+export async function deleteLocationById(userId: string, id: string, options?: { db?: PrismaClient }) {
     const db = options?.db ?? defaultPrisma
     await db.location.updateMany({
-        where: { id, deletedAt: null },
+        where: { id, userId, deletedAt: null },
         data: {
             status: LocationStatus.DELETED,
             deletedAt: new Date()
@@ -125,6 +158,7 @@ export async function deleteLocationById(id: string, options?: { db?: PrismaClie
 }
 
 export async function getLocations(
+    userId: string,
     options?: {
         db?: PrismaClient
         query?: string
@@ -133,7 +167,7 @@ export async function getLocations(
 ) {
     const db = options?.db ?? defaultPrisma
     const where: Prisma.LocationWhereInput = {
-         status: { not: LocationStatus.DELETED }
+        userId, status: { not: LocationStatus.DELETED }
     }
 
     if (options?.query) {

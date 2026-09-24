@@ -10,14 +10,15 @@ export const createDefaultTestUser = () => ({
     password: "Test@1234",
 });
 
-export const signUpSetup : (user?: any) => Promise<{ name: string; email: string; password: string }> = (async(user) => {
+export const signUpSetup : (user?: any) => Promise<{ userId: string, name: string; email: string; password: string }> = (async(user) => {
     const testUser = user ?? createDefaultTestUser();
 
+    let userResult
     await given('a user exists', async() => {
-        const { user } = await auth.api.signUpEmail({body: testUser})
-        if(!user.id) throw new Error("User not created");
+        userResult = await auth.api.signUpEmail({body: testUser})
+        if(!userResult.user.id) throw new Error("User not created");
     })
-    return testUser
+    return {...testUser, userId: userResult!.user.id}
 })
 
 export const signInSetup = async ( { email, password }: { email: string, password: string}, page: Page
