@@ -56,14 +56,14 @@ export async function getLocationsByProject(
 
 const dGeocoder = defaultGeocoder;
 
-export async function createProject(input: z.infer<typeof CreateProjectSchema>, options?: { db?: typeof defaultPrisma, geocoder?: Geocoder }) {
+export async function createProject(userId: string, input: z.infer<typeof CreateProjectSchema>, options?: { db?: typeof defaultPrisma, geocoder?: Geocoder }) : Promise<Result<Project>> {
     const db = options?.db ?? defaultPrisma
     const gc = options?.geocoder ?? defaultGeocoder
 
     try {
         const validated = CreateProjectSchema.parse(input)
 
-        const project = await db.project.create({data: validated})
+        const project = await db.project.create({data: { ...validated, userId }})
         const address = `${project.address}, ${project.city}, ${project.province}, ${project.postalCode}, ${project.country}`
 
         // fire and forget pattern. Assuming the client will not need the lat-long right away and can refetch if needed.
@@ -85,17 +85,17 @@ export async function createProject(input: z.infer<typeof CreateProjectSchema>, 
     }
 }
 
-export async function getProjects(options?: { db?: typeof defaultPrisma }) {
+export async function getProjects(userId:string, options?: { db?: typeof defaultPrisma }) {
     const db = options?.db ?? defaultPrisma
 
-    const projects = await db.project.findMany()
+    const projects = await db.project.findMany({ where: { userId } })
     return { success: true, data: projects }
 }
 
-export async function getProjectById(id: string, options?: {db?: typeof defaultPrisma}): Promise<Result<Project>> {
+export async function getProjectById(userId: string, id: string, options?: {db?: typeof defaultPrisma}): Promise<Result<Project>> {
     const db = options?.db ?? defaultPrisma
 
-    const project = await db.project.findUnique({ where: { id } })
+    const project = await db.project.findUnique({ where: { id, userId } })
     if(!project) {
         return { success: false, error: "Project not found" }
     } else {
@@ -104,6 +104,7 @@ export async function getProjectById(id: string, options?: {db?: typeof defaultP
 }
 
 export async function updateProject(
+    userId: string,
     id: string,
     input: Partial<z.infer<typeof CreateProjectSchema>>,
     options?: { db?: typeof defaultPrisma; geocoder?: Geocoder }
@@ -113,27 +114,27 @@ export async function updateProject(
 
     try {
         const project = await db.project.update({
-            where: { id },
+            where: { id, userId },
             data: input,
         })
 
         // Re-geocode if any address field changed
         if (input.address || input.city || input.province || input.postalCode || input.country) {
-            const full = await db.project.findUnique({ where: { id } })
+            const full = await db.project.findUnique({ where: { id, userId } })
             if (full) {
                 const address = `${full.address}, ${full.city}, ${full.province}, ${full.postalCode}, ${full.country}`
                 geocoder(address)
                     .then(async (coords) => {
                         if (coords) {
                             await db.project.update({
-                                where: { id },
+                                where: { id, userId },
                                 data: { latitude: coords.lat, longitude: coords.lng },
                             })
                         }
                     })
                     .catch(async () => {
                         await db.project.update({
-                            where: { id },
+                            where: { id, userId },
                             data: { latitude: null, longitude: null },
                         })
                     })
