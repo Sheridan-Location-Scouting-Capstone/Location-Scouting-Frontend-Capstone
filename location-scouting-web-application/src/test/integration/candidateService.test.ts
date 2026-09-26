@@ -14,6 +14,8 @@ import {
 import {addPhotosToLocation} from "@/services/locationPhotoService";
 import {Geocoder} from "@/schemas/geocoder";
 import {PhotoUploadInput} from "@/schemas/photoUploadInput";
+import {setupUserWithLocations} from "@/test/e2e/fixtures";
+import { expectSuccess } from "@/test/helpers/result";
 
 const dummyKeyWordGen: KeywordGenerator = async() => ({ success: true, data: ['house', 'generated', 'gothic'] })
 const mockGeocoder: Geocoder = async () => ({ lat: 43.6532, lng: -79.3832 })
@@ -22,23 +24,18 @@ describe('Candidate Services', () => {
     let locationId: string
     let projectId: string
     let sceneId: string
+    let userId: string
 
 
     beforeEach(async() => {
         // Location Arrange
-        const locationInput = {
-            name: 'Downtown Alley',
-            address: '123 Main St',
-            city: 'Toronto',
-            province: 'ON',
-            postalCode: 'M5V 1A1'
-        }
 
-        const locationResult = await createLocation(locationInput, { db: prisma, geocoder: mockGeocoder })
+        const userWithLocations = await setupUserWithLocations(1);
+        userId = userWithLocations.user.userId
 
-        expect(locationResult.id).toBeDefined()
-        expect(locationResult.id).not.toBeNull()
-        locationId = locationResult.id
+        expect(userWithLocations.locations[0].id).toBeDefined()
+        expect(userWithLocations.locations[0].id).not.toBeNull()
+        locationId = userWithLocations.locations[0].id
 
         // Project Arrange
         const productionInput = {
@@ -49,10 +46,12 @@ describe('Candidate Services', () => {
             postalCode: 'M5V 2B2',
             country: 'Canada'
         }
-        const projectResult = await createProject(productionInput, {db: prisma})
+        const projectResult = await createProject(userWithLocations.user.userId, productionInput, {db: prisma})
 
         expect(projectResult.success).toBe(true)
-        if(!projectResult.success) return
+        if(!projectResult.success) {
+            throw new Error(`Failed to create project: ${projectResult.error}`);
+        }
         projectId = projectResult.data!.id
 
 
@@ -242,7 +241,7 @@ describe('Candidate Services', () => {
             }
 
             // Act & Assert - create second location
-            const secondLocationInputResult = await createLocation(secondLocationInput, { db: prisma, geocoder: mockGeocoder })
+            const secondLocationInputResult = expectSuccess(await createLocation(userId, secondLocationInput, { db: prisma, geocoder: mockGeocoder }));
             expect(secondLocationInputResult).toBeDefined()
             expect(secondLocationInputResult.id).not.toBeNull()
             const secondLocationId: string = secondLocationInputResult.id
@@ -394,7 +393,7 @@ describe('Candidate Services', () => {
             expect(result.data!.selected).toBe(selected)
         })
 
-        it(' should allow more than one candidate per scene to be selected', async() => {
+        it('should allow more than one candidate per scene to be selected', async() => {
             // Arrange - set up a second location & candidate
             const locationInput = {
                 name: 'Downtown Alley',
@@ -404,7 +403,7 @@ describe('Candidate Services', () => {
                 postalCode: 'M5V 1A2'
             }
 
-            const locationResult = await createLocation(locationInput, { db: prisma, geocoder: mockGeocoder })
+            const locationResult = expectSuccess(await createLocation(userId, locationInput, { db: prisma, geocoder: mockGeocoder }));
             const secondLocationId = locationResult.id
 
             // Arrange set up the candidate

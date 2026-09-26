@@ -15,19 +15,7 @@ import {signUpSetup} from "@/test/e2e/fixtures";
 import {expectFailure, expectSuccess} from "@/test/helpers/result";
 import {User} from "better-auth";
 import {ErrorCode} from "@/schemas/result";
-
-function buildLocationInput({
-    name = 'Downtown Alley',
-    address = '123 Main St',
-    city = 'Toronto',
-    province = 'ON',
-    postalCode = 'M5V 1A1',
-    contactName = undefined as string | undefined,
-    contactPhone = undefined as string | undefined,
-} = {}) {
-    return {name, address, city, province, postalCode, contactName, contactPhone }
-}
-
+import { buildLocationInput } from "@/test/helpers/builders"
 
 
 describe('Location Services', () => {
