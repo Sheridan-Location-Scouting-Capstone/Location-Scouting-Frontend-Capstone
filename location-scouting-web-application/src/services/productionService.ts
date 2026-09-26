@@ -2,7 +2,7 @@ import { prisma as defaultPrisma} from '@/lib/prisma'
 import { CreateProjectSchema } from "@/schemas/projectSchema";
 import { z } from 'zod';
 import {Project} from "@prisma/client";
-import {Result} from "@/schemas/result";
+import {ErrorCode, Result} from "@/schemas/result";
 import {Geocoder} from "@/schemas/geocoder";
 import {defaultGeocoder} from "@/services/locationService";
 
@@ -61,9 +61,18 @@ export async function createProject(userId: string, input: z.infer<typeof Create
     const gc = options?.geocoder ?? defaultGeocoder
 
     try {
-        const validated = CreateProjectSchema.parse(input)
+        const validated = CreateProjectSchema.safeParse(input)
 
-        const project = await db.project.create({data: { ...validated, userId }})
+        if (!validated.success) {
+            return {
+                success: false,
+                code: ErrorCode.VALIDATION_FAILED,
+                error: "Invalid project data",
+                fieldErrors: z.flattenError(validated.error).fieldErrors
+            };
+        }
+
+        const project = await db.project.create({data: { ...validated.data, userId }})
         const address = `${project.address}, ${project.city}, ${project.province}, ${project.postalCode}, ${project.country}`
 
         // fire and forget pattern. Assuming the client will not need the lat-long right away and can refetch if needed.

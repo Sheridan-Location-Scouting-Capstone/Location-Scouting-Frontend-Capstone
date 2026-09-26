@@ -2,6 +2,8 @@ import {prisma} from '@/test/setup'
 import {describe, expect, it, vi} from 'vitest'
 import {createProject, getProjectById, getProjects} from "@/services/productionService";
 import {Geocoder} from "@/schemas/geocoder";
+import {signUpSetup} from "@/test/e2e/fixtures";
+import {expectSuccess} from "@/test/helpers/result";
 
 const mockLat = 43.6532
 const mockLong = -79.3832
@@ -11,6 +13,7 @@ describe('Production Service', () => {
     describe('createProject', () => {
         it('should save a production with minimum required fields', async () => {
             // Arrange
+            const user = await signUpSetup();
             const productionInput = {
                 name: 'Test Production',
                 address: '456 Film St',
@@ -21,16 +24,11 @@ describe('Production Service', () => {
             }
 
             // Act
-            const sut = await createProject(productionInput, {db: prisma})
+            const sut = expectSuccess(await createProject(user.userId, productionInput, {db: prisma}));
 
             // Assert
-            expect(sut.success).toBe(true)
-            if (sut.success) {
-                expect(sut.data).not.toBeNull()
-                expect(sut.data).toBeDefined()
-                expect(sut.data!.name).toBe(productionInput.name)
-                expect(sut.data!.id).toBeDefined()
-            }
+            expect(sut.name).toBe(productionInput.name)
+            expect(sut.id).toBeDefined()
         })
 
         it('should fail to save a production with missing required fields', async () => {

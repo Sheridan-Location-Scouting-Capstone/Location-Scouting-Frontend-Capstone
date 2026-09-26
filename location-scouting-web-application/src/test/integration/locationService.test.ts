@@ -453,17 +453,13 @@ describe('Location Services', () => {
             'Alexander Maximillian Christopher-Jonathan Montgomery-Smythe Jr. The Gre' // 72 char
         ])('should reject invalid contact names (boundary value analysis)', async (input) => {
             // Arrange
-            const locationInput = {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1',
-                contactName: input
-            }
+            const locationInput = buildLocationInput({contactName: input});
 
-            // Act & Assert
-            await expect(updateLocation(user.userId, locationId, locationInput, { db: prisma })).rejects.toThrow();
+            // Act
+            const result = expectFailure(await updateLocation(user.userId, locationId, locationInput, { db: prisma }));
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.VALIDATION_FAILED)
         })
     })
 
