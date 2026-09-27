@@ -94,7 +94,7 @@ export async function createProject(userId: string, input: z.infer<typeof Create
     }
 }
 
-export async function getProjects(userId:string, options?: { db?: typeof defaultPrisma }) {
+export async function getProjects(userId:string, options?: { db?: typeof defaultPrisma }) : Promise<Result<Project[]>> {
     const db = options?.db ?? defaultPrisma
 
     const projects = await db.project.findMany({ where: { userId } })

@@ -4,15 +4,21 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import {createProject, getProjects, getProjectById, updateProject} from '@/services/productionService'
 import {createScene, deleteScene, getScenesForProject, updateScene} from '@/services/sceneService'
+import {requireUser} from "@/lib/auth-session";
 
 // ─── Projects ───────────────────────────────────────────────
 
 export async function getProjectsAction() {
-  const result = await getProjects()
-  return result.data
+  const user = await requireUser();
+  const result = await getProjects(user.id);
+  if(result.success) {
+    return result.data
+  }
+  throw new Error('Failed to retrieve projects')
 }
 
 export async function createProjectAction(formData: FormData) {
+  const user = await requireUser();
   const raw = {
     name: formData.get('name') as string,
     address: formData.get('address') as string,
@@ -22,16 +28,18 @@ export async function createProjectAction(formData: FormData) {
     country: (formData.get('country') as string) || 'Canada',
   }
 
-  const result = await createProject(raw)
-
-  revalidatePath('/productions')
-  redirect(`/productions/${result.data!.id}`)
+  const result = await createProject(user.id, raw)
+  if(result.success) {
+    revalidatePath('/productions')
+    redirect(`/productions/${result.data.id}`)
+  }
+  throw new Error('Failed to create project')
 }
 
 
 export async function getProject(projectId: string)  {
-  const result = await getProjectById(projectId)
-  return result
+  const user = await requireUser();
+  return await getProjectById(user.id, projectId);
 }
 
 // ─── Scenes ─────────────────────────────────────────────────
@@ -82,6 +90,7 @@ export async function updateSceneAction(sceneId: string, projectId: string, form
 }
 
 export async function updateProjectAction(projectId: string, formData: FormData) {
+  const user = await requireUser();
   const raw = {
     name: formData.get('name') as string,
     address: formData.get('address') as string,
@@ -91,7 +100,7 @@ export async function updateProjectAction(projectId: string, formData: FormData)
     country: (formData.get('country') as string) || 'Canada',
   }
 
-  await updateProject(projectId, raw)
+  await updateProject(user.id, projectId, raw)
 
   revalidatePath(`/productions/${projectId}`)
   redirect(`/productions/${projectId}`)

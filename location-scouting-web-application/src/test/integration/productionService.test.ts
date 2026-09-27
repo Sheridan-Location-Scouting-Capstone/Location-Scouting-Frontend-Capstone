@@ -101,18 +101,16 @@ describe('Production Service', () => {
             await createProject(user.userId, productionInput, {db: prisma})
 
             // Act
-            const productions = await getProjects(user.userId, {db: prisma})
+            const productions = expectSuccess(await getProjects(user.userId, {db: prisma}))
 
             // Assert
-            if (productions.success) {
-                expect(productions.data).toBeInstanceOf(Array)
-                expect(productions.data.length).toBeGreaterThan(0)
-                const found = productions.data.find(p => p.name === productionInput.name)
-                expect(found).toBeDefined()
-                if (found) {
-                    expect(found.address).toBe(productionInput.address)
-                    expect(found.city).toBe(productionInput.city)
-                }
+            expect(productions).toBeInstanceOf(Array)
+            expect(productions.length).toBeGreaterThan(0)
+            const found = productions.find(p => p.name === productionInput.name)
+            expect(found).toBeDefined()
+            if (found) {
+                expect(found.address).toBe(productionInput.address)
+                expect(found.city).toBe(productionInput.city)
             }
         })
     })
