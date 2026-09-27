@@ -3,7 +3,8 @@ export const ErrorCode = {
     NOT_FOUND: 'NOT_FOUND',
     ALREADY_EXISTS: 'ALREADY_EXISTS',
     LIMIT_EXCEEDED: 'LIMIT_EXCEEDED',
-    UNAUTHORIZED: 'UNAUTHORIZED'
+    UNAUTHORIZED: 'UNAUTHORIZED',
+    INTERNAL_SERVER_ERROR: 'INTERNAL_SERVER_ERROR',
 } as const;
 
 export type ErrorCode = typeof ErrorCode[keyof typeof ErrorCode];

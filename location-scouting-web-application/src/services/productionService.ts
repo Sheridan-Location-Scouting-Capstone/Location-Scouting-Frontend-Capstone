@@ -151,6 +151,6 @@ export async function updateProject(
 
         return { success: true, data: project }
     } catch (error) {
-        return { success: false, error: `Failed to update project: ${id}` }
+        return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: `Failed to update project: ${id}` }
     }
 }
