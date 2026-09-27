@@ -105,11 +105,10 @@ export async function getProjectById(userId: string, id: string, options?: {db?:
     const db = options?.db ?? defaultPrisma
 
     const project = await db.project.findUnique({ where: { id, userId } })
-    if(!project) {
-        return { success: false, error: "Project not found" }
-    } else {
-        return { success: true, data: project }
+    if (!project) {
+        return { success: false, code: ErrorCode.NOT_FOUND, error: `Project not found: ${id}` }
     }
+    return { success: true, data: project }
 }
 
 export async function updateProject(
