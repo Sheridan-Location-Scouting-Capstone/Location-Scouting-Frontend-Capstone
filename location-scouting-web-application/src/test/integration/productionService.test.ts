@@ -1,5 +1,5 @@
 import {prisma} from '@/test/setup'
-import {describe, expect, it, vi, beforeAll} from 'vitest'
+import {describe, expect, it, vi, beforeEach} from 'vitest'
 import {createProject, getProjectById, getProjects} from "@/services/productionService";
 import {Geocoder} from "@/schemas/geocoder";
 import {signUpSetup} from "@/test/e2e/fixtures";
@@ -15,7 +15,7 @@ describe('Production Service', () => {
 
         let user: any
 
-        beforeAll(async () => {
+        beforeEach(async () => {
             user = await signUpSetup();
         })
 
@@ -84,7 +84,7 @@ describe('Production Service', () => {
     describe('Get Productions', () => {
         let user: any
 
-        beforeAll(async () => {
+        beforeEach(async () => {
             user = await signUpSetup();
         })
 
@@ -120,7 +120,7 @@ describe('Production Service', () => {
     describe('Get Production By ID', () => {
         let user: any
 
-        beforeAll(async () => {
+        beforeEach(async () => {
             user = await signUpSetup();
         })
 
