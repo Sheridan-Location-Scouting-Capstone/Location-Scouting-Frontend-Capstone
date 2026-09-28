@@ -45,11 +45,16 @@ export async function getProject(projectId: string)  {
 // ─── Scenes ─────────────────────────────────────────────────
 
 export async function getScenesAction(projectId: string) {
-  const result = await getScenesForProject(projectId)
-  return result.data
+  const user = await requireUser();
+  const result = await getScenesForProject(user.id, projectId)
+  if(result.success) {
+    return result.data
+  }
+  throw new Error('Failed to retrieve scenes')
 }
 
 export async function createSceneAction(formData: FormData) {
+  const user = await requireUser();
   const raw = {
     sceneNumber: parseInt(formData.get('sceneNumber') as string, 10),
     intExt: formData.get('intExt') as 'INT' | 'EXT' | 'INT_EXT',
@@ -59,20 +64,24 @@ export async function createSceneAction(formData: FormData) {
     projectId: formData.get('projectId') as string,
   }
 
-  const result = await createScene(raw)
+  const result = await createScene(user.id, raw)
+  if(!result.success) return result
 
   revalidatePath(`/productions/${raw.projectId}`)
   redirect(`/productions/${raw.projectId}`)
 }
 
 export async function deleteSceneAction(sceneId: string, projectId: string) {
-  await deleteScene(sceneId)
+  const user = await requireUser();
+  const result = await deleteScene(user.id, sceneId)
+  if(!result.success) return result
 
   revalidatePath(`/productions/${projectId}`)
   redirect(`/productions/${projectId}`)
 }
 
 export async function updateSceneAction(sceneId: string, projectId: string, formData: FormData) {
+  const user = await requireUser();
   const raw = {
     sceneNumber: parseInt(formData.get('sceneNumber') as string, 10),
     intExt: formData.get('intExt') as 'INT' | 'EXT' | 'INT_EXT',
@@ -83,7 +92,8 @@ export async function updateSceneAction(sceneId: string, projectId: string, form
     projectId,
   }
 
-  await updateScene(sceneId, raw)
+  const result = await updateScene(user.id, sceneId, raw)
+  if(!result.success) return result
 
   revalidatePath(`/productions/${projectId}/scenes/${sceneId}`)
   redirect(`/productions/${projectId}/scenes/${sceneId}`)
@@ -100,7 +110,8 @@ export async function updateProjectAction(projectId: string, formData: FormData)
     country: (formData.get('country') as string) || 'Canada',
   }
 
-  await updateProject(user.id, projectId, raw)
+  const result = await updateProject(user.id, projectId, raw)
+  if(!result.success) return result
 
   revalidatePath(`/productions/${projectId}`)
   redirect(`/productions/${projectId}`)

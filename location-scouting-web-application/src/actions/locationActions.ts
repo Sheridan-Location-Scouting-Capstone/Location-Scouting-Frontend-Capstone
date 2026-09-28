@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import {
   createLocation, deleteLocationById, getLocations,
-  // getLocation,
+  getLocationById,
   getLocationWithPhotos,
   updateLocation,
   // updateLocationStatus,
@@ -21,13 +21,15 @@ import {requireUser} from "@/lib/auth-session";
 // ─── List / Search ──────────────────────────────────────────
 
 export async function getLocationsAction(query?: string, keywords?: string[]) {
-  return getLocations({ query, keywords })
+  const user = await requireUser()
+  return getLocations(user.id, { query, keywords })
 }
 
 // ─── Single Location ────────────────────────────────────────
 
 export async function getLocationAction(id: string) {
-  return await getLocationWithPhotos(id)
+  const user = await requireUser()
+  return await getLocationWithPhotos(user.id, id)
 }
 
 // ─── Create ─────────────────────────────────────────────────
@@ -80,6 +82,7 @@ export async function createLocationAction(formData: FormData) {
 // ─── Update ─────────────────────────────────────────────────
 
 export async function updateLocationAction(id: string, formData: FormData) {
+  const user = await requireUser()
   const data: Record<string, unknown> = {}
 
   const fields = ['name', 'address', 'city', 'province', 'postalCode', 'country', 'notes', 'contactName', 'contactPhone', 'contactEmail']
@@ -95,7 +98,8 @@ export async function updateLocationAction(id: string, formData: FormData) {
     data.keywords = keywordsStr.split(',').map((k) => k.trim()).filter(Boolean)
   }
 
-  await updateLocation(id, data)
+  const result = await updateLocation(user.id, id, data)
+  if (!result.success) return result
 
   revalidatePath('/locations')
   revalidatePath(`/locations/${id}`)
@@ -103,11 +107,13 @@ export async function updateLocationAction(id: string, formData: FormData) {
 }
 
 export async function removeKeywordAction(id: string, keyword: string) {
-    const locations = await getLocations()
-    const location = locations.find((l: any) => l.id === id)
-    const updatedKeywords = location!.keywords.filter((k: string) => k !== keyword)
+    const user = await requireUser()
+    const locationResult = await getLocationById(user.id, id)
+    if (!locationResult.success) return locationResult
+    const updatedKeywords = locationResult.data.keywords.filter((k: string) => k !== keyword)
 
-    await updateLocation(id, { keywords: updatedKeywords })
+    const result = await updateLocation(user.id, id, { keywords: updatedKeywords })
+    if (!result.success) return result
 
     revalidatePath('/locations')
     revalidatePath(`/locations/${id}`)
@@ -116,11 +122,11 @@ export async function removeKeywordAction(id: string, keyword: string) {
 // ─── Status ─────────────────────────────────────────────────
 
 export async function updateLocationStatusAction(id: string, status: 'ACTIVE' | 'ARCHIVED' | 'DELETED') {
-  if (status === 'DELETED') {
-    await deleteLocationById(id)
-  } else {
-    await updateLocation(id, { status, deletedAt: null })
-  }
+  const user = await requireUser()
+  const result = status === 'DELETED'
+    ? await deleteLocationById(user.id, id)
+    : await updateLocation(user.id, id, { status, deletedAt: null })
+  if (!result.success) return result
 
   revalidatePath('/locations')
   if (status === 'DELETED') redirect('/locations')
@@ -129,6 +135,7 @@ export async function updateLocationStatusAction(id: string, status: 'ACTIVE' | 
 // ─── Photos ─────────────────────────────────────────────────
 
 export async function addPhotosAction(locationId: string, formData: FormData) {
+  const user = await requireUser()
   const photoFiles = formData.getAll('photos') as File[]
   const photoNames = formData.getAll('photoNames') as string[]
   const photoInputs = []
@@ -146,23 +153,30 @@ export async function addPhotosAction(locationId: string, formData: FormData) {
   }
 
   if (photoInputs.length > 0) {
-    await addPhotosToLocation(locationId, photoInputs)
+    const result = await addPhotosToLocation(user.id, locationId, photoInputs)
+    if (!result.success) return result
   }
 
   revalidatePath(`/locations/${locationId}`)
 }
 
 export async function deletePhotoAction(photoId: string, locationId: string) {
-  await removePhotosFromLocation(locationId, [photoId])
+  const user = await requireUser()
+  const result = await removePhotosFromLocation(user.id, locationId, [photoId])
+  if (!result.success) return result
   revalidatePath(`/locations/${locationId}`)
 }
 
 export async function updatePhotoNameAction(photoId: string, name: string, locationId: string) {
-  await updatePhoto(photoId, { name })
+  const user = await requireUser()
+  const result = await updatePhoto(user.id, photoId, { name })
+  if (!result.success) return result
   revalidatePath(`/locations/${locationId}`)
 }
 
 export async function updatePhotoDisplayOrderAction(locationId: string, orderedPhotoIds: string[]) {
-  await updatePhotoDisplayOrder(locationId, orderedPhotoIds)
+  const user = await requireUser()
+  const result = await updatePhotoDisplayOrder(user.id, locationId, orderedPhotoIds)
+  if (!result.success) return result
   revalidatePath(`/locations/${locationId}`)
 }
