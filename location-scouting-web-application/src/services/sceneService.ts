@@ -2,14 +2,18 @@ import { prisma as defaultPrisma} from '@/lib/prisma'
 import { z } from 'zod'
 import {CreateSceneSchema, UpdateSceneSchema} from "@/schemas/sceneSchema";
 import {getKeywords, KeywordGenerator} from "@/services/keywordGenerator";
-import {Result} from "@/schemas/result";
+import {ErrorCode, Result} from "@/schemas/result";
 import {Scene} from "@prisma/client";
 
 const defaultKeywordGenerator: KeywordGenerator = async (scriptContent: string) => {
     return getKeywords(scriptContent)
 }
 
-export async function createScene(input: z.infer<typeof CreateSceneSchema>, options?: { db?: typeof defaultPrisma, keywordGenerator?: KeywordGenerator }) {
+export async function createScene(
+    userId: string,
+    input: z.infer<typeof CreateSceneSchema>,
+    options?: { db?: typeof defaultPrisma, keywordGenerator?: KeywordGenerator }
+) : Promise<Result<Scene>> {
     const db = options?.db ?? defaultPrisma
     const keywordGenerator = options?.keywordGenerator ?? defaultKeywordGenerator
 
@@ -17,55 +21,79 @@ export async function createScene(input: z.infer<typeof CreateSceneSchema>, opti
 
     let scene = await db.scene.create({ data: validated })
 
-    const response = await keywordGenerator(scene.scriptSection)
-    if (response.success) {
-            scene = await db.scene.update({
-                where: { id: scene.id },
-                data: { keywords: response.data }
-            })
-        }
+    keywordGenerator(scene.scriptSection)
+        .then(async (response) => {
+            if (response.success) {
+                scene = await db.scene.update({
+                    where: { id: scene.id, project: { userId } },
+                    data: { keywords: response.data }
+                })
+            }
+        })
+
     return { success: true, data: scene }
 }
 
-export async function getScenesForProject(projectId: string, options?: { db?: typeof defaultPrisma }) {
+export async function getScenesForProject(
+    userId: string,
+    projectId: string,
+    options?: { db?: typeof defaultPrisma }
+) : Promise<Result<Scene[]>> {
     const db = options?.db ?? defaultPrisma
 
     const scenes = await db.scene.findMany({
-        where: { projectId },
+        where: { projectId, project: { userId } },
         orderBy: { createdAt: 'asc' }
     })
     return { success: true, data: scenes }
 }
 
-export async function getSceneById(sceneId: string, options?: { db?: typeof defaultPrisma }) : Promise<Result<Scene>> {
+export async function getSceneById(
+    userId: string,
+    sceneId: string,
+    options?: { db?: typeof defaultPrisma }
+) : Promise<Result<Scene>> {
     const db = options?.db ?? defaultPrisma
 
     const scene = await db.scene.findUnique({
-        where: { id: sceneId }
+        where: { id: sceneId, project: { userId } }
     })
     if (!scene) {
-        return { success: false, error: 'Scene not found' }
+        return { success: false, code: ErrorCode.NOT_FOUND, error: 'Scene not found' }
     }
     return { success: true, data: scene }
 }
 
-export async function updateScene(sceneId: string, input: Partial<z.infer<typeof CreateSceneSchema>>, options?: { db?: typeof defaultPrisma, keywordGenerator: KeywordGenerator }) {
+export async function updateScene(
+    userId: string,
+    sceneId: string,
+    input: Partial<z.infer<typeof CreateSceneSchema>>,
+    options?: { db?: typeof defaultPrisma, keywordGenerator: KeywordGenerator }
+) : Promise<Result<Scene>> {
     const db = options?.db ?? defaultPrisma
 
-    const validated = UpdateSceneSchema.partial().parse(input)
+    const validated = UpdateSceneSchema.partial().safeParse(input)
+
+    if (!validated.success) {
+        return { success: false, code: ErrorCode.VALIDATION_FAILED, error: 'Invalid input' }
+    }
 
     const updatedScene = await db.scene.update({
-        where: { id: sceneId },
-        data: validated
+        where: { id: sceneId, project: { userId } },
+        data: validated.data
     })
 
     return { success: true, data: updatedScene }
 }
 
-export async function deleteScene(sceneId: string, options?: { db?: typeof defaultPrisma}) {
+export async function deleteScene(
+    userId: string,
+    sceneId: string,
+    options?: { db?: typeof defaultPrisma}
+) : Promise<Result<void>> {
     const db = options?.db ?? defaultPrisma
     try {
-        await db.scene.delete({ where: { id: sceneId } })
+        await db.scene.delete({ where: { id: sceneId, project: { userId } } })
         return { success: true, data: undefined }
     } catch (error) {
         console.log(`Failed to delete scene: ${sceneId}. Due to: ${error}`)

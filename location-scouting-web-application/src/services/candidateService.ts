@@ -1,5 +1,5 @@
-import {Result} from "@/schemas/result";
-import {Candidate, Prisma} from "@prisma/client";
+import {ErrorCode, Result} from "@/schemas/result";
+import {Candidate, LocationStatus, Prisma} from "@prisma/client";
 import { prisma as defaultPrisma } from '@/lib/prisma'
 import { z } from 'zod'
 import {CreateCandidateSchema} from "@/schemas/candidateSchema"
@@ -14,7 +14,11 @@ const candidateInclude = {
 export type CandidateWithDetails = Prisma.CandidateGetPayload<{ include: typeof candidateInclude }>
 
 
-export async function createCandidate(input: z.infer<typeof CreateCandidateSchema>, options?: { db?: typeof defaultPrisma }) : Promise<Result<Candidate>> {
+export async function createCandidate(
+    userId: string,
+    input: z.infer<typeof CreateCandidateSchema>,
+    options?: { db?: typeof defaultPrisma }
+) : Promise<Result<Candidate>> {
     const db = options?.db ?? defaultPrisma
 
     const photoIds = input.photos ?? []
@@ -22,12 +26,12 @@ export async function createCandidate(input: z.infer<typeof CreateCandidateSchem
     try {
         const candidate = await db.candidate.create({
             data: {
-                scene: {connect: {id: input.sceneId}},
-                location: {connect: {id: input.locationId}},
+                scene: { connect: { id: input.sceneId, project: { userId } } },
+                location: { connect: { id: input.locationId, userId, status: LocationStatus.ACTIVE } },
                 selected: input.selected ?? false,
                 photos: {
                     create: photoIds.map((photoId, index) => ({
-                        photo: {connect: {id: photoId}},
+                        photo: { connect: { id: photoId, locationId: input.locationId } },
                         displayOrder: index,
                     }))
                 }
@@ -40,75 +44,120 @@ export async function createCandidate(input: z.infer<typeof CreateCandidateSchem
         if(error instanceof Prisma.PrismaClientKnownRequestError) {
             if(error.code === 'P2002') {
                 console.log('Candidate already exists for this scene')
-                return { success: false, error: 'Candidate already exists for this scene' }
+                return { success: false, code: ErrorCode.ALREADY_EXISTS, error: 'Candidate already exists for this scene' }
+            }
+            if(error.code === 'P2025') {
+                console.log('Scene or Location not found for this candidate')
+                return { success: false, code: ErrorCode.NOT_FOUND, error: 'Scene or Location not found for this candidate' }
             }
         }
 
         console.log(`Failed to create candidate with Scene ID: ${input.sceneId} and Location ID: ${input.locationId}`);
-        return { success: false, error: "Failed to create candidate with Scene ID and Location ID" }
+        return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: "Failed to create candidate with Scene ID and Location ID" }
     }
 }
 
-export async function getCandidatesForScene(sceneId: string, options?: {db?: typeof defaultPrisma}) : Promise<Result<CandidateWithDetails[]>> {
+export async function getCandidatesForScene(
+    userId: string,
+    sceneId: string,
+    options?: {db?: typeof defaultPrisma}
+) : Promise<Result<CandidateWithDetails[]>> {
     const db = options?.db ?? defaultPrisma
 
     try {
         const candidates = await db.candidate.findMany({
-            where: { sceneId: sceneId },
+            where: {
+                sceneId: sceneId,
+                location: { userId },
+                scene: { project: { userId } }
+            },
             include: candidateInclude
         })
+
+        if(!candidates) {
+            return { success: false, code: ErrorCode.NOT_FOUND, error: `No candidates found for scene: ${sceneId}` }
+        }
 
         return { success: true, data: candidates }
     } catch (error) {
         console.log(`Failed to get all candidates for Scene: ${sceneId}`)
-        return { success: false, error: `Failed to fetch candidates for scene: ${sceneId}`}
+        return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: `Failed to fetch candidates for scene: ${sceneId}`}
     }
 }
 
-export async function removeCandidateFromScene(candidateId: string, options?: {db?: typeof defaultPrisma}) {
+export async function removeCandidateFromScene(
+    userId: string,
+    candidateId: string,
+    options?: { db?: typeof defaultPrisma }
+) : Promise<Result<void>> {
     const db = options?.db ?? defaultPrisma
     try {
-        const result = await db.candidate.delete({
-            where: { id : candidateId }
+        await db.candidate.delete({
+            where: {
+                id : candidateId,
+                location: { userId }
+            }
         })
-        return {success: true, data: result }
+        return { success: true, data: undefined }
     } catch (error) {
+        if(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            console.log(`Candidate not found or not authorized to delete: ${candidateId}`)
+            return { success: false, code: ErrorCode.NOT_FOUND, error: `Candidate not found or not authorized to delete: ${candidateId}` }
+        }
+        if(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+            console.log(`Cannot delete candidate due to foreign key constraint: ${candidateId}`)
+            return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: `Cannot delete candidate due to foreign key constraint: ${candidateId}` }
+        }
+
         console.log(`Error when deleting candidate: ${candidateId}`)
-        return { success: false, error: `Failed to delete candidate: ${candidateId}` }
+        return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: `Failed to delete candidate: ${candidateId}` }
     }
 }
 
-export async function toggleCandidateSelected(candidateId: string, selected: boolean, options?: { db?: typeof defaultPrisma}) {
+export async function toggleCandidateSelected(
+    userId: string,
+    candidateId: string,
+    selected: boolean,
+    options?: { db?: typeof defaultPrisma}
+) : Promise<Result<Candidate>> {
     const db = options?.db ?? defaultPrisma
 
     try {
         const result = await db.candidate.update({
-            where: {id: candidateId},
-            data: {selected: selected}
+            where: { id: candidateId, location: { userId } },
+            data: { selected: selected }
         })
         return {success: true, data: result }
     } catch (error) {
-        console.log(`Error when deleting candidate: ${candidateId}`)
-        return { success: false, error: `Failed to update candidate: ${candidateId}` }
+        if(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            console.log(`Candidate not found or not authorized to update: ${candidateId}`)
+            return { success: false, code: ErrorCode.NOT_FOUND, error: `Candidate not found or not authorized to update: ${candidateId}` }
+        }
+        console.log(`Error when updating candidate: ${candidateId}`)
+        return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: `Failed to update candidate: ${candidateId}` }
     }
 }
 
-export async function getCandidateById(candidateId: string, options?: { db?: typeof defaultPrisma }) {
+export async function getCandidateById(
+    userId: string,
+    candidateId: string,
+    options?: { db?: typeof defaultPrisma }
+): Promise<Result<Candidate>> {
     const db = options?.db ?? defaultPrisma
 
     try{
         const result = await db.candidate.findUnique({
-            where: { id: candidateId }
+            where: { id: candidateId, location: { userId } }
         })
 
         if(!result){
-            return {success: false, error: `Failed to get candidate with id ${candidateId}` }
+            return {success: false, code: ErrorCode.NOT_FOUND, error: `Failed to get candidate with id ${candidateId}` }
         }
 
         return {success: true, data: result }
     } catch (error) {
         console.log(`Error when finding candidate: ${candidateId}`)
-        return { success: false, error: `Failed to get candidate with id ${candidateId}` }
+        return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: `Failed to get candidate with id ${candidateId}` }
     }
 }
 //

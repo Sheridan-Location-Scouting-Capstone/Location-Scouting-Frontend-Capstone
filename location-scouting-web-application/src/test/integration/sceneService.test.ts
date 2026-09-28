@@ -8,6 +8,9 @@ import {KeywordGenerator} from "@/services/keywordGenerator";
 import {createLocation} from "@/services/locationService";
 import {Geocoder} from "@/schemas/geocoder";
 import {createCandidate, getCandidateById} from "@/services/candidateService";
+import {signUpSetup} from "@/test/e2e/fixtures";
+import {expectFailure, expectSuccess} from "@/test/helpers/result";
+import {ErrorCode} from "@/schemas/result";
 
 
 const dummyKeyWordGen: KeywordGenerator = async() => ({ success: true, data: ['generated', 'keywords']})
@@ -16,40 +19,30 @@ const failingGenerator: KeywordGenerator = async() => ({ success: false, error: 
 describe('Scene Service', () => {
 
     let projectId: string
+    let userId: string
 
     const mockGeocoder: Geocoder = async () => ({lat: 43.6532, lng: -79.3832})
 
     beforeEach(async () => {
-        const project = await createProject({
-            name: 'Test Project',
-            address: '456 Film St',
-            city: 'Vancouver',
-            province: 'BC',
-            postalCode: 'V5K 0A1',
-            country: 'Canada'
-        }, { db: prisma })
-
-        expect(project.success).toBe(true)
-        if (!project.success) return
-        projectId = project.data!.id
+        const user = await signUpSetup();
+        userId = user.userId;
+        const project = expectSuccess(await createProject(
+            userId,
+            {
+                name: 'Test Project',
+                address: '456 Film St',
+                city: 'Vancouver',
+                province: 'BC',
+                postalCode: 'V5K 0A1',
+                country: 'Canada'
+            },
+            { db: prisma }))
+        projectId = project.id
     })
 
     describe('createScene', () => {
         it('should create a scene with valid input', async () => {
             // Arrange
-            // First create a project to associate the scene with
-            const project = await createProject({
-                      name: 'Test Project',
-                      address: '456 Film St',
-                      city: 'Vancouver',
-                      province: 'BC',
-                      postalCode: 'V5K 0A1',
-                      country: 'Canada'
-            }, { db: prisma })
-
-            // Verify project was created successfully before continuing
-            expect(project.success).toBe(true)
-
             const sceneInput = {
                 sceneNumber: 2,
                 intExt: IntExt.EXT,
@@ -70,12 +63,12 @@ describe('Scene Service', () => {
                     '                         HATTIE (O.S.)\n' +
                     '               He\'s out back, looking like he fell\n' +
                     '               out.\n',
-                projectId: project.data!.id
+                projectId: projectId
             }
 
 
             // Act
-            const createdScene = await createScene(sceneInput, { db: prisma, keywordGenerator: dummyKeyWordGen })
+            const createdScene = await createScene(userId, sceneInput, { db: prisma, keywordGenerator: dummyKeyWordGen })
 
             // Assert
             expect(createdScene.success).toBe(true)
@@ -92,23 +85,6 @@ describe('Scene Service', () => {
 
         it('should identify location characteristics from the script section', async () => {
             // Arrange
-            // First create a project to associate the scene with
-            const project = await createProject({
-                    name: 'Test Project',
-                    address: '456 Film St',
-                    city: 'Vancouver',
-                    province: 'BC',
-                    postalCode: 'V5K 0A1',
-                    country: 'Canada'
-            }, { db: prisma })
-
-            // Verify project creation was successful
-            expect(project.success).toBe(true)
-            if (!project.success) {
-                throw new Error('Failed to create project for test setup')
-            }
-
-
             const sceneInput = {
                 sceneNumber: 2,
                 intExt: IntExt.EXT,
@@ -129,7 +105,7 @@ describe('Scene Service', () => {
                     '                         HATTIE (O.S.)\n' +
                     '               He\'s out back, looking like he fell\n' +
                     '               out.\n',
-                projectId: project.data!.id
+                projectId: projectId
             }
 
 
@@ -137,29 +113,23 @@ describe('Scene Service', () => {
             const fakeKeywordGenerator: KeywordGenerator = async() => ({ success: true, data: ['house', 'backyard'] })
 
             // Act
-            const createdScene = await createScene(sceneInput, { db: prisma, keywordGenerator: fakeKeywordGenerator })
+            const createdScene = expectSuccess(await createScene(userId, sceneInput, { db: prisma, keywordGenerator: fakeKeywordGenerator }))
+            expect(createdScene).not.toBeNull()
+            expect(createdScene.keywords).toBeDefined()
+            expect(createdScene.id).not.toBeNull()
+            expect(createdScene.id).toBeDefined()
+
 
             // Assert
-            expect(createdScene.success).toBe(true)
-            if(createdScene.success) {
-                expect(createdScene.data).not.toBeNull()
-                expect(createdScene.data.keywords).toBeDefined()
-                expect(createdScene.data.keywords).to.contain('backyard')
-                expect(createdScene.data.keywords).to.contain('house')
-            }
+            await vi.waitFor(async () => {
+                const savedScene = expectSuccess(await getSceneById(userId, createdScene.id, { db: prisma }))
+                expect(savedScene.keywords).to.contain('backyard')
+                expect(savedScene.keywords).to.contain('house')
+            })
         })
 
         it('INTEGRATION: should identify location characteristics from the script section', async () => {
             // Arrange
-            const project = await createProject({
-                name: 'Test Project',
-                address: '456 Film St',
-                city: 'Vancouver',
-                province: 'BC',
-                postalCode: 'V5K 0A1',
-                country: 'Canada'
-            }, { db: prisma })
-            expect(project.success).toBe(true);
             const sceneInput = {
                 sceneNumber: 2,
                 intExt: IntExt.EXT,
@@ -180,19 +150,18 @@ describe('Scene Service', () => {
                     '                         HATTIE (O.S.)\n' +
                     '               He\'s out back, looking like he fell\n' +
                     '               out.\n',
-                projectId: project.data!.id
+                projectId: projectId
             }
 
             // Act
-            const createdScene = await createScene(sceneInput, { db: prisma })
+            const createdScene = expectSuccess(await createScene(userId, sceneInput, { db: prisma }))
 
             // Assert
-            expect(createdScene.success).toBe(true)
-            if(createdScene.success) {
-                expect(createdScene.data).not.toBeNull()
-                expect(createdScene.data.keywords).toBeDefined()
+            expect(createdScene).not.toBeNull()
+            expect(createdScene.keywords).toBeDefined()
+            expect(createdScene.keywords).to.contain('backyard')
+            expect(createdScene.keywords).to.contain('house')
 
-            }
         }, 10000)
     })
 
@@ -200,17 +169,14 @@ describe('Scene Service', () => {
         it('should get all scenes associated with a project', async () => {
             // Arrange
             // First create a project to associate the scene with
-            const project = await createProject({
+            const project = expectSuccess(await createProject(userId, {
                 name: 'Test Project',
                 address: '456 Film St',
                 city: 'Vancouver',
                 province: 'BC',
                 postalCode: 'V5K 0A1',
                 country: 'Canada'
-            }, { db: prisma })
-
-            // Verify project was created successfully before continuing
-            expect(project.success).toBe(true)
+            }, { db: prisma }))
 
             const sceneInput = {
                 sceneNumber: 2,
@@ -232,7 +198,7 @@ describe('Scene Service', () => {
                     '                         HATTIE (O.S.)\n' +
                     '               He\'s out back, looking like he fell\n' +
                     '               out.\n',
-                projectId: project.data!.id
+                projectId: project.id
             }
 
             const additionalSceneInput = {
@@ -254,25 +220,22 @@ describe('Scene Service', () => {
                     '     The dew drop begins to slide down the side of the beer can.\n' +
                     '\n' +
                     '     Percy throws a discarded card face down.',
-                projectId: project.data!.id
+                projectId: project.id
             }
 
 
-            await createScene(sceneInput, { db: prisma, keywordGenerator: dummyKeyWordGen })
-            await createScene(additionalSceneInput, { db: prisma, keywordGenerator: dummyKeyWordGen })
+            await createScene(userId, sceneInput, { db: prisma, keywordGenerator: dummyKeyWordGen })
+            await createScene(userId, additionalSceneInput, { db: prisma, keywordGenerator: dummyKeyWordGen })
 
             // Act
-            const result = await getScenesForProject(project.data!.id, { db: prisma })
+            const result = expectSuccess(await getScenesForProject(userId, project.id, { db: prisma }))
 
             // Assert
-            expect(result.success).toBe(true)
-            if(result.success) {
-                expect(result.data).not.toBeNull()
-                expect(result.data).toHaveLength(2)
-                const sceneNumbers = result.data.map((s: { sceneNumber: any; }) => s.sceneNumber)
-                expect(sceneNumbers).toContain(sceneInput.sceneNumber)
-                expect(sceneNumbers).toContain(additionalSceneInput.sceneNumber)
-            }
+            expect(result).not.toBeNull()
+            expect(result).toHaveLength(2)
+            const sceneNumbers = result.map((s: { sceneNumber: any; }) => s.sceneNumber)
+            expect(sceneNumbers).toContain(sceneInput.sceneNumber)
+            expect(sceneNumbers).toContain(additionalSceneInput.sceneNumber)
         })
     })
 
@@ -307,11 +270,9 @@ describe('Scene Service', () => {
                 projectId: projectId
             }
 
-            const sceneCreationResult = await createScene(sceneInput, { db: prisma, keywordGenerator: dummyKeyWordGen })
-            expect(sceneCreationResult.success).toBe(true)
-            if(!sceneCreationResult.success) return
+            const sceneCreationResult = expectSuccess(await createScene(userId, sceneInput, { db: prisma, keywordGenerator: dummyKeyWordGen }))
 
-            sceneId = sceneCreationResult.data!.id
+            sceneId = sceneCreationResult.id
 
             // Arrange a location
             const locationInput = {
@@ -322,8 +283,7 @@ describe('Scene Service', () => {
                 postalCode: 'M5V 3L9'
             }
 
-            const locationCreationResult = await createLocation(locationInput, { db: prisma, geocoder: mockGeocoder })
-            expect(locationCreationResult).toBeDefined()
+            const locationCreationResult = expectSuccess(await createLocation(userId, locationInput, { db: prisma, geocoder: mockGeocoder }))
             locationId = locationCreationResult.id
 
             // Arrange a candidate
@@ -333,39 +293,31 @@ describe('Scene Service', () => {
                 selected: false
             }
 
-            const candidateCreationResult = await createCandidate(candidateInput, { db: prisma })
-            expect(candidateCreationResult.success).toBe(true)
-            if(!candidateCreationResult.success) return
+            const candidateCreationResult = expectSuccess(await createCandidate(userId, candidateInput, { db: prisma }))
 
-            candidateId = candidateCreationResult.data!.id
+            candidateId = candidateCreationResult.id
 
             // This fixture allows to test that when you delete a scene, the candidate is deleted, but the location is unaffected
         })
 
         it(' a scene should no longer exist after deleting it ', async () => {
             // Act
-            const result = await deleteScene(sceneId, { db: prisma })
+            expectSuccess(await deleteScene(userId, sceneId, { db: prisma }))
 
             // Assert
-
-            expect(result.success).toBe(true)
-
-            // Assert again to verify scene no longer exists
-            const findSceneResult = await getSceneById( sceneId, { db: prisma })
-            expect(findSceneResult.success).toBe(false)
+            const findSceneResult = expectFailure(await getSceneById(userId, sceneId, { db: prisma }))
+            expect(findSceneResult.code).toBe(ErrorCode.NOT_FOUND)
         })
 
         it(' should delete associated candidate(s)', async () => {
             // Arrange
-            const deleteResult = await deleteScene(sceneId, { db: prisma })
-            expect(deleteResult.success).toBe(true)
-            if(!deleteResult.success) return
+            expectSuccess(await deleteScene(userId, sceneId, { db: prisma }))
 
             // Act
-            const findCandidateResult = await getCandidateById(candidateId, { db: prisma })
+            const findCandidateResult = expectFailure(await getCandidateById(userId, candidateId, { db: prisma }))
 
             // Assert
-            expect(findCandidateResult.success).toBe(false)
+            expect(findCandidateResult.code).toBe(ErrorCode.NOT_FOUND)
         })
     })
 

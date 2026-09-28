@@ -56,7 +56,11 @@ export async function getLocationsByProject(
 
 const dGeocoder = defaultGeocoder;
 
-export async function createProject(userId: string, input: z.infer<typeof CreateProjectSchema>, options?: { db?: typeof defaultPrisma, geocoder?: Geocoder }) : Promise<Result<Project>> {
+export async function createProject(
+    userId: string,
+    input: z.infer<typeof CreateProjectSchema>,
+    options?: { db?: typeof defaultPrisma, geocoder?: Geocoder }
+) : Promise<Result<Project>> {
     const db = options?.db ?? defaultPrisma
     const gc = options?.geocoder ?? defaultGeocoder
 
