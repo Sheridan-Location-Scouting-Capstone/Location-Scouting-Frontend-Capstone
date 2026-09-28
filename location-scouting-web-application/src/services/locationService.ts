@@ -80,7 +80,7 @@ export async function createLocation(
         .catch(() => {}) // swallow geocoding errors silently. Potentially add a queue system here to retry periodically or on a cron job
 
     if(photoInput?.length) {
-        await addPhotosToLocation(location.id, photoInput, { db, bucket })
+        await addPhotosToLocation(userId, location.id, photoInput, { db, bucket })
     }
 
     return { success: true, data: location }
@@ -125,7 +125,15 @@ export async function updateLocation(userId: string, id: string, data: Prisma.Lo
 
     const address = `${validated.data.address}, ${validated.data.city}, ${validated.data.province}, ${validated.data.postalCode}, ${validated.data.country}`
 
-    const updatedLocation = await db.location.update({ where: { id, userId },  data: validated.data });
+    let updatedLocation: Location
+    try {
+        updatedLocation = await db.location.update({ where: { id, userId },  data: validated.data });
+    } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            return { success: false, code: ErrorCode.NOT_FOUND, error: 'Location not found' }
+        }
+        throw error
+    }
 
     geocoder(address)
         .then(async coords => {

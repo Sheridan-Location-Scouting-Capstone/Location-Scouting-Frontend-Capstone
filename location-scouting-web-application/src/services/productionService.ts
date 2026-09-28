@@ -1,12 +1,13 @@
 import { prisma as defaultPrisma} from '@/lib/prisma'
 import { CreateProjectSchema } from "@/schemas/projectSchema";
 import { z } from 'zod';
-import {Project} from "@prisma/client";
+import {Prisma, Project} from "@prisma/client";
 import {ErrorCode, Result} from "@/schemas/result";
 import {Geocoder} from "@/schemas/geocoder";
 import {defaultGeocoder} from "@/services/locationService";
 
 export async function getLocationsByProject(
+  userId: string,
   input: { projectId: string },
   options?: { db?: typeof defaultPrisma }
 ) {
@@ -15,9 +16,11 @@ export async function getLocationsByProject(
   const scenes = await db.scene.findMany({
     where: {
       projectId: input.projectId,
+      project: { userId },
     },
     include: {
       candidates: {
+        where: { location: { userId } },
         include: {
           location: true,
         },
@@ -155,6 +158,9 @@ export async function updateProject(
 
         return { success: true, data: project }
     } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            return { success: false, code: ErrorCode.NOT_FOUND, error: `Project not found: ${id}` }
+        }
         return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: `Failed to update project: ${id}` }
     }
 }

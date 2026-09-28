@@ -1,7 +1,3 @@
-import {prisma} from '@/test/setup'
-import {beforeEach, describe, expect, it, test, vi} from 'vitest'
-
-
 import { prisma as defaultPrisma } from '@/lib/prisma'
 import type {
     AnalyticsSummary,
@@ -10,9 +6,22 @@ import type {
     KeywordGap,
     KeywordFrequency,
 } from "@/app/(protected)/productions/[id]/analytics/analytics.types";
-import {IntExt} from "@prisma/client";
+import {IntExt, LocationStatus} from "@prisma/client";
+import {ErrorCode, Result} from "@/schemas/result";
 
 type Options = { db?: typeof defaultPrisma }
+
+// Analytics are scoped to a project the user owns, and keyword matching only
+// considers the user's own location library.
+async function userOwnsProject(db: typeof defaultPrisma, userId: string, projectId: string): Promise<boolean> {
+    const project = await db.project.findFirst({
+        where: { id: projectId, userId },
+        select: { id: true }
+    })
+    return project !== null
+}
+
+const projectNotFound = { success: false, code: ErrorCode.NOT_FOUND, error: 'Project not found' } as const
 
 /**
  * Aggregate summary stats for a production's scenes.
@@ -26,14 +35,17 @@ type Options = { db?: typeof defaultPrisma }
  *   all unique keywords across locations that are candidates in this project
  *   to get matched vs unmatched counts
  */
-export async function getAnalyticsSummary(projectId: string, options?: Options
-): Promise<{ success: true; data: AnalyticsSummary } | { success: false; error: string }> {
+export async function getAnalyticsSummary(userId: string, projectId: string, options?: Options
+): Promise<Result<AnalyticsSummary>> {
     const db = options?.db ?? defaultPrisma
 
     try {
+        if (!await userOwnsProject(db, userId, projectId)) {
+            return projectNotFound
+        }
 
         const scenes = await db.scene.findMany({
-            where: {projectId: projectId}
+            where: {projectId: projectId, project: { userId }}
         })
 
         const totalScenes = scenes.length
@@ -44,6 +56,7 @@ export async function getAnalyticsSummary(projectId: string, options?: Options
         const scenesWithCandidates = await db.scene.count({
             where: {
                 projectId: projectId,
+                project: { userId },
                 candidates: {
                     some: {}
                 }
@@ -53,6 +66,7 @@ export async function getAnalyticsSummary(projectId: string, options?: Options
         const scenesWithSelected = await db.scene.count({
             where: {
                 projectId: projectId,
+                project: { userId },
                 candidates: {
                     some: {selected: true}
                 }
@@ -60,6 +74,7 @@ export async function getAnalyticsSummary(projectId: string, options?: Options
         })
 
         const locationKeywords = await db.location.findMany({
+            where: { userId },
             select: {
                 keywords: true
             }
@@ -101,19 +116,24 @@ export async function getAnalyticsSummary(projectId: string, options?: Options
  * filter out locations where latitude or longitude is null,
  * deduplicate by location ID (same location can be candidate for multiple scenes)
  */
-export async function getLocationPoints( projectId: string,
+export async function getLocationPoints(userId: string, projectId: string,
     options?: Options
-): Promise<{ success: true; data: LocationPoint[] } | { success: false; error: string }> {
+): Promise<Result<LocationPoint[]>> {
     const db = options?.db ?? defaultPrisma
+
+    if (!await userOwnsProject(db, userId, projectId)) {
+        return projectNotFound
+    }
 
     const locations = await db.location.findMany({
         where: {
-            status: 'ACTIVE',
+            userId,
+            status: LocationStatus.ACTIVE,
             latitude: { not: null },
             longitude: { not: null },
             candidates: {
                 some: {
-                    scene: { projectId },
+                    scene: { projectId, project: { userId } },
                 },
             },
         },
@@ -136,23 +156,28 @@ export async function getLocationPoints( projectId: string,
  *
  * These three should sum to totalScenes.
  */
-export async function getSceneCoverage( projectId: string,
+export async function getSceneCoverage(userId: string, projectId: string,
     options?: Options
-): Promise<{ success: true; data: SceneCoverage } | { success: false; error: string }> {
+): Promise<Result<SceneCoverage>> {
     const db = options?.db ?? defaultPrisma
+
+    if (!await userOwnsProject(db, userId, projectId)) {
+        return projectNotFound
+    }
 
     const [selected, candidateOnly, noCandidates] = await Promise.all([
         db.scene.count({
-            where: { projectId, candidates: { some: { selected: true } } },
+            where: { projectId, project: { userId }, candidates: { some: { selected: true } } },
         }),
         db.scene.count({
             where: {
                 projectId,
+                project: { userId },
                 candidates: { some: {}, none: { selected: true } },
             },
         }),
         db.scene.count({
-            where: { projectId, candidates: { none: {} } },
+            where: { projectId, project: { userId }, candidates: { none: {} } },
         }),
     ])
 
@@ -172,18 +197,22 @@ export async function getSceneCoverage( projectId: string,
  *
  * Note: keyword matching should be case-insensitive (same as Jaccard in scoring)
  */
-export async function getKeywordGaps(projectId: string,
+export async function getKeywordGaps(userId: string, projectId: string,
     options?: Options
-): Promise<{ success: true; data: KeywordGap[] } | { success: false; error: string }> {
+): Promise<Result<KeywordGap[]>> {
     const db = options?.db ?? defaultPrisma
+
+    if (!await userOwnsProject(db, userId, projectId)) {
+        return projectNotFound
+    }
 
     const [scenes, locations] = await Promise.all([
         db.scene.findMany({
-            where: { projectId },
+            where: { projectId, project: { userId } },
             select: { keywords: true },
         }),
         db.location.findMany({
-            where: { status: 'ACTIVE' },
+            where: { userId, status: LocationStatus.ACTIVE },
             select: { keywords: true },
         }),
     ])
@@ -234,14 +263,18 @@ export async function getKeywordGaps(projectId: string,
  * The "Other" bucket aggregation happens at the page level, not here —
  * this just returns the sorted list and the page truncates + groups.
  */
-export async function getKeywordDistribution(projectId: string,
+export async function getKeywordDistribution(userId: string, projectId: string,
     limit?: number,
     options?: Options
-): Promise<{ success: true; data: KeywordFrequency[] } | { success: false; error: string }> {
+): Promise<Result<KeywordFrequency[]>> {
     const db = options?.db ?? defaultPrisma
 
+    if (!await userOwnsProject(db, userId, projectId)) {
+        return projectNotFound
+    }
+
     const scenes = await db.scene.findMany({
-        where: { projectId },
+        where: { projectId, project: { userId } },
         select: { keywords: true },
     })
 

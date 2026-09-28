@@ -1,25 +1,31 @@
 import {beforeEach, describe, expect, it } from 'vitest'
-import {createLocation} from "@/services/locationService";
+import {createLocation, deleteLocationById} from "@/services/locationService";
 import {prisma} from "@/test/setup";
-import {addPhotosToLocation, updatePhoto, updatePhotoDisplayOrder} from "@/services/locationPhotoService";
+import {
+    addPhotosToLocation,
+    removePhotosFromLocation,
+    updatePhoto,
+    updatePhotoDisplayOrder
+} from "@/services/locationPhotoService";
+import {signUpSetup} from "@/test/e2e/fixtures";
+import {expectFailure, expectSuccess} from "@/test/helpers/result";
+import {buildLocationInput} from "@/test/helpers/builders";
+import {ErrorCode} from "@/schemas/result";
 
 describe('Location Photo Service', () => {
+    let userId: string
+
+    beforeEach(async () => {
+        const user = await signUpSetup()
+        userId = user.userId
+    })
+
     describe('addPhotosToLocation', async() => {
 
         let locationId: string
 
         beforeEach(async () => {
-            const locationInput = {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1'
-            }
-
-            const createdLocation = await createLocation( locationInput, { db : prisma })
-            expect(createdLocation).toBeDefined()
-            expect(createdLocation).not.toBeNull()
+            const createdLocation = expectSuccess(await createLocation(userId, buildLocationInput(), { db : prisma }))
             expect(createdLocation.id).toBeDefined()
             expect(createdLocation.id).not.toBeNull()
             locationId = createdLocation.id
@@ -42,17 +48,15 @@ describe('Location Photo Service', () => {
                 }]
 
             // Act - Upload photos to the location
-            const result = await addPhotosToLocation(locationId, photoInput, { db: prisma })
+            const result = expectSuccess(await addPhotosToLocation(userId, locationId, photoInput, { db: prisma }))
 
-            expect(result.success).toBe(true)
-            if(result.success) {
-                expect(result.data).not.toBeNull()
-                expect(result.data).toHaveLength(2)
-                expect(result.data[0].name).toBe('alley.jpg')
-                expect(result.data[1].name).toBe('alley2.jpg')
-                expect(result.data[0].locationId).toBe(locationId)
-                expect(result.data[1].locationId).toBe(locationId)
-            }
+            // Assert
+            expect(result).not.toBeNull()
+            expect(result).toHaveLength(2)
+            expect(result[0].name).toBe('alley.jpg')
+            expect(result[1].name).toBe('alley2.jpg')
+            expect(result[0].locationId).toBe(locationId)
+            expect(result[1].locationId).toBe(locationId)
         })
 
         it('Should save a client specified name for a photo', async() => {
@@ -75,18 +79,14 @@ describe('Location Photo Service', () => {
                 }]
 
             // Act
-            const result = await addPhotosToLocation(locationId, photoInput, { db : prisma })
+            const result = expectSuccess(await addPhotosToLocation(userId, locationId, photoInput, { db : prisma }))
 
             // Assert
-            expect(result.success).toBe(true)
-            if(result.success) {
-                expect(result.data).not.toBeNull()
-                expect(result.data).toHaveLength(2)
-                expect(result.data[0].name).toBe(firstPhotoName)
-                expect(result.data[1].name).toBe(lastPhotoName)
-                expect(result.data[0].locationId).toBe(locationId)
-                expect(result.data[1].locationId).toBe(locationId)
-            }
+            expect(result).toHaveLength(2)
+            expect(result[0].name).toBe(firstPhotoName)
+            expect(result[1].name).toBe(lastPhotoName)
+            expect(result[0].locationId).toBe(locationId)
+            expect(result[1].locationId).toBe(locationId)
         })
 
         it('should automatically assign a display order value if unspecified', async() => {
@@ -99,37 +99,34 @@ describe('Location Photo Service', () => {
                 mimeType: 'image/jpeg'
             }]
 
-            const secondPhotoInput = [{
-                locationId: locationId,
-                buffer: Buffer.from('another fake image'),
-                filename: 'border.jpg',
-                name: 'Border',
-                mimeType: 'image/jpeg'
-            }]
-
             // Act first photo
-            const firstPhotoResult = await addPhotosToLocation(locationId, firstPhotoInput, { db: prisma })
+            const firstPhotoResult = expectSuccess(await addPhotosToLocation(userId, locationId, firstPhotoInput, { db: prisma }))
 
             // Assert that the display order is present and a positive number
-            expect(firstPhotoResult.success).toBe(true)
-            if(firstPhotoResult.success) {
-                expect(firstPhotoResult.data[0].displayOrder).toBeDefined()
-                expect(firstPhotoResult.data[0].displayOrder).not.toBeNull()
-                expect(firstPhotoResult.data[0].displayOrder).toBeGreaterThan(-1)
-                console.log("First photo display order value: " + firstPhotoResult.data[0].displayOrder)
+            expect(firstPhotoResult[0].displayOrder).toBeDefined()
+            expect(firstPhotoResult[0].displayOrder).not.toBeNull()
+            expect(firstPhotoResult[0].displayOrder).toBeGreaterThan(-1)
 
-                // Act - add second photo
-                const secondPhotoResult = await addPhotosToLocation(locationId, firstPhotoInput, { db: prisma })
+            // Act - add second photo
+            const secondPhotoResult = expectSuccess(await addPhotosToLocation(userId, locationId, firstPhotoInput, { db: prisma }))
 
-                // Assert - Second Photo should be greater than the first display photo
-                expect(secondPhotoResult.success).toBe(true)
-                if(secondPhotoResult.success) {
-                    expect(secondPhotoResult.data[0].displayOrder).toBeDefined()
-                    expect(secondPhotoResult.data[0].displayOrder).not.toBeNull()
-                    expect(secondPhotoResult.data[0].displayOrder).toBeGreaterThan(firstPhotoResult.data[0].displayOrder)
-                    console.log("Second Photo display order value: " + secondPhotoResult.data[0].displayOrder)
-                }
-            }
+            // Assert - Second Photo should be greater than the first display photo
+            expect(secondPhotoResult[0].displayOrder).toBeDefined()
+            expect(secondPhotoResult[0].displayOrder).not.toBeNull()
+            expect(secondPhotoResult[0].displayOrder).toBeGreaterThan(firstPhotoResult[0].displayOrder)
+        })
+
+        it('should reject adding photos to a location that has been deleted', async () => {
+            // Arrange
+            expectSuccess(await deleteLocationById(userId, locationId, { db: prisma }))
+
+            // Act
+            const result = expectFailure(await addPhotosToLocation(userId, locationId, [
+                { buffer: Buffer.from('photo'), filename: 'a.jpg', mimeType: 'image/jpeg' }
+            ], { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
         })
     })
 
@@ -137,18 +134,7 @@ describe('Location Photo Service', () => {
         let locationId: string
         let photoId: string
         beforeEach(async () => {
-            const locationInput = {
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1'
-            }
-
-            const createdLocation = await createLocation( locationInput, { db : prisma })
-            expect(createdLocation).toBeDefined()
-            expect(createdLocation).not.toBeNull()
-            expect(createdLocation.id).not.toBeNull()
+            const createdLocation = expectSuccess(await createLocation(userId, buildLocationInput(), { db : prisma }))
             locationId = createdLocation.id
 
             const photoInput = [{
@@ -159,10 +145,8 @@ describe('Location Photo Service', () => {
                 mimeType: 'image/jpeg'
             }]
 
-            const result = await addPhotosToLocation(locationId, photoInput, { db : prisma })
-            if(result.success) {
-                photoId = result.data[0].id
-            }
+            const result = expectSuccess(await addPhotosToLocation(userId, locationId, photoInput, { db : prisma }))
+            photoId = result[0].id
         })
 
         it('should be able to update photo name', async() => {
@@ -171,26 +155,44 @@ describe('Location Photo Service', () => {
             const updateInput = { name: name }
 
             // Act
-            const result = await updatePhoto(photoId, updateInput, { db : prisma })
+            const result = expectSuccess(await updatePhoto(userId, photoId, updateInput, { db : prisma }))
 
             // Assert
-            expect(result.success).toBe(true)
-            if(result.success) {
-                expect(result.data.name).toBe(name)
-            }
+            expect(result.name).toBe(name)
+        })
+
+        it('should return NOT_FOUND for a photo that does not exist', async () => {
+            // Act
+            const result = expectFailure(await updatePhoto(userId, 'nonexistent-photo-id', { name: 'x' }, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+        })
+    })
+
+    describe('removePhotosFromLocation', () => {
+        it('should remove only the specified photos', async () => {
+            // Arrange
+            const location = expectSuccess(await createLocation(userId, buildLocationInput(), { db: prisma }))
+            const photos = expectSuccess(await addPhotosToLocation(userId, location.id, [
+                { buffer: Buffer.from('photo1'), filename: 'first.jpg', mimeType: 'image/jpeg' },
+                { buffer: Buffer.from('photo2'), filename: 'second.jpg', mimeType: 'image/jpeg' },
+            ], { db: prisma }))
+
+            // Act
+            expectSuccess(await removePhotosFromLocation(userId, location.id, [photos[0].id], { db: prisma }))
+
+            // Assert
+            const remaining = await prisma.photo.findMany({ where: { locationId: location.id } })
+            expect(remaining).toHaveLength(1)
+            expect(remaining[0].id).toBe(photos[1].id)
         })
     })
 
     describe('updatePhotoDisplayOrder', async() => {
         it('should reorder photos for a location', async () => {
             // Arrange - Create location with photos
-            const location = await createLocation({
-                name: 'Downtown Alley',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1'
-            }, { db: prisma })
+            const location = expectSuccess(await createLocation(userId, buildLocationInput(), { db: prisma }))
 
             const photos = [
                 { buffer: Buffer.from('photo1'), filename: 'first.jpg', mimeType: 'image/jpeg' },
@@ -198,24 +200,20 @@ describe('Location Photo Service', () => {
                 { buffer: Buffer.from('photo3'), filename: 'third.jpg', mimeType: 'image/jpeg' },
             ]
 
-            const addResult = await addPhotosToLocation(location.id, photos, { db: prisma })
-            expect(addResult.success).toBe(true)
-            if (!addResult.success) return
+            const added = expectSuccess(await addPhotosToLocation(userId, location.id, photos, { db: prisma }))
 
             // Original order: first=0, second=1, third=2
             // New order: third, first, second
             const reordered = [
-                addResult.data[2].id,
-                addResult.data[0].id,
-                addResult.data[1].id,
+                added[2].id,
+                added[0].id,
+                added[1].id,
             ]
 
             // Act
-            const result = await updatePhotoDisplayOrder(location.id, reordered, { db: prisma })
+            expectSuccess(await updatePhotoDisplayOrder(userId, location.id, reordered, { db: prisma }))
 
             // Assert
-            expect(result.success).toBe(true)
-
             const updated = await prisma.photo.findMany({
                 where: { locationId: location.id },
                 orderBy: { displayOrder: 'asc' }
@@ -231,38 +229,25 @@ describe('Location Photo Service', () => {
 
         it('should fail if a photo does not belong to the location', async () => {
             // Arrange - Create two locations, each with a photo
-            const locationA = await createLocation({
-                name: 'Location A',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1'
-            }, { db: prisma })
-
-            const locationB = await createLocation({
+            const locationA = expectSuccess(await createLocation(userId, buildLocationInput({ name: 'Location A' }), { db: prisma }))
+            const locationB = expectSuccess(await createLocation(userId, buildLocationInput({
                 name: 'Location B',
                 address: '456 Other St',
-                city: 'Toronto',
-                province: 'ON',
                 postalCode: 'M5V 2B2'
-            }, { db: prisma })
+            }), { db: prisma }))
 
-            const photoA = await addPhotosToLocation(locationA.id, [
+            const photoA = expectSuccess(await addPhotosToLocation(userId, locationA.id, [
                 { buffer: Buffer.from('photoA'), filename: 'a.jpg', mimeType: 'image/jpeg' }
-            ], { db: prisma })
+            ], { db: prisma }))
 
-            const photoB = await addPhotosToLocation(locationB.id, [
+            const photoB = expectSuccess(await addPhotosToLocation(userId, locationB.id, [
                 { buffer: Buffer.from('photoB'), filename: 'b.jpg', mimeType: 'image/jpeg' }
-            ], { db: prisma })
-
-            expect(photoA.success).toBe(true)
-            expect(photoB.success).toBe(true)
-            if (!photoA.success || !photoB.success) return
+            ], { db: prisma }))
 
             // Act - Try to reorder location A's photos but sneak in location B's photo
-            const result = await updatePhotoDisplayOrder(locationA.id, [
-                photoA.data[0].id,
-                photoB.data[0].id,
+            const result = await updatePhotoDisplayOrder(userId, locationA.id, [
+                photoA[0].id,
+                photoB[0].id,
             ], { db: prisma })
 
             // Assert
@@ -271,21 +256,12 @@ describe('Location Photo Service', () => {
 
         it('should rollback all changes if any photo fails validation', async () => {
             // Arrange
-            const location = await createLocation({
-                name: 'Rollback Test',
-                address: '123 Main St',
-                city: 'Toronto',
-                province: 'ON',
-                postalCode: 'M5V 1A1'
-            }, { db: prisma })
+            const location = expectSuccess(await createLocation(userId, buildLocationInput({ name: 'Rollback Test' }), { db: prisma }))
 
-            const addResult = await addPhotosToLocation(location.id, [
+            const added = expectSuccess(await addPhotosToLocation(userId, location.id, [
                 { buffer: Buffer.from('photo1'), filename: 'first.jpg', mimeType: 'image/jpeg' },
                 { buffer: Buffer.from('photo2'), filename: 'second.jpg', mimeType: 'image/jpeg' },
-            ], { db: prisma })
-
-            expect(addResult.success).toBe(true)
-            if (!addResult.success) return
+            ], { db: prisma }))
 
             const originalOrder = await prisma.photo.findMany({
                 where: { locationId: location.id },
@@ -293,8 +269,8 @@ describe('Location Photo Service', () => {
             })
 
             // Act - Valid photo followed by a fake ID
-            const result = await updatePhotoDisplayOrder(location.id, [
-                addResult.data[1].id,
+            const result = await updatePhotoDisplayOrder(userId, location.id, [
+                added[1].id,
                 'nonexistent-photo-id',
             ], { db: prisma })
 
@@ -310,6 +286,108 @@ describe('Location Photo Service', () => {
             expect(afterAttempt[0].displayOrder).toBe(originalOrder[0].displayOrder)
             expect(afterAttempt[1].id).toBe(originalOrder[1].id)
             expect(afterAttempt[1].displayOrder).toBe(originalOrder[1].displayOrder)
+        })
+    })
+
+    describe('User isolation', () => {
+        let ownerId: string
+        let intruderId: string
+        let locationId: string
+        let photoIds: string[]
+
+        beforeEach(async () => {
+            // Arrange - owner has a location with two photos; intruder is a separate user
+            ownerId = userId
+            intruderId = (await signUpSetup()).userId
+
+            const location = expectSuccess(await createLocation(ownerId, buildLocationInput(), { db: prisma }))
+            locationId = location.id
+
+            const photos = expectSuccess(await addPhotosToLocation(ownerId, locationId, [
+                { buffer: Buffer.from('photo1'), filename: 'first.jpg', mimeType: 'image/jpeg' },
+                { buffer: Buffer.from('photo2'), filename: 'second.jpg', mimeType: 'image/jpeg' },
+            ], { db: prisma }))
+            photoIds = photos.map(p => p.id)
+        })
+
+        it('should not allow another user to add photos to a location they do not own', async () => {
+            // Act
+            const result = expectFailure(await addPhotosToLocation(intruderId, locationId, [
+                { buffer: Buffer.from('intruder'), filename: 'intruder.jpg', mimeType: 'image/jpeg' }
+            ], { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const photos = await prisma.photo.findMany({ where: { locationId } })
+            expect(photos).toHaveLength(2)
+        })
+
+        it('should not allow another user to remove specific photos from a location they do not own', async () => {
+            // Act
+            const result = expectFailure(await removePhotosFromLocation(intruderId, locationId, [photoIds[0]], { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const photos = await prisma.photo.findMany({ where: { locationId } })
+            expect(photos).toHaveLength(2)
+        })
+
+        it('should not allow another user to remove all photos from a location they do not own', async () => {
+            // Act
+            const result = expectFailure(await removePhotosFromLocation(intruderId, locationId, [], { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const photos = await prisma.photo.findMany({ where: { locationId } })
+            expect(photos).toHaveLength(2)
+        })
+
+        it('should not allow another user to rename a photo they do not own', async () => {
+            // Act
+            const result = expectFailure(await updatePhoto(intruderId, photoIds[0], { name: 'Hijacked' }, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const photo = await prisma.photo.findUnique({ where: { id: photoIds[0] } })
+            expect(photo!.name).toBe('first.jpg')
+        })
+
+        it('should not allow another user to reorder photos on a location they do not own', async () => {
+            // Arrange
+            const originalOrder = await prisma.photo.findMany({
+                where: { locationId },
+                orderBy: { displayOrder: 'asc' }
+            })
+
+            // Act
+            const result = expectFailure(await updatePhotoDisplayOrder(intruderId, locationId, [...photoIds].reverse(), { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const afterAttempt = await prisma.photo.findMany({
+                where: { locationId },
+                orderBy: { displayOrder: 'asc' }
+            })
+            expect(afterAttempt.map(p => p.id)).toEqual(originalOrder.map(p => p.id))
+        })
+
+        it('should not allow a user to move their own photo ordering onto another user\'s photos', async () => {
+            // Arrange - intruder owns their own location with a photo
+            const intruderLocation = expectSuccess(await createLocation(intruderId, buildLocationInput({ name: 'Intruder Spot' }), { db: prisma }))
+            const intruderPhotos = expectSuccess(await addPhotosToLocation(intruderId, intruderLocation.id, [
+                { buffer: Buffer.from('mine'), filename: 'mine.jpg', mimeType: 'image/jpeg' }
+            ], { db: prisma }))
+
+            // Act - intruder passes their own location, but sneaks in the owner's photo id
+            const result = await updatePhotoDisplayOrder(intruderId, intruderLocation.id, [
+                intruderPhotos[0].id,
+                photoIds[0],
+            ], { db: prisma })
+
+            // Assert
+            expect(result.success).toBe(false)
+            const ownerPhoto = await prisma.photo.findUnique({ where: { id: photoIds[0] } })
+            expect(ownerPhoto!.displayOrder).toBe(0)
         })
     })
 })

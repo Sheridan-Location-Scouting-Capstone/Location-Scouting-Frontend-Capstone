@@ -532,7 +532,7 @@ describe('Location Services', () => {
 
             const numOfPhotos = photoInput.length
 
-            const addedPhotosResult = await addPhotosToLocation(createdLocation.id, photoInput, {db: prisma})
+            const addedPhotosResult = await addPhotosToLocation(user.userId, createdLocation.id, photoInput, {db: prisma})
             expect(addedPhotosResult.success).toBe(true)
             if(addedPhotosResult.success){
                 expect(addedPhotosResult.data).toHaveLength(numOfPhotos)
@@ -632,6 +632,76 @@ describe('Location Services', () => {
             expect(locationNames).toContain(activeLocationInput.name)
             expect(locationNames).toContain(secondActiveLocationInput.name)
             expect(locationNames).not.toContain(deletedLocation.name)
+        })
+    })
+
+    describe('User isolation', () => {
+        let ownerId: string
+        let intruderId: string
+        let locationId: string
+
+        beforeEach(async () => {
+            // Arrange - owner has a location; intruder is a separate user
+            ownerId = (await signUpSetup()).userId
+            intruderId = (await signUpSetup()).userId
+            locationId = expectSuccess(await createLocation(ownerId, buildLocationInput(), { db: prisma })).id
+        })
+
+        it('should not return another user\'s location by id', async () => {
+            // Act
+            const result = expectFailure(await getLocationById(intruderId, locationId, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+        })
+
+        it('should not return another user\'s location with photos', async () => {
+            // Act
+            const result = await getLocationWithPhotos(intruderId, locationId, { db: prisma })
+
+            // Assert
+            expect(result).toBeNull()
+        })
+
+        it('should only list the user\'s own locations', async () => {
+            // Arrange
+            const intruderLocation = expectSuccess(await createLocation(intruderId, buildLocationInput({ name: 'Intruder Spot' }), { db: prisma }))
+
+            // Act
+            const ownerLocations = await getLocations(ownerId, { db: prisma })
+            const intruderLocations = await getLocations(intruderId, { db: prisma })
+
+            // Assert
+            expect(ownerLocations.map(l => l.id)).toEqual([locationId])
+            expect(intruderLocations.map(l => l.id)).toEqual([intruderLocation.id])
+        })
+
+        it('should not match another user\'s locations when searching', async () => {
+            // Act
+            const results = await getLocations(intruderId, { db: prisma, query: 'Downtown' })
+
+            // Assert
+            expect(results).toHaveLength(0)
+        })
+
+        it('should not allow a user to update another user\'s location', async () => {
+            // Act
+            const result = expectFailure(await updateLocation(intruderId, locationId, { name: 'Hijacked' }, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const location = expectSuccess(await getLocationById(ownerId, locationId, { db: prisma }))
+            expect(location.name).not.toBe('Hijacked')
+        })
+
+        it('should not allow a user to delete another user\'s location', async () => {
+            // Act
+            const result = expectFailure(await deleteLocationById(intruderId, locationId, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const location = expectSuccess(await getLocationById(ownerId, locationId, { db: prisma }))
+            expect(location.status).toBe(LocationStatus.ACTIVE)
         })
     })
 })
