@@ -1,5 +1,6 @@
 import {LocationStatus, Photo, Prisma, PrismaClient} from "@prisma/client";
-import {defaultBucket, deletePhoto, PhotoUploadResult, uploadPhoto, uploadPhotos} from "@/services/photoService";
+import {defaultBucket, deletePhoto, uploadPhotos} from "@/services/photoService";
+import {detectLabels, LabelDetector} from "@/services/visionService";
 import {ErrorCode, Result} from "@/schemas/result";
 import {PhotoUploadInput} from "@/schemas/photoUploadInput";
 import {prisma} from "@/lib/prisma";
@@ -21,11 +22,12 @@ export async function addPhotosToLocation(
     userId: string,
     locationId: string,
     photoInput: PhotoUploadInput[],
-    options?: { db?: PrismaClient, bucket?: string }):
+    options?: { db?: PrismaClient, bucket?: string, labelDetector?: LabelDetector }):
     Promise<Result<Photo[]>>
 {
     const db = options?.db ?? prisma
     const bucket = options?.bucket ?? defaultBucket
+    const labelDetector = options?.labelDetector ?? detectLabels
 
     if (!await userOwnsLocation(db, userId, locationId)) {
         return locationNotFound
@@ -47,7 +49,9 @@ export async function addPhotosToLocation(
         }))
     })
 
-    const newKeywords = uploadedPhotos.flatMap(photo => photo.keywords ?? [])
+    // Best-effort: a detector that fails returns no labels, so it never undoes a successful upload
+    const labelsPerPhoto = await Promise.all(photoInput.map(photo => labelDetector(photo.buffer)))
+    const newKeywords = labelsPerPhoto.flat()
     if (newKeywords.length > 0) {
         const existing = await db.location.findUnique({
             where: { id: locationId, userId },

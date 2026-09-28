@@ -1,0 +1,10 @@
+{
+  "name": "Nominatim geocoding: outage (NOMINATIM_API_URL=http://localhost:8089/unavailable)",
+  "request": {
+    "method": "GET",
+    "urlPath": "/unavailable/search"
+  },
+  "response": {
+    "status": 503
+  }
+}

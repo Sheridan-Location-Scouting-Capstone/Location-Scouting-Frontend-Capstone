@@ -1,0 +1,23 @@
+{
+  "name": "Google Vision: label detection",
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/images:annotate"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "responses": [
+        {
+          "labelAnnotations": [
+            { "mid": "/m/0cgh4", "description": "Building", "score": 0.95, "topicality": 0.95 },
+            { "mid": "/m/01c8br", "description": "Street", "score": 0.91, "topicality": 0.91 },
+            { "mid": "/m/039jbq", "description": "Urban area", "score": 0.87, "topicality": 0.87 },
+            { "mid": "/m/01bqvp", "description": "Sky", "score": 0.62, "topicality": 0.62 }
+          ]
+        }
+      ]
+    }
+  }
+}

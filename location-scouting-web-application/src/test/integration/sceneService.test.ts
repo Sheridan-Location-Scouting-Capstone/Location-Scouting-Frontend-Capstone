@@ -405,7 +405,8 @@ describe('Scene Service', () => {
         let sceneId: string
 
         beforeEach(async () => {
-            sceneId = expectSuccess(await createScene(userId, buildSceneInput(projectId), { db: prisma, keywordGenerator: dummyKeyWordGen })).id
+            // failingGenerator: no background keyword write that could race the keywords set below
+            sceneId = expectSuccess(await createScene(userId, buildSceneInput(projectId), { db: prisma, keywordGenerator: failingGenerator })).id
             await prisma.scene.update({ where: { id: sceneId }, data: { keywords: ['yard', 'lemon tree'] } })
         })
 

@@ -1,13 +1,12 @@
 import * as Minio from 'minio'
 import { PhotoUploadInput} from "@/schemas/photoUploadInput";
-import vision from '@google-cloud/vision'
+
+// Photo storage only. Label detection is separate (visionService) so a Vision outage can't break uploads.
 
 export type PhotoUploadResult = {
     url: string
     key: string
-    keywords: string[]
 }
-
 
 const minioClient = new Minio.Client({
     endPoint: process.env.MINIO_ENDPOINT || 'localhost',
@@ -18,8 +17,6 @@ const minioClient = new Minio.Client({
 })
 
 export const defaultBucket = process.env.MINIO_BUCKET || 'location-photos'
-
-const visionClient = new vision.ImageAnnotatorClient()
 
 export async function ensureBucketExists(bucketName = defaultBucket) {
     const exists = await minioClient.bucketExists(bucketName)
@@ -55,33 +52,7 @@ export async function uploadPhoto(
 
     const url = `http://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}/${bucketName}/${key}`
 
-    // Convert buffer to base64
-    const base64Image = input.buffer.toString('base64')
-
-    // Call Vision REST API with API key
-    const response = await fetch(
-        `https://vision.googleapis.com/v1/images:annotate?key=${process.env.GOOGLE_VISION_API}`,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                requests: [{
-                    image: { content: base64Image },
-                    features: [{ type: 'LABEL_DETECTION', maxResults: 10 }]
-                }]
-            })
-        }
-    )
-
-    const data = await response.json()
-    const keywords = data.responses[0]?.labelAnnotations
-        ?.filter((label: any) => label.score >= 0.8)
-        ?.slice(0, 3)
-        ?.map((label: any) => label.description) ?? []
-
-    // console.log("Keywords:", keywords)
-
-    return { url, key, keywords }
+    return { url, key }
 }
 
 export async function uploadPhotos(

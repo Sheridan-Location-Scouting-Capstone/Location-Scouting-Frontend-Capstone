@@ -45,6 +45,20 @@ services:
     ports:
       - "8080:8080"
 
+  # Stand-in for the external services (Google Vision, keyword generation, Nominatim) so the app and E2E tests
+  # can run without API keys or network access. Opt-in; see mocks/README.md:
+  #   docker compose --profile mocks up -d external-mocks
+  external-mocks:
+    image: wiremock/wiremock:3.13.1
+    container_name: location-scouting-external-mocks
+    profiles: ["mocks"]
+    restart: unless-stopped
+    command: ["--disable-banner"]
+    ports:
+      - "8089:8080"
+    volumes:
+      - ./mocks/wiremock:/home/wiremock
+
 
 volumes:
   postgres_data:

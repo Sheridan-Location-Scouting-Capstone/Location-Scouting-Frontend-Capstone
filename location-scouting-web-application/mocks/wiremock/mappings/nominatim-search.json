@@ -1,0 +1,14 @@
+{
+  "name": "Nominatim geocoding: every address resolves to downtown Toronto",
+  "request": {
+    "method": "GET",
+    "urlPath": "/search"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": [
+      { "lat": "43.6532", "lon": "-79.3832", "display_name": "Toronto, Ontario, Canada" }
+    ]
+  }
+}

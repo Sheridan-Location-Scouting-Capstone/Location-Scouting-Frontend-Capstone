@@ -9,10 +9,14 @@ import {addPhotosToLocation} from "@/services/locationPhotoService";
 import { z } from 'zod';
 import {ErrorCode, Result} from '@/schemas/result';
 
+const DEFAULT_NOMINATIM_URL = 'https://nominatim.openstreetmap.org'
+
+// NOMINATIM_API_URL (.env) points geocoding at a mock server instead of OpenStreetMap; see mocks/README.md
 export const defaultGeocoder: Geocoder = async (address: string) => {
     const encoded = encodeURIComponent(address)
+    const baseUrl = (process.env.NOMINATIM_API_URL || DEFAULT_NOMINATIM_URL).replace(/\/+$/, '')
     const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1`,
+        `${baseUrl}/search?q=${encoded}&format=json&limit=1`,
         { headers: { 'User-Agent': 'location-scouting-app/1.0' } }
     )
     const data = await res.json()

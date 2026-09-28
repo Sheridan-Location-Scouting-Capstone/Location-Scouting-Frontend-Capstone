@@ -1,0 +1,12 @@
+{
+  "name": "Google Vision: outage (GOOGLE_VISION_API_URL=http://localhost:8089/unavailable)",
+  "request": {
+    "method": "POST",
+    "urlPath": "/unavailable/v1/images:annotate"
+  },
+  "response": {
+    "status": 503,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": { "error": { "code": 503, "message": "The service is currently unavailable.", "status": "UNAVAILABLE" } }
+  }
+}
