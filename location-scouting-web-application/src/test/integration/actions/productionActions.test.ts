@@ -8,6 +8,7 @@ import {
     deleteSceneAction,
     getProject,
     getProjectsAction,
+    getSceneAction,
     getScenesAction,
     updateProjectAction,
     updateSceneAction,
@@ -106,12 +107,17 @@ describe('Production Actions', () => {
             expect(revalidatePath).toHaveBeenCalledWith('/productions')
         })
 
-        it('should throw when the form is invalid', async () => {
+        it('should return a validation failure without redirecting when the form is invalid', async () => {
             // Arrange
             const formData = formDataFrom({ address: '456 Film St' })
 
-            // Act & Assert
-            await expect(createProjectAction(formData)).rejects.toThrow('Failed to create project')
+            // Act
+            const result = expectFailure((await createProjectAction(formData))!)
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.VALIDATION_FAILED)
+            expect(result.fieldErrors?.name).toBeDefined()
+            expect(revalidatePath).not.toHaveBeenCalled()
         })
     })
 
@@ -124,6 +130,20 @@ describe('Production Actions', () => {
             await expectRedirect(updateProjectAction(projectId, formData), `/productions/${projectId}`)
             const project = await prisma.project.findUnique({ where: { id: projectId } })
             expect(project!.name).toBe('Renamed Production')
+        })
+
+        it('should return a validation failure when a required field is cleared', async () => {
+            // Arrange
+            const formData = formDataFrom(buildProjectInput({ name: '' }))
+
+            // Act
+            const result = expectFailure((await updateProjectAction(projectId, formData))!)
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.VALIDATION_FAILED)
+            expect(result.fieldErrors?.name).toBeDefined()
+            const project = await prisma.project.findUnique({ where: { id: projectId } })
+            expect(project!.name).toBe(buildProjectInput().name)
         })
 
         it('should not update another user\'s project', async () => {
@@ -163,6 +183,28 @@ describe('Production Actions', () => {
         })
     })
 
+    describe('getSceneAction', () => {
+        it('should return the signed-in user\'s scene', async () => {
+            // Act
+            const scene = expectSuccess(await getSceneAction(sceneId))
+
+            // Assert
+            expect(scene.id).toBe(sceneId)
+            expect(scene.projectId).toBe(projectId)
+        })
+
+        it('should return NOT_FOUND for another user\'s scene', async () => {
+            // Arrange
+            actAs(intruderId)
+
+            // Act
+            const result = expectFailure(await getSceneAction(sceneId))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+        })
+    })
+
     describe('createSceneAction', () => {
         const sceneForm = (targetProjectId: string) => formDataFrom({
             sceneNumber: 7,
@@ -178,6 +220,20 @@ describe('Production Actions', () => {
             await expectRedirect(createSceneAction(sceneForm(projectId)), `/productions/${projectId}`)
             const scenes = await prisma.scene.findMany({ where: { projectId, sceneNumber: 7 } })
             expect(scenes).toHaveLength(1)
+        })
+
+        it('should return a validation failure without redirecting when the form is invalid', async () => {
+            // Arrange - scene number left blank
+            const formData = sceneForm(projectId)
+            formData.set('sceneNumber', '')
+
+            // Act
+            const result = expectFailure((await createSceneAction(formData))!)
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.VALIDATION_FAILED)
+            expect(result.fieldErrors?.sceneNumber).toBeDefined()
+            expect(revalidatePath).not.toHaveBeenCalled()
         })
 
         it('should not create a scene in another user\'s project', async () => {

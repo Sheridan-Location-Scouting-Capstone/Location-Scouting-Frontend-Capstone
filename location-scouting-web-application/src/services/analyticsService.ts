@@ -5,7 +5,7 @@ import type {
     SceneCoverage,
     KeywordGap,
     KeywordFrequency,
-} from "@/app/(protected)/productions/[id]/analytics/analytics.types";
+} from "@/schemas/analytics";
 import {IntExt, LocationStatus} from "@prisma/client";
 import {ErrorCode, Result} from "@/schemas/result";
 

@@ -401,7 +401,41 @@ describe('Scene Service', () => {
         })
     })
 
-    describe('Update Scene', async()=>{
-        it('should ')
+    describe('Update Scene', () => {
+        let sceneId: string
+
+        beforeEach(async () => {
+            sceneId = expectSuccess(await createScene(userId, buildSceneInput(projectId), { db: prisma, keywordGenerator: dummyKeyWordGen })).id
+            await prisma.scene.update({ where: { id: sceneId }, data: { keywords: ['yard', 'lemon tree'] } })
+        })
+
+        it('should leave keywords untouched when a partial update omits them', async () => {
+            // Act
+            const result = expectSuccess(await updateScene(userId, sceneId, { sceneLocation: 'FRONT PORCH' }, { db: prisma }))
+
+            // Assert
+            expect(result.sceneLocation).toBe('FRONT PORCH')
+            expect(result.keywords).toEqual(['yard', 'lemon tree'])
+        })
+
+        it('should return field errors when validation fails', async () => {
+            // Act
+            const result = expectFailure(await updateScene(userId, sceneId, { sceneLocation: '' }, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.VALIDATION_FAILED)
+            expect(result.fieldErrors?.sceneLocation).toBeDefined()
+        })
+    })
+
+    describe('createScene validation', () => {
+        it('should return a validation failure instead of throwing on invalid input', async () => {
+            // Act
+            const result = expectFailure(await createScene(userId, { ...buildSceneInput(projectId), sceneNumber: Number.NaN }, { db: prisma, keywordGenerator: dummyKeyWordGen }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.VALIDATION_FAILED)
+            expect(result.fieldErrors?.sceneNumber).toBeDefined()
+        })
     })
 })

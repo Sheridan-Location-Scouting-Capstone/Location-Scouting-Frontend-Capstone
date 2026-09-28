@@ -3,13 +3,11 @@ import {$Enums, Location, Prisma, PrismaClient} from "@prisma/client";
 import {CreateLocationScheme, UpdateLocationScheme} from "@/schemas/locationSchema";
 import {Geocoder} from "@/schemas/geocoder";
 import {PhotoUploadInput} from "@/schemas/photoUploadInput";
-import { uploadPhotos, defaultBucket } from "@/services/photoService";
+import { defaultBucket } from "@/services/photoService";
 import LocationStatus = $Enums.LocationStatus;
-import {addPhotosToLocation, removePhotosFromLocation} from "@/services/locationPhotoService";
-import {AppError} from "@/server/errors";
+import {addPhotosToLocation} from "@/services/locationPhotoService";
 import { z } from 'zod';
 import {ErrorCode, Result} from '@/schemas/result';
-import {Void} from "effect/Schema";
 
 export const defaultGeocoder: Geocoder = async (address: string) => {
     const encoded = encodeURIComponent(address)
@@ -54,7 +52,7 @@ export async function createLocation(
     }
 
     if (parsed.data.contactPhone) {
-        parsed.data.contactPhone = parsed.data.contactPhone.replace(/[\s()-]/g, '')
+        parsed.data.contactPhone = normalizePhone(parsed.data.contactPhone)
     }
     const address = `${parsed.data.address}, ${parsed.data.city}, ${parsed.data.province}, ${parsed.data.postalCode}, ${parsed.data.country}`
 
@@ -113,21 +111,44 @@ export async function getLocationWithPhotos(userId: string, id: string, options?
     });
 }
 
-export async function updateLocation(userId: string, id: string, data: Prisma.LocationUpdateInput, options?: { db?: PrismaClient, geocoder?: Geocoder }) : Promise<Result<Location>> {
+const ADDRESS_FIELDS = ['address', 'city', 'province', 'postalCode', 'country'] as const
+
+function normalizePhone(phone: string) {
+    return phone.replace(/[\s()-]/g, '')
+}
+
+function formatGeocodingAddress(location: Pick<Location, typeof ADDRESS_FIELDS[number]>) {
+    return `${location.address}, ${location.city}, ${location.province}, ${location.postalCode}, ${location.country}`
+}
+
+export async function updateLocation(
+    userId: string,
+    id: string,
+    data: z.input<typeof UpdateLocationScheme>,
+    options?: { db?: PrismaClient, geocoder?: Geocoder }
+) : Promise<Result<Location>> {
     const db = options?.db ?? defaultPrisma
     const geocoder = options?.geocoder ?? defaultGeocoder
 
     const validated = UpdateLocationScheme.safeParse(data)
 
     if (!validated.success) {
-        return { success: false, code: ErrorCode.VALIDATION_FAILED, error: 'Invalid location data' }
+        return {
+            success: false,
+            code: ErrorCode.VALIDATION_FAILED,
+            error: 'Invalid location data',
+            fieldErrors: z.flattenError(validated.error).fieldErrors
+        }
     }
 
-    const address = `${validated.data.address}, ${validated.data.city}, ${validated.data.province}, ${validated.data.postalCode}, ${validated.data.country}`
+    const updates = validated.data
+    if (updates.contactPhone) {
+        updates.contactPhone = normalizePhone(updates.contactPhone)
+    }
 
     let updatedLocation: Location
     try {
-        updatedLocation = await db.location.update({ where: { id, userId },  data: validated.data });
+        updatedLocation = await db.location.update({ where: { id, userId },  data: updates });
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return { success: false, code: ErrorCode.NOT_FOUND, error: 'Location not found' }
@@ -135,26 +156,30 @@ export async function updateLocation(userId: string, id: string, data: Prisma.Lo
         throw error
     }
 
-    geocoder(address)
-        .then(async coords => {
-            if (coords) {
-                console.log(coords)
-                await db.location.update({
-                    where: { id: id},
-                    data: { latitude: coords.lat, longitude: coords.lng }
-                })
-            }
-        }) // If geocoding fails, set the values to null in order to avoid old address being valid, and pointing to the wrong area on a map
-        .catch(async() => {
-            try {
-                await db.location.update({
-                    where: {id: id},
-                    data: {latitude: null, longitude: null}
-                })
-            } catch (error){
-                console.log(error)
-            }
-        })
+    // Only re-geocode when the address changed, and always from the full saved address
+    const addressChanged = ADDRESS_FIELDS.some(field => updates[field] !== undefined)
+    if (addressChanged) {
+        geocoder(formatGeocodingAddress(updatedLocation))
+            .then(async coords => {
+                if (coords) {
+                    await db.location.update({
+                        where: { id },
+                        data: { latitude: coords.lat, longitude: coords.lng }
+                    })
+                }
+            })
+            // If geocoding fails, clear the coordinates so the old address doesn't keep pointing at the wrong place on a map
+            .catch(async () => {
+                try {
+                    await db.location.update({
+                        where: { id },
+                        data: { latitude: null, longitude: null }
+                    })
+                } catch (error) {
+                    console.error(error)
+                }
+            })
+    }
 
     return { success: true, data: updatedLocation };
 }
