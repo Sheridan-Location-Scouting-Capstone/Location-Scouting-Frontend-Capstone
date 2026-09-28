@@ -23,6 +23,17 @@ export default defineConfig({
         plugins: [react()],
         resolve: { alias },
         test : {
+          name: 'components',
+          include: ['src/test/components/**/*.test.tsx'],
+          environment: 'jsdom',
+          globals: true,
+          setupFiles: ['./src/test/components/setup.ts'],
+        },
+      },
+      {
+        plugins: [react()],
+        resolve: { alias },
+        test : {
           name: 'integration',
             include: ['src/test/integration/**/*.test.ts'],
             environment: 'node',

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import ThemeRegistry from '@/components/ThemeRegistry'
+import ThemeRegistry from '@/components/layout/ThemeRegistry'
 
 export const metadata: Metadata = {
   title: 'LocusPoint - Location Scouting',

@@ -1,24 +1,38 @@
-import {getCandidateById} from "@/services/candidateService";
-import {notFound} from "next/navigation";
-import {Box, Typography} from "@mui/material";
-import {getSceneById} from "@/services/sceneService";
+import { notFound } from 'next/navigation'
+import { getProject, getSceneAction } from '@/actions/productionActions'
+import { getCandidateAction } from '@/actions/candidateActions'
+import PageHeader from '@/components/common/PageHeader'
 
-export default async function CandidateDetailPage({ params }: { params: Promise<{ candidateId: string }> }) {
-    const { candidateId } = await params
-    const result = await getCandidateById(candidateId)
-    if(!result.success) notFound()
+// Candidate detail is still a stub: it only confirms the candidate exists and shows which scene it's for
+export default async function CandidateDetailPage({
+    params,
+}: {
+    params: Promise<{ id: string; sceneId: string; candidateId: string }>
+}) {
+    const { id: projectId, sceneId, candidateId } = await params
 
-    const candidate = result.data
-
-    // @ts-ignore
-    const sceneResult = await getSceneById(candidate.sceneId);
-    const sceneNumber : number  = sceneResult.success ? sceneResult.data.sceneNumber : 0
+    const [projectResult, sceneResult, candidateResult] = await Promise.all([
+        getProject(projectId),
+        getSceneAction(sceneId),
+        getCandidateAction(candidateId),
+    ])
+    // The candidate must belong to the scene, and the scene to the production, named in the URL
+    if (
+        !projectResult.success ||
+        !sceneResult.success ||
+        !candidateResult.success ||
+        sceneResult.data.projectId !== projectId ||
+        candidateResult.data.sceneId !== sceneId
+    ) {
+        notFound()
+    }
+    const scene = sceneResult.data
 
     return (
-        <Box>
-            <Typography variant="h4" sx={{ mb : 1}}>
-                Scene {sceneNumber} -
-            </Typography>
-        </Box>
+        <PageHeader
+            title={`Scene ${scene.sceneNumber} - Candidate`}
+            backHref={`/productions/${projectId}/scenes/${sceneId}`}
+            breadcrumbs={[projectResult.data.name, 'Scenes', `Scene ${scene.sceneNumber}`, 'Candidate']}
+        />
     )
 }

@@ -1,153 +1,39 @@
 import { notFound } from 'next/navigation'
-import { Box, Typography, Button, Card, CardContent, Chip } from '@mui/material'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import { Button } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import ShareIcon from '@mui/icons-material/Share'
-import Link from 'next/link'
 import { getLocationAction } from '@/actions/locationActions'
-import LocationPhotoGallery from '@/components/LocationPhotoGallery'
-import LocationStatusActions from '@/components/LocationStatusActions'
-import KeywordChips from '@/components/KeywordChips'
+import PageHeader from '@/components/common/PageHeader'
+import LinkButton from '@/components/common/LinkButton'
+import LocationDetailsCard from '@/components/locations/LocationDetailsCard'
+import LocationPhotoGallery from '@/components/locations/LocationPhotoGallery'
+import LocationStatusActions from '@/components/locations/LocationStatusActions'
 
-export default async function LocationDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
-  const location = await getLocationAction(id)
-  // const [keywords, setKeywords] = useState<string[]>([])
+export default async function LocationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
+    const location = await getLocationAction(id)
+    if (!location) notFound()
 
-  // const removeKeyword = (kw: string) => {
-  //   setKeywords(keywords.filter((k) => k !== kw))
-  // }
-  if (!location) {
-    notFound()
-  }
-
-  return (
-    <Box>
-      {/* Header */}
-      <Typography variant="h4" sx={{ mb: 1 }}>
-        {location.name}
-      </Typography>
-
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Link href="/locations" style={{ textDecoration: 'none' }}>
-          <Button
-            startIcon={<ArrowBackIcon />}
-            variant="outlined"
-            size="small"
-          >
-            Back
-          </Button>
-        </Link>
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <LocationStatusActions locationId={location.id} currentStatus={location.status} />
-          <Button
-            variant="contained"
-            color="secondary"
-            startIcon={<ShareIcon />}
-          >
-            Share
-          </Button>
-          <Link href={`/locations/${location.id}/edit`} style={{ textDecoration: 'none' }}>
-          <Button
-            variant="contained"
-            startIcon={<EditIcon />}
-          >
-            Edit Location
-          </Button>
-          </Link>
-        </Box>
-      </Box>
-
-      {/* Info card */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent sx={{ p: 3 }}>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: '2fr 1fr 1.5fr 1fr',
-              gap: 2,
-            }}
-          >
-            {/* Description */}
-            <Box>
-              <Typography variant="overline" color="text.secondary" fontWeight={700}>
-                Description
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 0.5 }}>
-                {location.notes || 'No description added.'}
-              </Typography>
-            </Box>
-
-            {/* Tags */}
-            <Box>
-              <Typography variant="overline" color="text.secondary" fontWeight={700}>
-                Tags
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
-                {location.keywords.length > 0 ? (
-                  // location.keywords.map((kw) => (
-                  // <Chip key={kw} label={kw} size="small" variant="outlined" onDelete={() => removeKeyword(kw)} />
-                  // ))
-                  <KeywordChips locationId={location.id} initialKeywords={location.keywords} />
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No tags
-                  </Typography>
-                )}
-              </Box>
-            </Box>
-
-            {/* Address */}
-            <Box>
-              <Typography variant="overline" color="text.secondary" fontWeight={700}>
-                Address
-              </Typography>
-              <Typography variant="body2" color="primary.main" sx={{ mt: 0.5 }}>
-                {location.address}, {location.city}, {location.province}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {location.postalCode}, {location.country}
-              </Typography>
-            </Box>
-
-            {/* Contact */}
-            <Box>
-              <Typography variant="overline" color="text.secondary" fontWeight={700}>
-                Contact
-              </Typography>
-              {location.contactName ? (
-                <Box sx={{ mt: 0.5 }}>
-                  <Typography variant="body2">{location.contactName}</Typography>
-                  {location.contactPhone && (
-                    <Typography variant="body2" color="text.secondary">
-                      {location.contactPhone}
-                    </Typography>
-                  )}
-                  {location.contactEmail && (
-                    <Typography variant="body2" color="primary.main">
-                      {location.contactEmail}
-                    </Typography>
-                  )}
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  No contact info
-                </Typography>
-              )}
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Photo Gallery */}
-      <LocationPhotoGallery
-        photos={location.photos}
-        locationId={location.id}
-      />
-    </Box>
-  )
+    return (
+        <>
+            <PageHeader
+                title={location.name}
+                backHref="/locations"
+                actions={
+                    <>
+                        <LocationStatusActions locationId={location.id} currentStatus={location.status} />
+                        {/* Not wired up yet */}
+                        <Button variant="contained" color="secondary" startIcon={<ShareIcon />}>
+                            Share
+                        </Button>
+                        <LinkButton href={`/locations/${location.id}/edit`} variant="contained" startIcon={<EditIcon />}>
+                            Edit Location
+                        </LinkButton>
+                    </>
+                }
+            />
+            <LocationDetailsCard location={location} />
+            <LocationPhotoGallery photos={location.photos} locationId={location.id} />
+        </>
+    )
 }
