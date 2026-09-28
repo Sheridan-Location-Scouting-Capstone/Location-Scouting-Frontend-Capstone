@@ -22,7 +22,7 @@ export const EXTERNAL_MOCKS_URL = `http://localhost:${EXTERNAL_MOCKS_HOST_PORT}`
  * Nominatim, so a test run never spends Vision credits or depends on the network. Set EXTERNAL_SERVICE_MOCKS=off
  * (in .env, .env.e2e or the shell) to run against the real services configured in your environment instead.
  */
-export function useExternalServiceMocks() {
+export function externalServiceMocksEnabled() {
     return process.env.EXTERNAL_SERVICE_MOCKS !== 'off'
 }
 
@@ -61,7 +61,7 @@ export async function startContainers() {
     ;[pg, minio, externalMocks] = await Promise.all([
         (reuse ? pgBuilder.withReuse() : pgBuilder).start(),
         (reuse ? minioBuilder.withReuse() : minioBuilder).start(),
-        useExternalServiceMocks() ? (reuse ? mocksBuilder.withReuse() : mocksBuilder).start() : undefined,
+        externalServiceMocksEnabled() ? (reuse ? mocksBuilder.withReuse() : mocksBuilder).start() : undefined,
     ])
 
     const databaseUrl =

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { prisma } from '@/test/setup'
-import { EXTERNAL_MOCKS_URL, useExternalServiceMocks } from '@/test/containers'
+import { EXTERNAL_MOCKS_URL, externalServiceMocksEnabled } from '@/test/containers'
 import { createLabelDetector } from '@/services/visionService'
 import { getKeywords } from '@/services/keywordGenerator'
 import { createLocation, defaultGeocoder } from '@/services/locationService'
@@ -15,7 +15,7 @@ import { buildLocationInput } from '@/test/helpers/builders'
 
 const ENV_KEYS = ['GOOGLE_VISION_API', 'GOOGLE_VISION_API_URL', 'KEYWORD_GENERATION_API_URL', 'NOMINATIM_API_URL'] as const
 
-describe.skipIf(!useExternalServiceMocks())('External service mocks (WireMock)', () => {
+describe.skipIf(!externalServiceMocksEnabled())('External service mocks (WireMock)', () => {
     const baseUrl = EXTERNAL_MOCKS_URL
     const savedEnv: Partial<Record<typeof ENV_KEYS[number], string>> = {}
 
