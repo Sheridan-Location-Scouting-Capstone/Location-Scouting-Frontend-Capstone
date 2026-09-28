@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, it } from 'vitest'
+import {beforeEach, describe, expect, it, vi } from 'vitest'
 import {createLocation, deleteLocationById} from "@/services/locationService";
 import {prisma} from "@/test/setup";
 import {
@@ -11,6 +11,7 @@ import {signUpSetup} from "@/test/e2e/fixtures";
 import {expectFailure, expectSuccess} from "@/test/helpers/result";
 import {buildLocationInput} from "@/test/helpers/builders";
 import {ErrorCode} from "@/schemas/result";
+import {LabelDetector} from "@/services/visionService";
 
 describe('Location Photo Service', () => {
     let userId: string
@@ -127,6 +128,60 @@ describe('Location Photo Service', () => {
 
             // Assert
             expect(result.code).toBe(ErrorCode.NOT_FOUND)
+        })
+    })
+
+    describe('photo label detection', () => {
+        let locationId: string
+
+        beforeEach(async () => {
+            const location = expectSuccess(await createLocation(userId, { ...buildLocationInput(), keywords: ['brick'] }, { db: prisma }))
+            locationId = location.id
+        })
+
+        it('should add detected labels to the location\'s keywords without duplicates', async () => {
+            // Arrange
+            const labelDetector = vi.fn<LabelDetector>()
+                .mockResolvedValueOnce(['Building', 'brick'])
+                .mockResolvedValueOnce(['Street'])
+
+            // Act
+            expectSuccess(await addPhotosToLocation(userId, locationId, [
+                { buffer: Buffer.from('one'), filename: 'one.jpg', mimeType: 'image/jpeg' },
+                { buffer: Buffer.from('two'), filename: 'two.jpg', mimeType: 'image/jpeg' },
+            ], { db: prisma, labelDetector }))
+
+            // Assert
+            expect(labelDetector).toHaveBeenCalledTimes(2)
+            const location = await prisma.location.findUnique({ where: { id: locationId } })
+            expect(location!.keywords).toEqual(['brick', 'Building', 'Street'])
+        })
+
+        it('should still save the photos when label detection finds nothing', async () => {
+            // Act
+            const photos = expectSuccess(await addPhotosToLocation(userId, locationId, [
+                { buffer: Buffer.from('one'), filename: 'one.jpg', mimeType: 'image/jpeg' },
+            ], { db: prisma, labelDetector: async () => [] }))
+
+            // Assert
+            expect(photos).toHaveLength(1)
+            const location = await prisma.location.findUnique({ where: { id: locationId } })
+            expect(location!.keywords).toEqual(['brick'])
+        })
+
+        it('should cap the location at 15 keywords', async () => {
+            // Arrange
+            const manyLabels = Array.from({ length: 20 }, (_, i) => `label-${i}`)
+
+            // Act
+            expectSuccess(await addPhotosToLocation(userId, locationId, [
+                { buffer: Buffer.from('one'), filename: 'one.jpg', mimeType: 'image/jpeg' },
+            ], { db: prisma, labelDetector: async () => manyLabels }))
+
+            // Assert
+            const location = await prisma.location.findUnique({ where: { id: locationId } })
+            expect(location!.keywords).toHaveLength(15)
+            expect(location!.keywords[0]).toBe('brick')
         })
     })
 

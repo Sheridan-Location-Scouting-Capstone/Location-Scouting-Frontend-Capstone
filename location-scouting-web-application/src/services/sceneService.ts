@@ -17,7 +17,16 @@ export async function createScene(
     const db = options?.db ?? defaultPrisma
     const keywordGenerator = options?.keywordGenerator ?? defaultKeywordGenerator
 
-    const validated = CreateSceneSchema.parse(input)
+    const parsed = CreateSceneSchema.safeParse(input)
+    if (!parsed.success) {
+        return {
+            success: false,
+            code: ErrorCode.VALIDATION_FAILED,
+            error: 'Invalid scene data',
+            fieldErrors: z.flattenError(parsed.error).fieldErrors
+        }
+    }
+    const validated = parsed.data
 
     const project = await db.project.findFirst({
         where: { id: validated.projectId, userId },
@@ -38,6 +47,8 @@ export async function createScene(
                 })
             }
         })
+        // The scene may be deleted before keywords come back; that's not an error worth surfacing
+        .catch((error) => console.warn(`Failed to save generated keywords for scene ${scene.id}`, error))
 
     return { success: true, data: scene }
 }
@@ -83,7 +94,12 @@ export async function updateScene(
     const validated = UpdateSceneSchema.partial().safeParse(input)
 
     if (!validated.success) {
-        return { success: false, code: ErrorCode.VALIDATION_FAILED, error: 'Invalid input' }
+        return {
+            success: false,
+            code: ErrorCode.VALIDATION_FAILED,
+            error: 'Invalid scene data',
+            fieldErrors: z.flattenError(validated.error).fieldErrors
+        }
     }
 
     // Moving a scene is only allowed into another project the user also owns

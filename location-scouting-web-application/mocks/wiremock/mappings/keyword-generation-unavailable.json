@@ -1,0 +1,10 @@
+{
+  "name": "Scene keyword generation: outage (KEYWORD_GENERATION_API_URL=http://localhost:8089/unavailable/keywords)",
+  "request": {
+    "method": "POST",
+    "urlPath": "/unavailable/keywords"
+  },
+  "response": {
+    "status": 503
+  }
+}

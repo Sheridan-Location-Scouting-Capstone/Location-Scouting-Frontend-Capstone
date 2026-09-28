@@ -2,19 +2,26 @@
 
 import { revalidatePath } from 'next/cache'
 import {
+    getCandidateById,
     getCandidatesForScene,
     createCandidate,
     removeCandidateFromScene,
     toggleCandidateSelected,
 } from '@/services/candidateService'
-import {getRecommendations} from "@/services/recommendationService";
+import {getRecommendations, scoreCandidates} from "@/services/recommendationService";
 import {requireUser} from "@/lib/auth-session";
+import {Result} from "@/schemas/result";
 
 // ─── Candidates ─────────────────────────────────────────────
 
 export async function getCandidatesAction(sceneId: string) {
     const user = await requireUser()
     return await getCandidatesForScene(user.id, sceneId)
+}
+
+export async function getCandidateAction(candidateId: string) {
+    const user = await requireUser()
+    return await getCandidateById(user.id, candidateId)
 }
 
 export async function addCandidateAction(sceneId: string, locationId: string, projectId: string, photoIds: string[]) {
@@ -41,6 +48,14 @@ export async function toggleCandidateSelectedAction(
     const result = await toggleCandidateSelected(user.id, candidateId, selected)
     revalidatePath(`/productions/${projectId}/scenes/${sceneId}`)
     return result
+}
+
+// Match scores keyed by candidate id. A plain object rather than a Map so it serializes across the server boundary.
+export async function scoreCandidatesAction(sceneId: string): Promise<Result<Record<string, number>>> {
+    const user = await requireUser()
+    const result = await scoreCandidates(user.id, sceneId)
+    if (!result.success) return result
+    return { success: true, data: Object.fromEntries(result.data) }
 }
 
 export async function getRecommendationsAction(sceneId: string) {

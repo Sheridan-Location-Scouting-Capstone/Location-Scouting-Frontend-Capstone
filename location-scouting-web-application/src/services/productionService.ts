@@ -127,14 +127,25 @@ export async function updateProject(
     const db = options?.db ?? defaultPrisma
     const geocoder = options?.geocoder ?? defaultGeocoder
 
+    const validated = CreateProjectSchema.partial().safeParse(input)
+    if (!validated.success) {
+        return {
+            success: false,
+            code: ErrorCode.VALIDATION_FAILED,
+            error: 'Invalid project data',
+            fieldErrors: z.flattenError(validated.error).fieldErrors
+        }
+    }
+
     try {
         const project = await db.project.update({
             where: { id, userId },
-            data: input,
+            data: validated.data,
         })
 
         // Re-geocode if any address field changed
-        if (input.address || input.city || input.province || input.postalCode || input.country) {
+        const data = validated.data
+        if (data.address || data.city || data.province || data.postalCode || data.country) {
             const full = await db.project.findUnique({ where: { id, userId } })
             if (full) {
                 const address = `${full.address}, ${full.city}, ${full.province}, ${full.postalCode}, ${full.country}`
@@ -151,7 +162,7 @@ export async function updateProject(
                         await db.project.update({
                             where: { id, userId },
                             data: { latitude: null, longitude: null },
-                        })
+                        }).catch((error) => console.error(error))
                     })
             }
         }

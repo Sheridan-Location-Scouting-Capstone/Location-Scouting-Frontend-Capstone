@@ -4,9 +4,11 @@ import { revalidatePath } from 'next/cache'
 import * as candidateActions from '@/actions/candidateActions'
 import {
     addCandidateAction,
+    getCandidateAction,
     getCandidatesAction,
     getRecommendationsAction,
     removeCandidateAction,
+    scoreCandidatesAction,
     toggleCandidateSelectedAction,
 } from '@/actions/candidateActions'
 import { createProject } from '@/services/productionService'
@@ -86,6 +88,51 @@ describe('Candidate Actions', () => {
 
             // Assert
             expect(candidates).toHaveLength(0)
+        })
+    })
+
+    describe('getCandidateAction', () => {
+        it('should return the signed-in user\'s candidate', async () => {
+            // Act
+            const candidate = expectSuccess(await getCandidateAction(candidateId))
+
+            // Assert
+            expect(candidate.id).toBe(candidateId)
+            expect(candidate.sceneId).toBe(sceneId)
+        })
+
+        it('should return NOT_FOUND for another user\'s candidate', async () => {
+            // Arrange
+            actAs(intruderId)
+
+            // Act
+            const result = expectFailure(await getCandidateAction(candidateId))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+        })
+    })
+
+    describe('scoreCandidatesAction', () => {
+        it('should return a plain object of scores keyed by candidate id', async () => {
+            // Act
+            const scores = expectSuccess(await scoreCandidatesAction(sceneId))
+
+            // Assert
+            expect(scores).not.toBeInstanceOf(Map)
+            expect(Object.keys(scores)).toEqual([candidateId])
+            expect(typeof scores[candidateId]).toBe('number')
+        })
+
+        it('should return NOT_FOUND for another user\'s scene', async () => {
+            // Arrange
+            actAs(intruderId)
+
+            // Act
+            const result = expectFailure(await scoreCandidatesAction(sceneId))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
         })
     })
 

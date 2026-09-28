@@ -1,7 +1,6 @@
 import { Box } from '@mui/material'
-//import StarBorderIcon from '@mui/icons-material/StarBorder'
-import Sidebar, { DRAWER_WIDTH } from '@/components/Sidebar'
-import UserMenu from '@/components/UserMenu'
+import Sidebar, { DRAWER_WIDTH } from '@/components/layout/Sidebar'
+import UserMenu from '@/components/layout/UserMenu'
 import { requireUser } from '@/lib/auth-session'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -28,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </Box>
 
             {/* Page content */}
-            <Box sx={{ px: 4, pb: 4 }}>
+            <Box component="main" sx={{ px: 4, pb: 4 }}>
               {children}
             </Box>
           </Box>

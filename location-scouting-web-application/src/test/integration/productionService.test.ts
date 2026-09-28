@@ -176,6 +176,23 @@ describe('Production Service', () => {
         })
     })
 
+    describe('updateProject', () => {
+        it('should return field errors instead of saving an empty required field', async () => {
+            // Arrange
+            const user = await signUpSetup()
+            const project = expectSuccess(await createProject(user.userId, buildProjectInput(), { db: prisma, geocoder: mockGeocoder }))
+
+            // Act
+            const result = expectFailure(await updateProject(user.userId, project.id, { name: '' }, { db: prisma, geocoder: mockGeocoder }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.VALIDATION_FAILED)
+            expect(result.fieldErrors?.name).toBeDefined()
+            const saved = expectSuccess(await getProjectById(user.userId, project.id, { db: prisma }))
+            expect(saved.name).toBe(buildProjectInput().name)
+        })
+    })
+
     describe('getLocationsByProject', () => {
         it('should return the distinct candidate locations across a project\'s scenes', async () => {
             // Arrange - one location used as a candidate on two scenes

@@ -1,56 +1,40 @@
 import { notFound } from 'next/navigation'
-import { Box, Typography, Button } from '@mui/material'
-import {getProject, getScenesAction} from '@/actions/productionActions'
-import { getLocationsByProject } from '@/services/productionService'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
-import Link from "next/link";
-import SceneTable from '@/components/SceneTable'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
+import { getProject, getScenesAction } from '@/actions/productionActions'
+import PageHeader from '@/components/common/PageHeader'
+import LinkButton from '@/components/common/LinkButton'
+import SceneTable from '@/components/scenes/SceneTable'
 
-export default async function ProductionDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
+export default async function ProductionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
 
-  const result = await getProject(id)
-  if (!result.success) notFound()
+    const result = await getProject(id)
+    if (!result.success) notFound()
+    const project = result.data
 
-  const project = result.data
+    const scenes = await getScenesAction(project.id)
 
-  const scenes = await getScenesAction(id)
-
-  const locations = await getLocationsByProject({projectId: id});
-
-  const projectId = project.id;
-
-  return (
-  <Box>
-    <Typography variant="h4" sx={{ mb: 1 }}>
-      {project.name} - Scenes
-    </Typography>
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Link href="/productions" style={{ textDecoration: 'none' }}>
-            <Button startIcon={<ArrowBackIcon />} variant="outlined" size="small">
-            Back
-            </Button>
-        </Link>
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-            <Link href={`/productions/${projectId}/edit`} style={{ textDecoration: 'none' }}>
-                <Button variant="contained" color="secondary">Manage Production</Button>
-            </Link>
-            <Link href={`/productions/${projectId}/analytics`} style={{ textDecoration: 'none' }}>
-                <Button variant="outlined" startIcon={<AnalyticsIcon />}>Analytics</Button>
-            </Link>
-            <Link href={`/productions/${projectId}/scenes/new`} style={{ textDecoration: 'none' }}>
-                <Button variant="contained" startIcon={<AddIcon />}>Add New Scene</Button>
-            </Link>
-        </Box>
-    </Box>
-
-    <SceneTable scenes={scenes} projectId={projectId} />
-  </Box>
-)
+    return (
+        <>
+            <PageHeader
+                title={`${project.name} - Scenes`}
+                backHref="/productions"
+                actions={
+                    <>
+                        <LinkButton href={`/productions/${project.id}/edit`} variant="contained" color="secondary">
+                            Manage Production
+                        </LinkButton>
+                        <LinkButton href={`/productions/${project.id}/analytics`} variant="outlined" startIcon={<AnalyticsIcon />}>
+                            Analytics
+                        </LinkButton>
+                        <LinkButton href={`/productions/${project.id}/scenes/new`} variant="contained" startIcon={<AddIcon />}>
+                            Add New Scene
+                        </LinkButton>
+                    </>
+                }
+            />
+            <SceneTable scenes={scenes} projectId={project.id} />
+        </>
+    )
 }

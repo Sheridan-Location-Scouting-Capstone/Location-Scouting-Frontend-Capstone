@@ -17,7 +17,8 @@ export const UpdateSceneSchema = z.object({
     sceneTimeOfDay: z.string().min(1, "Scene time of day is required"),
     scriptSection: z.string().min(1, "Script content is required"),
     projectId: z.string(),
-    keywords: z.array(z.string()).optional().default([]),
+    // No default: a partial update that omits keywords must leave them untouched
+    keywords: z.array(z.string()).optional(),
 })
 
 

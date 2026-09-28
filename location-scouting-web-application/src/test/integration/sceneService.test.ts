@@ -154,16 +154,16 @@ describe('Scene Service', () => {
                 projectId: projectId
             }
 
-            // Act
+            // Act - default keyword generator: the mock service in test runs (EXTERNAL_SERVICE_MOCKS=off for the real one)
             const createdScene = expectSuccess(await createScene(userId, sceneInput, { db: prisma }))
 
-            // Assert
-            expect(createdScene).not.toBeNull()
-            expect(createdScene.keywords).toBeDefined()
-            expect(createdScene.keywords).to.contain('backyard')
-            expect(createdScene.keywords).to.contain('house')
-
-        }, 10000)
+            // Assert - keywords are saved in the background after the scene is returned
+            await vi.waitFor(async () => {
+                const savedScene = expectSuccess(await getSceneById(userId, createdScene.id, { db: prisma }))
+                expect(savedScene.keywords).to.contain('backyard')
+                expect(savedScene.keywords).to.contain('house')
+            }, { timeout: 10000 })
+        }, 15000)
     })
 
     describe('getScenesForProject', () => {
@@ -401,7 +401,42 @@ describe('Scene Service', () => {
         })
     })
 
-    describe('Update Scene', async()=>{
-        it('should ')
+    describe('Update Scene', () => {
+        let sceneId: string
+
+        beforeEach(async () => {
+            // failingGenerator: no background keyword write that could race the keywords set below
+            sceneId = expectSuccess(await createScene(userId, buildSceneInput(projectId), { db: prisma, keywordGenerator: failingGenerator })).id
+            await prisma.scene.update({ where: { id: sceneId }, data: { keywords: ['yard', 'lemon tree'] } })
+        })
+
+        it('should leave keywords untouched when a partial update omits them', async () => {
+            // Act
+            const result = expectSuccess(await updateScene(userId, sceneId, { sceneLocation: 'FRONT PORCH' }, { db: prisma }))
+
+            // Assert
+            expect(result.sceneLocation).toBe('FRONT PORCH')
+            expect(result.keywords).toEqual(['yard', 'lemon tree'])
+        })
+
+        it('should return field errors when validation fails', async () => {
+            // Act
+            const result = expectFailure(await updateScene(userId, sceneId, { sceneLocation: '' }, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.VALIDATION_FAILED)
+            expect(result.fieldErrors?.sceneLocation).toBeDefined()
+        })
+    })
+
+    describe('createScene validation', () => {
+        it('should return a validation failure instead of throwing on invalid input', async () => {
+            // Act
+            const result = expectFailure(await createScene(userId, { ...buildSceneInput(projectId), sceneNumber: Number.NaN }, { db: prisma, keywordGenerator: dummyKeyWordGen }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.VALIDATION_FAILED)
+            expect(result.fieldErrors?.sceneNumber).toBeDefined()
+        })
     })
 })

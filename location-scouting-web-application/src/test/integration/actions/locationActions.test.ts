@@ -151,6 +151,31 @@ describe('Location Actions', () => {
             expect(location!.name).toBe('Renamed Alley')
         })
 
+        it('should clear optional fields that are left empty', async () => {
+            // Arrange - the location starts with a description and contact name
+            await prisma.location.update({ where: { id: locationId }, data: { notes: 'Great light', contactName: 'Pat' } })
+            const formData = formDataFrom({ ...buildLocationInput(), notes: '', contactName: '' })
+
+            // Act & Assert
+            await expectRedirect(updateLocationAction(locationId, formData), `/locations/${locationId}`)
+            const location = await prisma.location.findUnique({ where: { id: locationId } })
+            expect(location!.notes).toBeNull()
+            expect(location!.contactName).toBeNull()
+        })
+
+        it('should return a validation failure when a required field is cleared', async () => {
+            // Arrange
+            const formData = formDataFrom({ ...buildLocationInput(), name: '' })
+
+            // Act
+            const result = expectFailure((await updateLocationAction(locationId, formData))!)
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.VALIDATION_FAILED)
+            expect(result.fieldErrors?.name).toBeDefined()
+            expect(revalidatePath).not.toHaveBeenCalled()
+        })
+
         it('should not update another user\'s location', async () => {
             // Arrange
             actAs(intruderId)
@@ -199,6 +224,20 @@ describe('Location Actions', () => {
             // Assert
             const location = await prisma.location.findUnique({ where: { id: locationId } })
             expect(location!.status).toBe(LocationStatus.ARCHIVED)
+        })
+
+        it('should keep the location\'s keywords and country when the status changes', async () => {
+            // Arrange
+            await prisma.location.update({ where: { id: locationId }, data: { country: 'USA' } })
+
+            // Act
+            await updateLocationStatusAction(locationId, 'ARCHIVED')
+            await updateLocationStatusAction(locationId, 'ACTIVE')
+
+            // Assert
+            const location = await prisma.location.findUnique({ where: { id: locationId } })
+            expect(location!.keywords).toEqual(['brick', 'alley'])
+            expect(location!.country).toBe('USA')
         })
 
         it('should soft delete the signed-in user\'s location and redirect to the list', async () => {

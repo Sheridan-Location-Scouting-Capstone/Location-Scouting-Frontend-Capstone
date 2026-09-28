@@ -2,21 +2,22 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
 import {
-  createLocation, deleteLocationById, getLocations,
+  createLocation,
+  deleteLocationById,
   getLocationById,
+  getLocations,
   getLocationWithPhotos,
   updateLocation,
-  // updateLocationStatus,
-  // searchLocations,
-  // filterByKeywords,
 } from '@/services/locationService'
 import {
   addPhotosToLocation,
   removePhotosFromLocation, updatePhoto, updatePhotoDisplayOrder
 } from '@/services/locationPhotoService'
 import {requireUser} from "@/lib/auth-session";
+
+const REQUIRED_LOCATION_FIELDS = ['name', 'address', 'city', 'province', 'postalCode'] as const
+const OPTIONAL_LOCATION_FIELDS = ['notes', 'contactName', 'contactPhone', 'contactEmail'] as const
 
 // ─── List / Search ──────────────────────────────────────────
 
@@ -85,12 +86,18 @@ export async function updateLocationAction(id: string, formData: FormData) {
   const user = await requireUser()
   const data: Record<string, unknown> = {}
 
-  const fields = ['name', 'address', 'city', 'province', 'postalCode', 'country', 'notes', 'contactName', 'contactPhone', 'contactEmail']
-  for (const field of fields) {
-    const val = formData.get(field) as string
-    if (val !== null && val !== undefined) {
-      data[field] = val || undefined
-    }
+  // Required fields are sent as-is so clearing one fails validation instead of being silently ignored
+  for (const field of REQUIRED_LOCATION_FIELDS) {
+    const val = formData.get(field)
+    if (typeof val === 'string') data[field] = val
+  }
+  // An empty country keeps the current value
+  const country = formData.get('country')
+  if (typeof country === 'string' && country) data.country = country
+  // Optional fields are cleared with null when left empty
+  for (const field of OPTIONAL_LOCATION_FIELDS) {
+    const val = formData.get(field)
+    if (typeof val === 'string') data[field] = val || null
   }
 
   const keywordsStr = formData.get('keywords') as string

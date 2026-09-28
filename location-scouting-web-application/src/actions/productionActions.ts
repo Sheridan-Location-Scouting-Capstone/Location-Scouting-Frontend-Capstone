@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import {createProject, getProjects, getProjectById, updateProject} from '@/services/productionService'
-import {createScene, deleteScene, getScenesForProject, updateScene} from '@/services/sceneService'
+import {createScene, deleteScene, getSceneById, getScenesForProject, updateScene} from '@/services/sceneService'
 import {requireUser} from "@/lib/auth-session";
 
 // ─── Projects ───────────────────────────────────────────────
@@ -29,11 +29,10 @@ export async function createProjectAction(formData: FormData) {
   }
 
   const result = await createProject(user.id, raw)
-  if(result.success) {
-    revalidatePath('/productions')
-    redirect(`/productions/${result.data.id}`)
-  }
-  throw new Error('Failed to create project')
+  if(!result.success) return result
+
+  revalidatePath('/productions')
+  redirect(`/productions/${result.data.id}`)
 }
 
 
@@ -43,6 +42,11 @@ export async function getProject(projectId: string)  {
 }
 
 // ─── Scenes ─────────────────────────────────────────────────
+
+export async function getSceneAction(sceneId: string) {
+  const user = await requireUser();
+  return await getSceneById(user.id, sceneId)
+}
 
 export async function getScenesAction(projectId: string) {
   const user = await requireUser();

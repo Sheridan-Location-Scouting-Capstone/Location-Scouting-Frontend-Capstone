@@ -463,6 +463,81 @@ describe('Location Services', () => {
         })
     })
 
+    describe('updateLocation partial updates', () => {
+        let userId: string
+        let locationId: string
+
+        beforeEach(async () => {
+            userId = (await signUpSetup()).userId
+            const location = expectSuccess(await createLocation(userId, { ...buildLocationInput(), country: 'USA', keywords: ['brick', 'alley'] }, { db: prisma, geocoder: async () => null }))
+            locationId = location.id
+        })
+
+        it('should leave fields that were not sent untouched', async () => {
+            // Act
+            const result = expectSuccess(await updateLocation(userId, locationId, { status: LocationStatus.ARCHIVED }, { db: prisma, geocoder: async () => null }))
+
+            // Assert
+            expect(result.keywords).toEqual(['brick', 'alley'])
+            expect(result.country).toBe('USA')
+        })
+
+        it('should not geocode when no address field changed', async () => {
+            // Arrange
+            const geocoder = vi.fn<Geocoder>(async () => ({ lat: 1, lng: 1 }))
+
+            // Act
+            expectSuccess(await updateLocation(userId, locationId, { name: 'Renamed' }, { db: prisma, geocoder }))
+
+            // Assert
+            expect(geocoder).not.toHaveBeenCalled()
+        })
+
+        it('should geocode the full saved address when one address field changed', async () => {
+            // Arrange
+            const geocoder = vi.fn<Geocoder>(async () => ({ lat: 45.4215, lng: -75.6972 }))
+
+            // Act
+            expectSuccess(await updateLocation(userId, locationId, { city: 'Ottawa' }, { db: prisma, geocoder }))
+
+            // Assert
+            expect(geocoder).toHaveBeenCalledWith('123 Main St, Ottawa, ON, M5V 1A1, USA')
+            await vi.waitFor(async () => {
+                const saved = await prisma.location.findUnique({ where: { id: locationId } })
+                expect(saved!.latitude).toBe(45.4215)
+            })
+        })
+
+        it('should clear optional fields set to null', async () => {
+            // Arrange
+            await prisma.location.update({ where: { id: locationId }, data: { notes: 'Great light', contactEmail: 'pat@example.com' } })
+
+            // Act
+            const result = expectSuccess(await updateLocation(userId, locationId, { notes: null, contactEmail: null }, { db: prisma }))
+
+            // Assert
+            expect(result.notes).toBeNull()
+            expect(result.contactEmail).toBeNull()
+        })
+
+        it('should normalize the contact phone number the same way create does', async () => {
+            // Act
+            const result = expectSuccess(await updateLocation(userId, locationId, { contactPhone: '(705) 773-3685' }, { db: prisma }))
+
+            // Assert
+            expect(result.contactPhone).toBe('7057733685')
+        })
+
+        it('should return field errors when validation fails', async () => {
+            // Act
+            const result = expectFailure(await updateLocation(userId, locationId, { name: '' }, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.VALIDATION_FAILED)
+            expect(result.fieldErrors?.name).toBeDefined()
+        })
+    })
+
     describe('updateLocationStatus', () => {
         it('should update the status of a location', async () => {
                 // Arrange
