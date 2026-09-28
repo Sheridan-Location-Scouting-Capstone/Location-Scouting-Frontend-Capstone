@@ -1,20 +1,19 @@
-import { notFound } from 'next/navigation'
 import { getProject } from '@/actions/productionActions'
+import { unwrapForPage } from '@/lib/pageResult'
 import PageHeader from '@/components/common/PageHeader'
 import SceneForm from '@/components/scenes/SceneForm'
 
 export default async function NewScenePage({ params }: { params: Promise<{ id: string }> }) {
     const { id: projectId } = await params
 
-    const projectResult = await getProject(projectId)
-    if (!projectResult.success) notFound()
+    const project = unwrapForPage(await getProject(projectId))
 
     return (
         <>
             <PageHeader
                 title="Add New Scene"
                 backHref={`/productions/${projectId}`}
-                breadcrumbs={[projectResult.data.name, 'Scenes', 'New']}
+                breadcrumbs={[project.name, 'Scenes', 'New']}
             />
             <SceneForm projectId={projectId} />
         </>

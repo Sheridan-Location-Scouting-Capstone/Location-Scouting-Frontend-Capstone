@@ -1,19 +1,16 @@
-import { notFound } from 'next/navigation'
 import AddIcon from '@mui/icons-material/Add'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
 import { getProject, getScenesAction } from '@/actions/productionActions'
 import PageHeader from '@/components/common/PageHeader'
 import LinkButton from '@/components/common/LinkButton'
 import SceneTable from '@/components/scenes/SceneTable'
+import { unwrapForPage } from '@/lib/pageResult'
 
 export default async function ProductionDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
 
-    const result = await getProject(id)
-    if (!result.success) notFound()
-    const project = result.data
-
-    const scenes = await getScenesAction(project.id)
+    const project = unwrapForPage(await getProject(id))
+    const scenes = unwrapForPage(await getScenesAction(project.id))
 
     return (
         <>

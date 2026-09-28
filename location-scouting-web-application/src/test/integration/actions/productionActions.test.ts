@@ -65,7 +65,7 @@ describe('Production Actions', () => {
             await createProject(intruderId, buildProjectInput({ name: 'Intruder Production' }), { db: prisma, geocoder: mockGeocoder })
 
             // Act
-            const projects = await getProjectsAction()
+            const projects = expectSuccess(await getProjectsAction())
 
             // Assert
             expect(projects.map(p => p.id)).toEqual([projectId])
@@ -165,7 +165,7 @@ describe('Production Actions', () => {
     describe('getScenesAction', () => {
         it('should return the scenes for the signed-in user\'s project', async () => {
             // Act
-            const scenes = await getScenesAction(projectId)
+            const scenes = expectSuccess(await getScenesAction(projectId))
 
             // Assert
             expect(scenes.map(s => s.id)).toEqual([sceneId])
@@ -176,7 +176,7 @@ describe('Production Actions', () => {
             actAs(intruderId)
 
             // Act
-            const scenes = await getScenesAction(projectId)
+            const scenes = expectSuccess(await getScenesAction(projectId))
 
             // Assert
             expect(scenes).toHaveLength(0)

@@ -7,7 +7,11 @@ import type {
     KeywordFrequency,
 } from "@/schemas/analytics";
 import {IntExt, LocationStatus} from "@prisma/client";
-import {ErrorCode, Result} from "@/schemas/result";
+import {ErrorCode, fail, ok, Result} from "@/schemas/result";
+import {createLogger} from "@/lib/logger";
+import {guard} from "@/services/serviceResult";
+
+const logger = createLogger('analyticsService')
 
 type Options = { db?: typeof defaultPrisma }
 
@@ -21,7 +25,7 @@ async function userOwnsProject(db: typeof defaultPrisma, userId: string, project
     return project !== null
 }
 
-const projectNotFound = { success: false, code: ErrorCode.NOT_FOUND, error: 'Project not found' } as const
+const projectNotFound = () => fail(ErrorCode.NOT_FOUND, 'Project not found')
 
 /**
  * Aggregate summary stats for a production's scenes.
@@ -39,9 +43,9 @@ export async function getAnalyticsSummary(userId: string, projectId: string, opt
 ): Promise<Result<AnalyticsSummary>> {
     const db = options?.db ?? defaultPrisma
 
-    try {
+    return guard(logger, 'load analytics', async () => {
         if (!await userOwnsProject(db, userId, projectId)) {
-            return projectNotFound
+            return projectNotFound()
         }
 
         const scenes = await db.scene.findMany({
@@ -90,22 +94,18 @@ export async function getAnalyticsSummary(userId: string, projectId: string, opt
         const matchedKeywords = [...sceneKeywords].filter((kw) => normalizedLocationKeywords.has(kw)).length
         const uniqueKeywords = sceneKeywords.size
 
-        return { success: true, data: {
-                totalScenes,
-                intCount,
-                extCount,
-                intExtCount,
-                scenesWithCandidates,
-                scenesWithSelected,
-                uniqueKeywords,
-                matchedKeywords,
-                unmatchedKeywords
-        }}
-    } catch (error) {
-        console.error(error)
-        return { success: false, error: "Failed to load analytics" }
-    }
-
+        return ok({
+            totalScenes,
+            intCount,
+            extCount,
+            intExtCount,
+            scenesWithCandidates,
+            scenesWithSelected,
+            uniqueKeywords,
+            matchedKeywords,
+            unmatchedKeywords
+        })
+    })
 }
 
 /**
@@ -121,31 +121,33 @@ export async function getLocationPoints(userId: string, projectId: string,
 ): Promise<Result<LocationPoint[]>> {
     const db = options?.db ?? defaultPrisma
 
-    if (!await userOwnsProject(db, userId, projectId)) {
-        return projectNotFound
-    }
+    return guard(logger, 'load location points', async () => {
+        if (!await userOwnsProject(db, userId, projectId)) {
+            return projectNotFound()
+        }
 
-    const locations = await db.location.findMany({
-        where: {
-            userId,
-            status: LocationStatus.ACTIVE,
-            latitude: { not: null },
-            longitude: { not: null },
-            candidates: {
-                some: {
-                    scene: { projectId, project: { userId } },
+        const locations = await db.location.findMany({
+            where: {
+                userId,
+                status: LocationStatus.ACTIVE,
+                latitude: { not: null },
+                longitude: { not: null },
+                candidates: {
+                    some: {
+                        scene: { projectId, project: { userId } },
+                    },
                 },
             },
-        },
-        select: { latitude: true, longitude: true },
+            select: { latitude: true, longitude: true },
+        })
+
+        const data = locations.map((l) => ({
+            latitude: l.latitude as number,
+            longitude: l.longitude as number,
+        }))
+
+        return ok(data)
     })
-
-    const data = locations.map((l) => ({
-        latitude: l.latitude as number,
-        longitude: l.longitude as number,
-    }))
-
-    return { success: true, data }
 }
 
 /**
@@ -161,27 +163,29 @@ export async function getSceneCoverage(userId: string, projectId: string,
 ): Promise<Result<SceneCoverage>> {
     const db = options?.db ?? defaultPrisma
 
-    if (!await userOwnsProject(db, userId, projectId)) {
-        return projectNotFound
-    }
+    return guard(logger, 'load scene coverage', async () => {
+        if (!await userOwnsProject(db, userId, projectId)) {
+            return projectNotFound()
+        }
 
-    const [selected, candidateOnly, noCandidates] = await Promise.all([
-        db.scene.count({
-            where: { projectId, project: { userId }, candidates: { some: { selected: true } } },
-        }),
-        db.scene.count({
-            where: {
-                projectId,
-                project: { userId },
-                candidates: { some: {}, none: { selected: true } },
-            },
-        }),
-        db.scene.count({
-            where: { projectId, project: { userId }, candidates: { none: {} } },
-        }),
-    ])
+        const [selected, candidateOnly, noCandidates] = await Promise.all([
+            db.scene.count({
+                where: { projectId, project: { userId }, candidates: { some: { selected: true } } },
+            }),
+            db.scene.count({
+                where: {
+                    projectId,
+                    project: { userId },
+                    candidates: { some: {}, none: { selected: true } },
+                },
+            }),
+            db.scene.count({
+                where: { projectId, project: { userId }, candidates: { none: {} } },
+            }),
+        ])
 
-    return { success: true, data: { selected, candidateOnly, noCandidates } }
+        return ok({ selected, candidateOnly, noCandidates })
+    })
 }
 
 /**
@@ -202,53 +206,55 @@ export async function getKeywordGaps(userId: string, projectId: string,
 ): Promise<Result<KeywordGap[]>> {
     const db = options?.db ?? defaultPrisma
 
-    if (!await userOwnsProject(db, userId, projectId)) {
-        return projectNotFound
-    }
+    return guard(logger, 'load keyword gaps', async () => {
+        if (!await userOwnsProject(db, userId, projectId)) {
+            return projectNotFound()
+        }
 
-    const [scenes, locations] = await Promise.all([
-        db.scene.findMany({
-            where: { projectId, project: { userId } },
-            select: { keywords: true },
-        }),
-        db.location.findMany({
-            where: { userId, status: LocationStatus.ACTIVE },
-            select: { keywords: true },
-        }),
-    ])
+        const [scenes, locations] = await Promise.all([
+            db.scene.findMany({
+                where: { projectId, project: { userId } },
+                select: { keywords: true },
+            }),
+            db.location.findMany({
+                where: { userId, status: LocationStatus.ACTIVE },
+                select: { keywords: true },
+            }),
+        ])
 
-    // Build a case-insensitive set of all keywords in the library
-    const libraryKeywords = new Set(
-        locations.flatMap((l) => l.keywords.map((k) => k.toLowerCase()))
-    )
+        // Build a case-insensitive set of all keywords in the library
+        const libraryKeywords = new Set(
+            locations.flatMap((l) => l.keywords.map((k) => k.toLowerCase()))
+        )
 
-    // Count scene occurrences for each unmatched keyword
-    // Map preserves the original casing of the first occurrence for display
-    const gapCounts = new Map<string, { display: string; count: number }>()
+        // Count scene occurrences for each unmatched keyword
+        // Map preserves the original casing of the first occurrence for display
+        const gapCounts = new Map<string, { display: string; count: number }>()
 
-    for (const scene of scenes) {
-        // Dedupe within a single scene so one scene = one count per keyword
-        const seenInScene = new Set<string>()
-        for (const kw of scene.keywords) {
-            const normalized = kw.toLowerCase()
-            if (libraryKeywords.has(normalized)) continue
-            if (seenInScene.has(normalized)) continue
-            seenInScene.add(normalized)
+        for (const scene of scenes) {
+            // Dedupe within a single scene so one scene = one count per keyword
+            const seenInScene = new Set<string>()
+            for (const kw of scene.keywords) {
+                const normalized = kw.toLowerCase()
+                if (libraryKeywords.has(normalized)) continue
+                if (seenInScene.has(normalized)) continue
+                seenInScene.add(normalized)
 
-            const existing = gapCounts.get(normalized)
-            if (existing) {
-                existing.count += 1
-            } else {
-                gapCounts.set(normalized, { display: kw, count: 1 })
+                const existing = gapCounts.get(normalized)
+                if (existing) {
+                    existing.count += 1
+                } else {
+                    gapCounts.set(normalized, { display: kw, count: 1 })
+                }
             }
         }
-    }
 
-    const data: KeywordGap[] = Array.from(gapCounts.values())
-        .map((v) => ({ keyword: v.display, sceneCount: v.count }))
-        .sort((a, b) => b.sceneCount - a.sceneCount)
+        const data: KeywordGap[] = Array.from(gapCounts.values())
+            .map((v) => ({ keyword: v.display, sceneCount: v.count }))
+            .sort((a, b) => b.sceneCount - a.sceneCount)
 
-    return { success: true, data }
+        return ok(data)
+    })
 }
 
 /**
@@ -269,38 +275,40 @@ export async function getKeywordDistribution(userId: string, projectId: string,
 ): Promise<Result<KeywordFrequency[]>> {
     const db = options?.db ?? defaultPrisma
 
-    if (!await userOwnsProject(db, userId, projectId)) {
-        return projectNotFound
-    }
+    return guard(logger, 'load keyword distribution', async () => {
+        if (!await userOwnsProject(db, userId, projectId)) {
+            return projectNotFound()
+        }
 
-    const scenes = await db.scene.findMany({
-        where: { projectId, project: { userId } },
-        select: { keywords: true },
-    })
+        const scenes = await db.scene.findMany({
+            where: { projectId, project: { userId } },
+            select: { keywords: true },
+        })
 
-    // Count how many scenes contain each keyword (case-insensitive)
-    const counts = new Map<string, { display: string; count: number }>()
+        // Count how many scenes contain each keyword (case-insensitive)
+        const counts = new Map<string, { display: string; count: number }>()
 
-    for (const scene of scenes) {
-        const seenInScene = new Set<string>()
-        for (const kw of scene.keywords) {
-            const normalized = kw.toLowerCase()
-            if (seenInScene.has(normalized)) continue
-            seenInScene.add(normalized)
+        for (const scene of scenes) {
+            const seenInScene = new Set<string>()
+            for (const kw of scene.keywords) {
+                const normalized = kw.toLowerCase()
+                if (seenInScene.has(normalized)) continue
+                seenInScene.add(normalized)
 
-            const existing = counts.get(normalized)
-            if (existing) {
-                existing.count += 1
-            } else {
-                counts.set(normalized, { display: kw, count: 1 })
+                const existing = counts.get(normalized)
+                if (existing) {
+                    existing.count += 1
+                } else {
+                    counts.set(normalized, { display: kw, count: 1 })
+                }
             }
         }
-    }
 
-    const data: KeywordFrequency[] = Array.from(counts.values())
-        .map((v) => ({ keyword: v.display, sceneCount: v.count }))
-        .sort((a, b) => b.sceneCount - a.sceneCount)
-        .slice(0, limit)
+        const data: KeywordFrequency[] = Array.from(counts.values())
+            .map((v) => ({ keyword: v.display, sceneCount: v.count }))
+            .sort((a, b) => b.sceneCount - a.sceneCount)
+            .slice(0, limit)
 
-    return { success: true, data }
+        return ok(data)
+    })
 }

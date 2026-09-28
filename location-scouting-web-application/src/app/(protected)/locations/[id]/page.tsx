@@ -1,8 +1,8 @@
-import { notFound } from 'next/navigation'
 import { Button } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import ShareIcon from '@mui/icons-material/Share'
 import { getLocationAction } from '@/actions/locationActions'
+import { unwrapForPage } from '@/lib/pageResult'
 import PageHeader from '@/components/common/PageHeader'
 import LinkButton from '@/components/common/LinkButton'
 import LocationDetailsCard from '@/components/locations/LocationDetailsCard'
@@ -11,8 +11,7 @@ import LocationStatusActions from '@/components/locations/LocationStatusActions'
 
 export default async function LocationDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
-    const location = await getLocationAction(id)
-    if (!location) notFound()
+    const location = unwrapForPage(await getLocationAction(id))
 
     return (
         <>

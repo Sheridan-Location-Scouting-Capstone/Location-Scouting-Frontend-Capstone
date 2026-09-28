@@ -18,7 +18,7 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('next/navigation', () => ({ redirect: vi.fn((url: string) => { throw Object.assign(new Error('NEXT_REDIRECT'), { url }) }) }))
 
 const mockGeocoder: Geocoder = async () => ({ lat: 43.6532, lng: -79.3832 })
-const noKeywords: KeywordGenerator = async () => ({ success: false, error: 'disabled in tests' })
+const noKeywords: KeywordGenerator = async () => ({ success: false, code: ErrorCode.UNAVAILABLE, error: 'disabled in tests' })
 
 describe('Analytics Actions', () => {
     let ownerId: string

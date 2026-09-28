@@ -15,7 +15,7 @@ import {ErrorCode} from "@/schemas/result";
 
 
 const dummyKeyWordGen: KeywordGenerator = async() => ({ success: true, data: ['generated', 'keywords']})
-const failingGenerator: KeywordGenerator = async() => ({ success: false, error: "Error Failed" })
+const failingGenerator: KeywordGenerator = async() => ({ success: false, code: ErrorCode.UNAVAILABLE, error: "Error Failed" })
 
 describe('Scene Service', () => {
 

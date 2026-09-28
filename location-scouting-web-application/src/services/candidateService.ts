@@ -1,8 +1,12 @@
-import {ErrorCode, Result} from "@/schemas/result";
+import {ErrorCode, fail, ok, Result} from "@/schemas/result";
 import {Candidate, LocationStatus, Prisma} from "@prisma/client";
 import { prisma as defaultPrisma } from '@/lib/prisma'
 import { z } from 'zod'
 import {CreateCandidateSchema} from "@/schemas/candidateSchema"
+import {createLogger} from "@/lib/logger";
+import {guard, isRecordNotFound, isUniqueViolation} from "@/services/serviceResult";
+
+const logger = createLogger('candidateService')
 
 export const HISTORICAL_THRESHOLD: number = 5
 
@@ -27,41 +31,34 @@ export async function createCandidate(
     options?: { db?: typeof defaultPrisma }
 ) : Promise<Result<Candidate>> {
     const db = options?.db ?? defaultPrisma
-
     const photoIds = input.photos ?? []
 
-    try {
-        const candidate = await db.candidate.create({
-            data: {
-                scene: { connect: { id: input.sceneId, project: { userId } } },
-                location: { connect: { id: input.locationId, userId, status: LocationStatus.ACTIVE } },
-                selected: input.selected ?? false,
-                photos: {
-                    create: photoIds.map((photoId, index) => ({
-                        photo: { connect: { id: photoId, locationId: input.locationId } },
-                        displayOrder: index,
-                    }))
+    return guard(logger, 'create candidate', async () => {
+        try {
+            const candidate = await db.candidate.create({
+                data: {
+                    scene: { connect: { id: input.sceneId, project: { userId } } },
+                    location: { connect: { id: input.locationId, userId, status: LocationStatus.ACTIVE } },
+                    selected: input.selected ?? false,
+                    photos: {
+                        create: photoIds.map((photoId, index) => ({
+                            photo: { connect: { id: photoId, locationId: input.locationId } },
+                            displayOrder: index,
+                        }))
+                    }
                 }
+            })
+            return ok(candidate)
+        } catch (error) {
+            if (isUniqueViolation(error)) {
+                return fail(ErrorCode.ALREADY_EXISTS, 'Candidate already exists for this scene')
             }
-        })
-
-        return {success: true, data: candidate}
-
-    } catch (error) {
-        if(error instanceof Prisma.PrismaClientKnownRequestError) {
-            if(error.code === 'P2002') {
-                console.log('Candidate already exists for this scene')
-                return { success: false, code: ErrorCode.ALREADY_EXISTS, error: 'Candidate already exists for this scene' }
+            if (isRecordNotFound(error)) {
+                return fail(ErrorCode.NOT_FOUND, 'Scene or Location not found for this candidate')
             }
-            if(error.code === 'P2025') {
-                console.log('Scene or Location not found for this candidate')
-                return { success: false, code: ErrorCode.NOT_FOUND, error: 'Scene or Location not found for this candidate' }
-            }
+            throw error
         }
-
-        console.log(`Failed to create candidate with Scene ID: ${input.sceneId} and Location ID: ${input.locationId}`);
-        return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: "Failed to create candidate with Scene ID and Location ID" }
-    }
+    })
 }
 
 export async function getCandidatesForScene(
@@ -71,24 +68,13 @@ export async function getCandidatesForScene(
 ) : Promise<Result<CandidateWithDetails[]>> {
     const db = options?.db ?? defaultPrisma
 
-    try {
+    return guard(logger, `get candidates for scene ${sceneId}`, async () => {
         const candidates = await db.candidate.findMany({
-            where: {
-                sceneId: sceneId,
-                ...ownedBy(userId)
-            },
+            where: { sceneId, ...ownedBy(userId) },
             include: candidateInclude
         })
-
-        if(!candidates) {
-            return { success: false, code: ErrorCode.NOT_FOUND, error: `No candidates found for scene: ${sceneId}` }
-        }
-
-        return { success: true, data: candidates }
-    } catch (error) {
-        console.log(`Failed to get all candidates for Scene: ${sceneId}`)
-        return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: `Failed to fetch candidates for scene: ${sceneId}`}
-    }
+        return ok(candidates)
+    })
 }
 
 export async function removeCandidateFromScene(
@@ -97,27 +83,18 @@ export async function removeCandidateFromScene(
     options?: { db?: typeof defaultPrisma }
 ) : Promise<Result<void>> {
     const db = options?.db ?? defaultPrisma
-    try {
-        await db.candidate.delete({
-            where: {
-                id : candidateId,
-                ...ownedBy(userId)
-            }
-        })
-        return { success: true, data: undefined }
-    } catch (error) {
-        if(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-            console.log(`Candidate not found or not authorized to delete: ${candidateId}`)
-            return { success: false, code: ErrorCode.NOT_FOUND, error: `Candidate not found or not authorized to delete: ${candidateId}` }
-        }
-        if(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-            console.log(`Cannot delete candidate due to foreign key constraint: ${candidateId}`)
-            return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: `Cannot delete candidate due to foreign key constraint: ${candidateId}` }
-        }
 
-        console.log(`Error when deleting candidate: ${candidateId}`)
-        return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: `Failed to delete candidate: ${candidateId}` }
-    }
+    return guard(logger, `delete candidate ${candidateId}`, async () => {
+        try {
+            await db.candidate.delete({ where: { id: candidateId, ...ownedBy(userId) } })
+            return ok(undefined)
+        } catch (error) {
+            if (isRecordNotFound(error)) {
+                return fail(ErrorCode.NOT_FOUND, `Candidate not found or not authorized to delete: ${candidateId}`)
+            }
+            throw error
+        }
+    })
 }
 
 export async function toggleCandidateSelected(
@@ -128,20 +105,20 @@ export async function toggleCandidateSelected(
 ) : Promise<Result<Candidate>> {
     const db = options?.db ?? defaultPrisma
 
-    try {
-        const result = await db.candidate.update({
-            where: { id: candidateId, ...ownedBy(userId) },
-            data: { selected: selected }
-        })
-        return {success: true, data: result }
-    } catch (error) {
-        if(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-            console.log(`Candidate not found or not authorized to update: ${candidateId}`)
-            return { success: false, code: ErrorCode.NOT_FOUND, error: `Candidate not found or not authorized to update: ${candidateId}` }
+    return guard(logger, `update candidate ${candidateId}`, async () => {
+        try {
+            const candidate = await db.candidate.update({
+                where: { id: candidateId, ...ownedBy(userId) },
+                data: { selected }
+            })
+            return ok(candidate)
+        } catch (error) {
+            if (isRecordNotFound(error)) {
+                return fail(ErrorCode.NOT_FOUND, `Candidate not found or not authorized to update: ${candidateId}`)
+            }
+            throw error
         }
-        console.log(`Error when updating candidate: ${candidateId}`)
-        return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: `Failed to update candidate: ${candidateId}` }
-    }
+    })
 }
 
 export async function getCandidateById(
@@ -151,20 +128,13 @@ export async function getCandidateById(
 ): Promise<Result<Candidate>> {
     const db = options?.db ?? defaultPrisma
 
-    try{
-        const result = await db.candidate.findUnique({
-            where: { id: candidateId, ...ownedBy(userId) }
-        })
-
-        if(!result){
-            return {success: false, code: ErrorCode.NOT_FOUND, error: `Failed to get candidate with id ${candidateId}` }
+    return guard(logger, `get candidate ${candidateId}`, async () => {
+        const candidate = await db.candidate.findUnique({ where: { id: candidateId, ...ownedBy(userId) } })
+        if (!candidate) {
+            return fail(ErrorCode.NOT_FOUND, `Candidate not found: ${candidateId}`)
         }
-
-        return {success: true, data: result }
-    } catch (error) {
-        console.log(`Error when finding candidate: ${candidateId}`)
-        return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: `Failed to get candidate with id ${candidateId}` }
-    }
+        return ok(candidate)
+    })
 }
 //
 // export async function getHistoricalScore(candidateId: string, options?: { db?: typeof defaultPrisma, historicalThreshold?: number }) : Promise<Result<number>> {

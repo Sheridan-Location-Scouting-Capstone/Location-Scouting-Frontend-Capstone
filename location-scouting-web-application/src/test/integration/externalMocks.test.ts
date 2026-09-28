@@ -3,10 +3,12 @@ import { prisma } from '@/test/setup'
 import { EXTERNAL_MOCKS_URL, externalServiceMocksEnabled } from '@/test/containers'
 import { createLabelDetector } from '@/services/visionService'
 import { getKeywords } from '@/services/keywordGenerator'
-import { createLocation, defaultGeocoder } from '@/services/locationService'
+import { createLocation } from '@/services/locationService'
+import { defaultGeocoder } from '@/services/geocodingService'
 import { addPhotosToLocation } from '@/services/locationPhotoService'
 import { signUpSetup } from '@/test/e2e/fixtures'
 import { expectSuccess } from '@/test/helpers/result'
+import { ErrorCode } from '@/schemas/result'
 import { buildLocationInput } from '@/test/helpers/builders'
 
 // Contract test for the WireMock stubs in mocks/wiremock, using the mock container the test run already started
@@ -74,7 +76,7 @@ describe.skipIf(!externalServiceMocksEnabled())('External service mocks (WireMoc
 
         it('should fail gracefully during a simulated outage', async () => {
             process.env.KEYWORD_GENERATION_API_URL = `${baseUrl}/unavailable/keywords`
-            expect((await getKeywords('INT. KITCHEN - DAY')).success).toBe(false)
+            expect(await getKeywords('INT. KITCHEN - DAY')).toMatchObject({ success: false, code: ErrorCode.UNAVAILABLE })
         })
     })
 

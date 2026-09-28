@@ -18,7 +18,7 @@ import {
 import { createLocation } from '@/services/locationService'
 import { defaultBucket, ensureBucketExists } from '@/services/photoService'
 import { signUpSetup } from '@/test/e2e/fixtures'
-import { expectFailure } from '@/test/helpers/result'
+import { expectFailure, expectSuccess } from '@/test/helpers/result'
 import { buildLocationInput } from '@/test/helpers/builders'
 import { actAs, actAsAnonymous, everyExportedAction, expectRedirect, formDataFrom } from '@/test/helpers/actions'
 import { ErrorCode } from '@/schemas/result'
@@ -77,7 +77,7 @@ describe('Location Actions', () => {
             await createLocation(intruderId, buildLocationInput({ name: 'Intruder Spot' }), { db: prisma, geocoder: mockGeocoder })
 
             // Act
-            const locations = await getLocationsAction()
+            const locations = expectSuccess(await getLocationsAction())
 
             // Assert
             expect(locations.map(l => l.id)).toEqual([locationId])
@@ -88,7 +88,7 @@ describe('Location Actions', () => {
             actAs(intruderId)
 
             // Act
-            const locations = await getLocationsAction('Downtown')
+            const locations = expectSuccess(await getLocationsAction('Downtown'))
 
             // Assert
             expect(locations).toHaveLength(0)
@@ -98,18 +98,21 @@ describe('Location Actions', () => {
     describe('getLocationAction', () => {
         it('should return the signed-in user\'s location', async () => {
             // Act
-            const location = await getLocationAction(locationId)
+            const location = expectSuccess(await getLocationAction(locationId))
 
             // Assert
-            expect(location!.id).toBe(locationId)
+            expect(location.id).toBe(locationId)
         })
 
-        it('should return null for another user\'s location', async () => {
+        it('should return NOT_FOUND for another user\'s location', async () => {
             // Arrange
             actAs(intruderId)
 
-            // Act & Assert
-            expect(await getLocationAction(locationId)).toBeNull()
+            // Act
+            const result = expectFailure(await getLocationAction(locationId))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
         })
     })
 
