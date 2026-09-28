@@ -54,9 +54,10 @@ export default function LocationDetailsCard({ location }: { location: LocationDe
                     </DetailColumn>
 
                     <DetailColumn label="Contact">
-                        {location.contactName ? (
+                        {/* Any one contact detail is worth showing, not only when there's a name */}
+                        {location.contactName || location.contactPhone || location.contactEmail ? (
                             <Box sx={{ mt: 0.5 }}>
-                                <Typography variant="body2">{location.contactName}</Typography>
+                                {location.contactName && <Typography variant="body2">{location.contactName}</Typography>}
                                 {location.contactPhone && (
                                     <Typography variant="body2" color="text.secondary">{location.contactPhone}</Typography>
                                 )}
