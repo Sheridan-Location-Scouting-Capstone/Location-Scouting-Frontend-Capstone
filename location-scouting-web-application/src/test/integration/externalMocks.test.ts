@@ -1,7 +1,6 @@
-import path from 'node:path'
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { prisma } from '@/test/setup'
+import { EXTERNAL_MOCKS_URL, useExternalServiceMocks } from '@/test/containers'
 import { createLabelDetector } from '@/services/visionService'
 import { getKeywords } from '@/services/keywordGenerator'
 import { createLocation, defaultGeocoder } from '@/services/locationService'
@@ -10,30 +9,15 @@ import { signUpSetup } from '@/test/e2e/fixtures'
 import { expectSuccess } from '@/test/helpers/result'
 import { buildLocationInput } from '@/test/helpers/builders'
 
-// Contract test for the WireMock stubs in mocks/wiremock: runs the same container docker-compose uses and calls it
-// through the app's real clients, so the stubs can't drift from what the code expects.
+// Contract test for the WireMock stubs in mocks/wiremock, using the mock container the test run already started
+// (src/test/containers.ts). Calls go through the app's real clients, so the stubs can't drift from what the code
+// expects.
 
-const MOCKS_DIR = path.resolve(__dirname, '../../../mocks/wiremock')
 const ENV_KEYS = ['GOOGLE_VISION_API', 'GOOGLE_VISION_API_URL', 'KEYWORD_GENERATION_API_URL', 'NOMINATIM_API_URL'] as const
 
-describe('External service mocks (WireMock)', () => {
-    let container: StartedTestContainer
-    let baseUrl: string
+describe.skipIf(!useExternalServiceMocks())('External service mocks (WireMock)', () => {
+    const baseUrl = EXTERNAL_MOCKS_URL
     const savedEnv: Partial<Record<typeof ENV_KEYS[number], string>> = {}
-
-    beforeAll(async () => {
-        container = await new GenericContainer('wiremock/wiremock:3.13.1')
-            .withCopyDirectoriesToContainer([{ source: MOCKS_DIR, target: '/home/wiremock' }])
-            .withCommand(['--disable-banner'])
-            .withExposedPorts(8080)
-            .withWaitStrategy(Wait.forHttp('/__admin/health', 8080))
-            .start()
-        baseUrl = `http://${container.getHost()}:${container.getMappedPort(8080)}`
-    }, 120_000)
-
-    afterAll(async () => {
-        await container?.stop()
-    })
 
     beforeEach(() => {
         ENV_KEYS.forEach((key) => { savedEnv[key] = process.env[key] })
@@ -48,6 +32,13 @@ describe('External service mocks (WireMock)', () => {
         vi.restoreAllMocks()
     })
 
+    it('should be what the test run routes every external service to', () => {
+        expect(process.env.GOOGLE_VISION_API_URL).toBe(baseUrl)
+        expect(process.env.GOOGLE_VISION_API).toBe('')
+        expect(process.env.KEYWORD_GENERATION_API_URL).toBe(`${baseUrl}/keywords`)
+        expect(process.env.NOMINATIM_API_URL).toBe(baseUrl)
+    })
+
     describe('Google Vision', () => {
         it('should return the canned labels that pass the score threshold', async () => {
             const detect = createLabelDetector({ apiUrl: baseUrl, apiKey: undefined })
@@ -59,10 +50,8 @@ describe('External service mocks (WireMock)', () => {
             expect(await detect(Buffer.from('image'))).toEqual([])
         })
 
-        it('should feed the labels into location keywords when configured through the environment', async () => {
+        it('should feed the labels into location keywords with the default detector', async () => {
             // Arrange
-            process.env.GOOGLE_VISION_API_URL = baseUrl
-            delete process.env.GOOGLE_VISION_API
             const userId = (await signUpSetup()).userId
             const location = expectSuccess(await createLocation(userId, buildLocationInput(), { db: prisma, geocoder: async () => null }))
 

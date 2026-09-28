@@ -1,8 +1,19 @@
 # External service mocks
 
 A [WireMock](https://wiremock.org/) container that stands in for the three external HTTP services the app calls,
-so you can run the app (and, later, E2E tests) without API keys, network access, or rate limits, and with
-predictable results.
+so the app and its tests run without API keys, network access, rate limits or Vision charges, and with predictable
+results. Photos are still analyzed on upload and scenes still get keywords; the answers just come from these stubs.
+
+## In automated tests (automatic)
+
+The integration tests and the Playwright E2E setup start this container themselves (`src/test/containers.ts`, host
+port 18089) and point all three services at it, with the Vision key blanked. That happens even if your `.env` has a
+real `GOOGLE_VISION_API`, so a test run never spends Vision credits.
+
+To deliberately run the tests against the real services in your environment, set `EXTERNAL_SERVICE_MOCKS=off` in
+`.env` (Vitest), `.env.e2e` (Playwright) or the shell.
+
+## In the running app (opt-in)
 
 | Service | Real endpoint | Env var | Point it at |
 |---|---|---|---|
@@ -13,7 +24,7 @@ predictable results.
 Each variable is independent, so you can mock one service and use the real thing for the others. Unset means
 "use the real service".
 
-## Running
+### Running
 
 ```bash
 docker compose --profile mocks up -d external-mocks

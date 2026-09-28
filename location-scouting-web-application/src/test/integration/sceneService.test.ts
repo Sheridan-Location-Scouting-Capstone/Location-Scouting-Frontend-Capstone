@@ -154,16 +154,16 @@ describe('Scene Service', () => {
                 projectId: projectId
             }
 
-            // Act
+            // Act - default keyword generator: the mock service in test runs (EXTERNAL_SERVICE_MOCKS=off for the real one)
             const createdScene = expectSuccess(await createScene(userId, sceneInput, { db: prisma }))
 
-            // Assert
-            expect(createdScene).not.toBeNull()
-            expect(createdScene.keywords).toBeDefined()
-            expect(createdScene.keywords).to.contain('backyard')
-            expect(createdScene.keywords).to.contain('house')
-
-        }, 10000)
+            // Assert - keywords are saved in the background after the scene is returned
+            await vi.waitFor(async () => {
+                const savedScene = expectSuccess(await getSceneById(userId, createdScene.id, { db: prisma }))
+                expect(savedScene.keywords).to.contain('backyard')
+                expect(savedScene.keywords).to.contain('house')
+            }, { timeout: 10000 })
+        }, 15000)
     })
 
     describe('getScenesForProject', () => {

@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 import dotenv from 'dotenv'
+import { externalServiceMockEnv, useExternalServiceMocks } from './src/test/containers'
 
 dotenv.config({ path: '.env.e2e', override: true })
 
@@ -34,6 +35,9 @@ export default defineConfig({
             MINIO_ACCESS_KEY: process.env.MINIO_ACCESS_KEY!,
             MINIO_SECRET_KEY: process.env.MINIO_SECRET_KEY!,
             MINIO_BUCKET: process.env.MINIO_TEST_BUCKET!,
+            // Vision, keyword generation and geocoding go to the WireMock container global setup starts, so E2E runs
+            // never spend Vision credits. EXTERNAL_SERVICE_MOCKS=off in .env.e2e uses the real services instead.
+            ...(useExternalServiceMocks() ? externalServiceMockEnv() : {}),
         }
     },
 })
