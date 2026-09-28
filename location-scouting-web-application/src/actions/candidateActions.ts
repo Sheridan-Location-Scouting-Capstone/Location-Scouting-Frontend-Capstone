@@ -8,23 +8,25 @@ import {
     toggleCandidateSelected,
 } from '@/services/candidateService'
 import {getRecommendations} from "@/services/recommendationService";
+import {requireUser} from "@/lib/auth-session";
 
 // ─── Candidates ─────────────────────────────────────────────
 
 export async function getCandidatesAction(sceneId: string) {
-    return await getCandidatesForScene(sceneId)
+    const user = await requireUser()
+    return await getCandidatesForScene(user.id, sceneId)
 }
 
 export async function addCandidateAction(sceneId: string, locationId: string, projectId: string, photoIds: string[]) {
-    // TODO: Connect to candidateService.addCandidateToScene
-    const result = await createCandidate({sceneId, locationId, photos: photoIds})
+    const user = await requireUser()
+    const result = await createCandidate(user.id, {sceneId, locationId, photos: photoIds})
     revalidatePath(`/productions/${projectId}/scenes/${sceneId}`)
     return result
 }
 
 export async function removeCandidateAction(candidateId: string, sceneId: string, projectId: string) {
-    // TODO: Connect to candidateService.removeCandidateFromScene
-    const result = await removeCandidateFromScene(candidateId)
+    const user = await requireUser()
+    const result = await removeCandidateFromScene(user.id, candidateId)
     revalidatePath(`/productions/${projectId}/scenes/${sceneId}`)
     return result
 }
@@ -35,13 +37,14 @@ export async function toggleCandidateSelectedAction(
     sceneId: string,
     projectId: string
 ) {
-    // TODO: Connect to candidateService.toggleCandidateSelected
-    const result = await toggleCandidateSelected(candidateId, selected)
+    const user = await requireUser()
+    const result = await toggleCandidateSelected(user.id, candidateId, selected)
     revalidatePath(`/productions/${projectId}/scenes/${sceneId}`)
     return result
 }
 
 export async function getRecommendationsAction(sceneId: string) {
-    const result = await getRecommendations(sceneId)
+    const user = await requireUser()
+    const result = await getRecommendations(user.id, sceneId)
     return result
 }
