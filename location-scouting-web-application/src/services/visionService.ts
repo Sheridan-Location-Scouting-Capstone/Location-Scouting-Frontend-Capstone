@@ -8,6 +8,10 @@
 //   GOOGLE_VISION_API_URL  Base URL. Defaults to Google; point it at a mock server (see mocks/README.md) to run
 //                          without a key or to get deterministic labels in tests.
 
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('Vision')
+
 export type LabelDetector = (image: Buffer) => Promise<string[]>
 
 export const GOOGLE_VISION_API_URL = 'https://vision.googleapis.com'
@@ -41,7 +45,7 @@ export function labelsFromResponse(body: unknown): string[] {
 export function createLabelDetector(config: VisionConfig = visionConfig(), fetchImpl: typeof fetch = fetch): LabelDetector {
     return async (image) => {
         if (config.apiUrl === GOOGLE_VISION_API_URL && !config.apiKey) {
-            console.warn('[Vision] GOOGLE_VISION_API is not set; skipping photo label detection')
+            logger.warn('GOOGLE_VISION_API is not set; skipping photo label detection')
             return []
         }
 
@@ -60,12 +64,12 @@ export function createLabelDetector(config: VisionConfig = visionConfig(), fetch
             })
 
             if (!response.ok) {
-                console.warn(`[Vision] Label detection failed with HTTP ${response.status}`)
+                logger.warn(`Label detection failed with HTTP ${response.status}`)
                 return []
             }
             return labelsFromResponse(await response.json())
         } catch (error) {
-            console.warn(`[Vision] Label detection failed: ${error instanceof Error ? error.message : 'unknown error'}`)
+            logger.warn(`Label detection failed: ${error instanceof Error ? error.message : 'unknown error'}`)
             return []
         }
     }

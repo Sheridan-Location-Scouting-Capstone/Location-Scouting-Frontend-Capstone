@@ -3,6 +3,7 @@ import { getLocationsAction } from '@/actions/locationActions'
 import PageHeader from '@/components/common/PageHeader'
 import LinkButton from '@/components/common/LinkButton'
 import LocationTable from '@/components/locations/LocationTable'
+import { unwrapForPage } from '@/lib/pageResult'
 
 export default async function LocationsPage({
     searchParams,
@@ -13,7 +14,7 @@ export default async function LocationsPage({
     const query = params.q || undefined
     const keywords = params.keywords ? params.keywords.split(',') : undefined
 
-    const locations = await getLocationsAction(query, keywords)
+    const locations = unwrapForPage(await getLocationsAction(query, keywords))
 
     return (
         <>

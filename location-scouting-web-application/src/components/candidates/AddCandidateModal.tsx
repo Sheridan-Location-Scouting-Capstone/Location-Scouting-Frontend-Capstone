@@ -26,6 +26,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import { getLocationAction } from '@/actions/locationActions'
 import { addCandidateAction } from '@/actions/candidateActions'
 import { isActionFailure } from '@/lib/actionResult'
+import { ErrorCode } from '@/schemas/result'
 import { formatAddress } from '@/lib/format'
 import Thumbnail from '@/components/common/Thumbnail'
 
@@ -116,15 +117,15 @@ export default function AddCandidateModal({
         setLoadingPhotos(true)
 
         // Fetch the full photo list for this location
-        const fullLocation = await getLocationAction(location.id)
+        const result = await getLocationAction(location.id)
         setLoadingPhotos(false)
-        if (!fullLocation) {
+        if (!result.success) {
             setSelectedLocation(null)
-            setError('That location is no longer available.')
+            setError(result.code === ErrorCode.NOT_FOUND ? 'That location is no longer available.' : result.error)
             return
         }
 
-        const photos: PhotoForSelector[] = fullLocation.photos.map((photo) => ({
+        const photos: PhotoForSelector[] = result.data.photos.map((photo) => ({
             id: photo.id,
             url: photo.url,
             name: photo.name,

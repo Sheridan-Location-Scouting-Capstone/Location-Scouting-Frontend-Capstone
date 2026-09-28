@@ -1,9 +1,11 @@
-// src/app/services/recommendationService.ts
-
 import { prisma as defaultPrisma } from '@/lib/prisma'
 import { PrismaClient, LocationStatus } from '@prisma/client'
 import { scoreLocation } from '@/services/scoringService'
-import { ErrorCode, Result } from '@/schemas/result'
+import { ErrorCode, fail, ok, Result } from '@/schemas/result'
+import { createLogger } from '@/lib/logger'
+import { guard } from '@/services/serviceResult'
+
+const logger = createLogger('recommendationService')
 
 type ScoredLocation = {
     locationId: string
@@ -21,7 +23,7 @@ export async function getRecommendations(
     const db = options?.db ?? defaultPrisma
     const limit = options?.limit ?? 3
 
-    try {
+    return guard(logger, `generate recommendations for scene ${sceneId}`, async () => {
         // 1. Load scene with project
         const scene = await db.scene.findUnique({
             where: { id: sceneId, project: { userId } },
@@ -29,7 +31,7 @@ export async function getRecommendations(
         })
 
         if (!scene) {
-            return { success: false, code: ErrorCode.NOT_FOUND, error: `Scene not found: ${sceneId}` }
+            return fail(ErrorCode.NOT_FOUND, `Scene not found: ${sceneId}`)
         }
 
         const projectCoords =
@@ -86,12 +88,8 @@ export async function getRecommendations(
         // 5. Sort descending, return top N
         scored.sort((a, b) => b.score - a.score)
 
-        return { success: true, data: scored.slice(0, limit) }
-
-    } catch (error) {
-        console.error(`Failed to generate recommendations for scene: ${sceneId}`, error)
-        return { success: false, error: `Failed to generate recommendations` }
-    }
+        return ok(scored.slice(0, limit))
+    })
 }
 
 export async function scoreCandidates(
@@ -101,7 +99,7 @@ export async function scoreCandidates(
 ): Promise<Result<Map<string, number>>> {
     const db = options?.db ?? defaultPrisma
 
-    try {
+    return guard(logger, `score candidates for scene ${sceneId}`, async () => {
         const scene = await db.scene.findUnique({
             where: { id: sceneId, project: { userId } },
             include: {
@@ -118,7 +116,7 @@ export async function scoreCandidates(
         })
 
         if (!scene) {
-            return { success: false, code: ErrorCode.NOT_FOUND, error: `Scene not found: ${sceneId}` }
+            return fail(ErrorCode.NOT_FOUND, `Scene not found: ${sceneId}`)
         }
 
         const projectCoords =
@@ -164,10 +162,6 @@ export async function scoreCandidates(
             )
         }
 
-        return { success: true, data: scores }
-
-    } catch (error) {
-        console.error(`Failed to score candidates for scene: ${sceneId}`, error)
-        return { success: false, error: `Failed to score candidates` }
-    }
+        return ok(scores)
+    })
 }

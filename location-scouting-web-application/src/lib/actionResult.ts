@@ -1,6 +1,6 @@
-import type { Result } from '@/schemas/result'
+import type { Failure } from '@/schemas/result'
 
-export type ActionFailure = Extract<Result<unknown>, { success: false }>
+export type ActionFailure = Failure
 
 /** True when a server action returned a failed Result. Actions that redirect on success return nothing. */
 export function isActionFailure(value: unknown): value is ActionFailure {

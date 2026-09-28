@@ -1,63 +1,63 @@
 import { prisma as defaultPrisma} from '@/lib/prisma'
 import { CreateProjectSchema } from "@/schemas/projectSchema";
 import { z } from 'zod';
-import {Prisma, Project} from "@prisma/client";
-import {ErrorCode, Result} from "@/schemas/result";
+import {Project} from "@prisma/client";
+import {ErrorCode, fail, ok, Result} from "@/schemas/result";
 import {Geocoder} from "@/schemas/geocoder";
-import {defaultGeocoder} from "@/services/locationService";
+import {defaultGeocoder} from "@/services/geocodingService";
+import {createLogger} from "@/lib/logger";
+import {guard, isRecordNotFound} from "@/services/serviceResult";
 
-export async function getLocationsByProject(
-  userId: string,
-  input: { projectId: string },
-  options?: { db?: typeof defaultPrisma }
-) {
-  const db = options?.db ?? defaultPrisma;
+const logger = createLogger('productionService')
 
-  const scenes = await db.scene.findMany({
-    where: {
-      projectId: input.projectId,
-      project: { userId },
-    },
-    include: {
-      candidates: {
-        where: { location: { userId } },
-        include: {
-          location: true,
-        },
-      },
-    },
-  });
-
-  const locationMap = new Map<string, {
-    locationId: string,
-    address: string,
-    city: string,
-    province: string,
-    postalCode: string,
-    latitude?: number,
-    longitude?: number,
-  }>();
-
-  for (const scene of scenes) {
-    for (const candidate of scene.candidates) {
-      if (!locationMap.has(candidate.locationId)) {
-        locationMap.set(candidate.locationId, {
-          locationId: candidate.locationId,
-          address: candidate.location.address,
-          city: candidate.location.city,
-          province: candidate.location.province,
-          postalCode: candidate.location.postalCode,
-          latitude: candidate.location.latitude ?? undefined,
-          longitude: candidate.location.longitude ?? undefined,
-        });
-      }
-    }
-  }
-
-  return { success: true, data: Array.from(locationMap.values()) };
+export type ProjectLocation = {
+    locationId: string
+    address: string
+    city: string
+    province: string
+    postalCode: string
+    latitude?: number
+    longitude?: number
 }
 
-const dGeocoder = defaultGeocoder;
+function formatGeocodingAddress(project: Project) {
+    return `${project.address}, ${project.city}, ${project.province}, ${project.postalCode}, ${project.country}`
+}
+
+/** The distinct locations used as candidates across a production's scenes */
+export async function getLocationsByProject(
+    userId: string,
+    input: { projectId: string },
+    options?: { db?: typeof defaultPrisma }
+): Promise<Result<ProjectLocation[]>> {
+    const db = options?.db ?? defaultPrisma
+
+    return guard(logger, `get locations for project ${input.projectId}`, async () => {
+        const scenes = await db.scene.findMany({
+            where: { projectId: input.projectId, project: { userId } },
+            include: { candidates: { where: { location: { userId } }, include: { location: true } } },
+        })
+
+        const locations = new Map<string, ProjectLocation>()
+        for (const scene of scenes) {
+            for (const { locationId, location } of scene.candidates) {
+                if (!locations.has(locationId)) {
+                    locations.set(locationId, {
+                        locationId,
+                        address: location.address,
+                        city: location.city,
+                        province: location.province,
+                        postalCode: location.postalCode,
+                        latitude: location.latitude ?? undefined,
+                        longitude: location.longitude ?? undefined,
+                    })
+                }
+            }
+        }
+
+        return ok(Array.from(locations.values()))
+    })
+}
 
 export async function createProject(
     userId: string,
@@ -65,57 +65,49 @@ export async function createProject(
     options?: { db?: typeof defaultPrisma, geocoder?: Geocoder }
 ) : Promise<Result<Project>> {
     const db = options?.db ?? defaultPrisma
-    const gc = options?.geocoder ?? defaultGeocoder
+    const geocoder = options?.geocoder ?? defaultGeocoder
 
-    try {
-        const validated = CreateProjectSchema.safeParse(input)
+    const validated = CreateProjectSchema.safeParse(input)
+    if (!validated.success) {
+        return fail(ErrorCode.VALIDATION_FAILED, 'Invalid project data', z.flattenError(validated.error).fieldErrors)
+    }
 
-        if (!validated.success) {
-            return {
-                success: false,
-                code: ErrorCode.VALIDATION_FAILED,
-                error: "Invalid project data",
-                fieldErrors: z.flattenError(validated.error).fieldErrors
-            };
-        }
+    return guard(logger, 'create project', async () => {
+        const project = await db.project.create({ data: { ...validated.data, userId } })
 
-        const project = await db.project.create({data: { ...validated.data, userId }})
-        const address = `${project.address}, ${project.city}, ${project.province}, ${project.postalCode}, ${project.country}`
-
-        // fire and forget pattern. Assuming the client will not need the lat-long right away and can refetch if needed.
-        gc(address)
+        // Fire and forget: the client doesn't need coordinates right away and can refetch.
+        // Potentially move to a queue so failed lookups are retried.
+        geocoder(formatGeocodingAddress(project))
             .then(async coords => {
                 if (coords) {
                     await db.project.update({
-                        where: {id: project.id},
-                        data: {latitude: coords.lat, longitude: coords.lng}
+                        where: { id: project.id },
+                        data: { latitude: coords.lat, longitude: coords.lng }
                     })
                 }
             })
-            .catch(() => {
-            }) // swallow geocoding errors silently. Potentially add a queue system here to retry periodically or on a cron job
-        return { success: true, data: project }
-    } catch (error) {
-        console.error(error)
-        return { success: false, error: "Failed to create the project"}
-    }
+            .catch((error) => logger.warn(`Failed to geocode project ${project.id}`, error))
+
+        return ok(project)
+    })
 }
 
 export async function getProjects(userId:string, options?: { db?: typeof defaultPrisma }) : Promise<Result<Project[]>> {
     const db = options?.db ?? defaultPrisma
 
-    const projects = await db.project.findMany({ where: { userId } })
-    return { success: true, data: projects }
+    return guard(logger, 'get projects', async () => ok(await db.project.findMany({ where: { userId } })))
 }
 
 export async function getProjectById(userId: string, id: string, options?: {db?: typeof defaultPrisma}): Promise<Result<Project>> {
     const db = options?.db ?? defaultPrisma
 
-    const project = await db.project.findUnique({ where: { id, userId } })
-    if (!project) {
-        return { success: false, code: ErrorCode.NOT_FOUND, error: `Project not found: ${id}` }
-    }
-    return { success: true, data: project }
+    return guard(logger, `get project ${id}`, async () => {
+        const project = await db.project.findUnique({ where: { id, userId } })
+        if (!project) {
+            return fail(ErrorCode.NOT_FOUND, `Project not found: ${id}`)
+        }
+        return ok(project)
+    })
 }
 
 export async function updateProject(
@@ -129,49 +121,41 @@ export async function updateProject(
 
     const validated = CreateProjectSchema.partial().safeParse(input)
     if (!validated.success) {
-        return {
-            success: false,
-            code: ErrorCode.VALIDATION_FAILED,
-            error: 'Invalid project data',
-            fieldErrors: z.flattenError(validated.error).fieldErrors
-        }
+        return fail(ErrorCode.VALIDATION_FAILED, 'Invalid project data', z.flattenError(validated.error).fieldErrors)
     }
 
-    try {
-        const project = await db.project.update({
-            where: { id, userId },
-            data: validated.data,
-        })
+    return guard(logger, `update project ${id}`, async () => {
+        let project: Project
+        try {
+            project = await db.project.update({ where: { id, userId }, data: validated.data })
+        } catch (error) {
+            if (isRecordNotFound(error)) {
+                return fail(ErrorCode.NOT_FOUND, `Project not found: ${id}`)
+            }
+            throw error
+        }
 
-        // Re-geocode if any address field changed
+        // Re-geocode from the full saved address if any address field changed
         const data = validated.data
         if (data.address || data.city || data.province || data.postalCode || data.country) {
-            const full = await db.project.findUnique({ where: { id, userId } })
-            if (full) {
-                const address = `${full.address}, ${full.city}, ${full.province}, ${full.postalCode}, ${full.country}`
-                geocoder(address)
-                    .then(async (coords) => {
-                        if (coords) {
-                            await db.project.update({
-                                where: { id, userId },
-                                data: { latitude: coords.lat, longitude: coords.lng },
-                            })
-                        }
-                    })
-                    .catch(async () => {
+            geocoder(formatGeocodingAddress(project))
+                .then(async (coords) => {
+                    if (coords) {
                         await db.project.update({
                             where: { id, userId },
-                            data: { latitude: null, longitude: null },
-                        }).catch((error) => console.error(error))
-                    })
-            }
+                            data: { latitude: coords.lat, longitude: coords.lng },
+                        })
+                    }
+                })
+                // Clear stale coordinates so the old address doesn't keep pointing at the wrong place on a map
+                .catch(async () => {
+                    await db.project.update({
+                        where: { id, userId },
+                        data: { latitude: null, longitude: null },
+                    }).catch((error) => logger.error(`Failed to clear coordinates for project ${id}`, error))
+                })
         }
 
-        return { success: true, data: project }
-    } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-            return { success: false, code: ErrorCode.NOT_FOUND, error: `Project not found: ${id}` }
-        }
-        return { success: false, code: ErrorCode.INTERNAL_SERVER_ERROR, error: `Failed to update project: ${id}` }
-    }
+        return ok(project)
+    })
 }

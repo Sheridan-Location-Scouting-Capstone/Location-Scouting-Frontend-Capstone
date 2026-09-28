@@ -10,11 +10,7 @@ import {requireUser} from "@/lib/auth-session";
 
 export async function getProjectsAction() {
   const user = await requireUser();
-  const result = await getProjects(user.id);
-  if(result.success) {
-    return result.data
-  }
-  throw new Error('Failed to retrieve projects')
+  return getProjects(user.id)
 }
 
 export async function createProjectAction(formData: FormData) {
@@ -50,11 +46,7 @@ export async function getSceneAction(sceneId: string) {
 
 export async function getScenesAction(projectId: string) {
   const user = await requireUser();
-  const result = await getScenesForProject(user.id, projectId)
-  if(result.success) {
-    return result.data
-  }
-  throw new Error('Failed to retrieve scenes')
+  return getScenesForProject(user.id, projectId)
 }
 
 export async function createSceneAction(formData: FormData) {

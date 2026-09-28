@@ -358,18 +358,17 @@ describe('Location Services', () => {
             expect(createdLocation.id).not.toBeNull()
 
             // Act
-            const result = await getLocationWithPhotos(user.userId, createdLocation.id, {db: prisma})
+            const result = expectSuccess(await getLocationWithPhotos(user.userId, createdLocation.id, {db: prisma}))
 
             // Assert
-            expect(result).not.toBeNull()
-            expect(result!.id).toBe(createdLocation.id)
-            expect(result!.photos).toHaveLength(2)
-            expect(result!.photos[0].name).toBe('test.jpg')
-            expect(result!.photos[1].name).toBe('test2.jpg')
-            expect(result!.photos[0].url).toBeDefined()
-            expect(result!.photos[1].url).toBeDefined()
-            expect(result!.photos[0].locationId).toBe(createdLocation.id)
-            expect(result!.photos[1].locationId).toBe(createdLocation.id)
+            expect(result.id).toBe(createdLocation.id)
+            expect(result.photos).toHaveLength(2)
+            expect(result.photos[0].name).toBe('test.jpg')
+            expect(result.photos[1].name).toBe('test2.jpg')
+            expect(result.photos[0].url).toBeDefined()
+            expect(result.photos[1].url).toBeDefined()
+            expect(result.photos[0].locationId).toBe(createdLocation.id)
+            expect(result.photos[1].locationId).toBe(createdLocation.id)
         })
 
         it('should return an empty photos array if location has no associated photos', async () => {
@@ -388,12 +387,11 @@ describe('Location Services', () => {
             expect(createdLocation.id).not.toBeNull()
 
             // Act
-            const result = await getLocationWithPhotos(user.userId, createdLocation.id, {db: prisma})
+            const result = expectSuccess(await getLocationWithPhotos(user.userId, createdLocation.id, {db: prisma}))
 
             // Assert
-            expect(result).not.toBeNull()
-            expect(result!.id).toBe(createdLocation.id)
-            expect(result!.photos).toHaveLength(0)
+            expect(result.id).toBe(createdLocation.id)
+            expect(result.photos).toHaveLength(0)
         })
     })
 
@@ -614,9 +612,8 @@ describe('Location Services', () => {
             }
 
             // Verify photos were added before proceeding with delete test (Soft Assert)
-            const createdLocationWithPhotos = await getLocationWithPhotos(user.userId, createdLocation.id, {db: prisma})
-            expect(createdLocationWithPhotos).not.toBeNull()
-            expect(createdLocationWithPhotos!.photos).toHaveLength(numOfPhotos)
+            const createdLocationWithPhotos = expectSuccess(await getLocationWithPhotos(user.userId, createdLocation.id, {db: prisma}))
+            expect(createdLocationWithPhotos.photos).toHaveLength(numOfPhotos)
 
 
             // Act
@@ -699,7 +696,7 @@ describe('Location Services', () => {
             await deleteLocationById(user.userId, deletedLocation.id, {db: prisma})
 
             // Act
-            const results = await getLocations(user.userId, {db: prisma})
+            const results = expectSuccess(await getLocations(user.userId, {db: prisma}))
 
             // Assert
             expect(results).toHaveLength(2)
@@ -732,10 +729,10 @@ describe('Location Services', () => {
 
         it('should not return another user\'s location with photos', async () => {
             // Act
-            const result = await getLocationWithPhotos(intruderId, locationId, { db: prisma })
+            const result = expectFailure(await getLocationWithPhotos(intruderId, locationId, { db: prisma }))
 
             // Assert
-            expect(result).toBeNull()
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
         })
 
         it('should only list the user\'s own locations', async () => {
@@ -743,8 +740,8 @@ describe('Location Services', () => {
             const intruderLocation = expectSuccess(await createLocation(intruderId, buildLocationInput({ name: 'Intruder Spot' }), { db: prisma }))
 
             // Act
-            const ownerLocations = await getLocations(ownerId, { db: prisma })
-            const intruderLocations = await getLocations(intruderId, { db: prisma })
+            const ownerLocations = expectSuccess(await getLocations(ownerId, { db: prisma }))
+            const intruderLocations = expectSuccess(await getLocations(intruderId, { db: prisma }))
 
             // Assert
             expect(ownerLocations.map(l => l.id)).toEqual([locationId])
@@ -753,7 +750,7 @@ describe('Location Services', () => {
 
         it('should not match another user\'s locations when searching', async () => {
             // Act
-            const results = await getLocations(intruderId, { db: prisma, query: 'Downtown' })
+            const results = expectSuccess(await getLocations(intruderId, { db: prisma, query: 'Downtown' }))
 
             // Assert
             expect(results).toHaveLength(0)

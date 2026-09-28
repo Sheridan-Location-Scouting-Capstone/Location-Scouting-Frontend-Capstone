@@ -8,7 +8,7 @@ import {
     getSceneCoverage,
 } from '@/services/analyticsService'
 import { requireUser } from '@/lib/auth-session'
-import { Result } from '@/schemas/result'
+import { ok, Result } from '@/schemas/result'
 import { ProductionAnalytics } from '@/schemas/analytics'
 
 const DEFAULT_KEYWORD_DISTRIBUTION_LIMIT = 10
@@ -35,14 +35,11 @@ export async function getProductionAnalyticsAction(
     if (!keywordGaps.success) return keywordGaps
     if (!keywordDistribution.success) return keywordDistribution
 
-    return {
-        success: true,
-        data: {
-            summary: summary.data,
-            locationPoints: locationPoints.data,
-            sceneCoverage: sceneCoverage.data,
-            keywordGaps: keywordGaps.data,
-            keywordDistribution: keywordDistribution.data,
-        },
-    }
+    return ok({
+        summary: summary.data,
+        locationPoints: locationPoints.data,
+        sceneCoverage: sceneCoverage.data,
+        keywordGaps: keywordGaps.data,
+        keywordDistribution: keywordDistribution.data,
+    })
 }

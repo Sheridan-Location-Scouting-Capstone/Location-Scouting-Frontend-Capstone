@@ -10,7 +10,7 @@ import {
 } from '@/services/candidateService'
 import {getRecommendations, scoreCandidates} from "@/services/recommendationService";
 import {requireUser} from "@/lib/auth-session";
-import {Result} from "@/schemas/result";
+import {ok, Result} from "@/schemas/result";
 
 // ─── Candidates ─────────────────────────────────────────────
 
@@ -55,7 +55,7 @@ export async function scoreCandidatesAction(sceneId: string): Promise<Result<Rec
     const user = await requireUser()
     const result = await scoreCandidates(user.id, sceneId)
     if (!result.success) return result
-    return { success: true, data: Object.fromEntries(result.data) }
+    return ok(Object.fromEntries(result.data))
 }
 
 export async function getRecommendationsAction(sceneId: string) {

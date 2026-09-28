@@ -15,7 +15,7 @@ const locations: LocationForPicker[] = [
 ]
 
 const fullLocation = (photos: { id: string; url: string; name: string | null; displayOrder: number }[]) =>
-    ({ id: 'loc-1', photos }) as unknown as Awaited<ReturnType<typeof getLocationAction>>
+    ({ success: true, data: { id: 'loc-1', photos } }) as unknown as Awaited<ReturnType<typeof getLocationAction>>
 
 function renderModal(onClose = vi.fn()) {
     render(
@@ -72,7 +72,7 @@ describe('AddCandidateModal', () => {
     it('should explain when the chosen location can no longer be loaded', async () => {
         // Arrange
         const user = userEvent.setup()
-        vi.mocked(getLocationAction).mockResolvedValue(null)
+        vi.mocked(getLocationAction).mockResolvedValue({ success: false, code: ErrorCode.NOT_FOUND, error: 'Location not found' })
         renderModal()
 
         // Act

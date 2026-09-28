@@ -7,24 +7,25 @@ import PageHeader from '@/components/common/PageHeader'
 import SceneDetailCard from '@/components/scenes/SceneDetailCard'
 import SceneCandidatesSection from '@/components/scenes/SceneCandidatesSection'
 import { toCandidateRow } from '@/components/candidates/toCandidateRow'
+import { unwrapForPage } from '@/lib/pageResult'
 
 export default async function ViewScenePage({ params }: { params: Promise<{ id: string; sceneId: string }> }) {
     const { id: projectId, sceneId } = await params
 
     const [projectResult, sceneResult] = await Promise.all([getProject(projectId), getSceneAction(sceneId)])
     // The scene must belong to the production in the URL
-    if (!projectResult.success || !sceneResult.success || sceneResult.data.projectId !== projectId) notFound()
-    const project = projectResult.data
-    const scene = sceneResult.data
+    const project = unwrapForPage(projectResult)
+    const scene = unwrapForPage(sceneResult)
+    if (scene.projectId !== projectId) notFound()
 
-    const [candidatesResult, locations, scoresResult] = await Promise.all([
+    const [candidatesResult, locationsResult, scoresResult] = await Promise.all([
         getCandidatesAction(sceneId),
         getLocationsAction(),
         scoreCandidatesAction(sceneId),
     ])
-    if (!candidatesResult.success) throw new Error(candidatesResult.error)
-
-    const candidates = candidatesResult.data
+    const candidates = unwrapForPage(candidatesResult)
+    const locations = unwrapForPage(locationsResult)
+    // Scores are optional: the candidate list still works without them
     const scores = scoresResult.success ? scoresResult.data : null
     const rows = candidates.map((candidate) => toCandidateRow(candidate, scores))
     // Only active locations can be added as candidates

@@ -3,9 +3,10 @@ import { getProjectsAction } from '@/actions/productionActions'
 import PageHeader from '@/components/common/PageHeader'
 import LinkButton from '@/components/common/LinkButton'
 import ProductionGrid from '@/components/productions/ProductionGrid'
+import { unwrapForPage } from '@/lib/pageResult'
 
 export default async function ProductionsPage() {
-    const projects = await getProjectsAction()
+    const projects = unwrapForPage(await getProjectsAction())
 
     return (
         <>

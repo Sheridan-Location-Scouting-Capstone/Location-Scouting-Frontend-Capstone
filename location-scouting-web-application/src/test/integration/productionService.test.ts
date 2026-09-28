@@ -206,11 +206,11 @@ describe('Production Service', () => {
             }
 
             // Act
-            const result = await getLocationsByProject(ownerId, { projectId: project.id }, { db: prisma })
+            const locations = expectSuccess(await getLocationsByProject(ownerId, { projectId: project.id }, { db: prisma }))
 
             // Assert
-            expect(result.data).toHaveLength(1)
-            expect(result.data[0].locationId).toBe(locationId)
+            expect(locations).toHaveLength(1)
+            expect(locations[0].locationId).toBe(locationId)
         })
     })
 
@@ -271,10 +271,10 @@ describe('Production Service', () => {
 
         it('should not return candidate locations for another user\'s production', async () => {
             // Act
-            const result = await getLocationsByProject(intruderId, { projectId }, { db: prisma })
+            const locations = expectSuccess(await getLocationsByProject(intruderId, { projectId }, { db: prisma }))
 
             // Assert
-            expect(result.data).toHaveLength(0)
+            expect(locations).toHaveLength(0)
         })
     })
 })

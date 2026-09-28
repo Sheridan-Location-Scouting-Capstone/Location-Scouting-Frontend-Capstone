@@ -2,28 +2,17 @@ import { prisma as defaultPrisma} from '@/lib/prisma'
 import {$Enums, Location, Prisma, PrismaClient} from "@prisma/client";
 import {CreateLocationScheme, UpdateLocationScheme} from "@/schemas/locationSchema";
 import {Geocoder} from "@/schemas/geocoder";
+import {defaultGeocoder} from "@/services/geocodingService";
 import {PhotoUploadInput} from "@/schemas/photoUploadInput";
 import { defaultBucket } from "@/services/photoService";
 import LocationStatus = $Enums.LocationStatus;
 import {addPhotosToLocation} from "@/services/locationPhotoService";
 import { z } from 'zod';
-import {ErrorCode, Result} from '@/schemas/result';
+import {ErrorCode, fail, ok, Result} from '@/schemas/result';
+import {createLogger} from "@/lib/logger";
+import {guard, isRecordNotFound, isUniqueViolation} from "@/services/serviceResult";
 
-const DEFAULT_NOMINATIM_URL = 'https://nominatim.openstreetmap.org'
-
-// NOMINATIM_API_URL (.env) points geocoding at a mock server instead of OpenStreetMap; see mocks/README.md
-export const defaultGeocoder: Geocoder = async (address: string) => {
-    const encoded = encodeURIComponent(address)
-    const baseUrl = (process.env.NOMINATIM_API_URL || DEFAULT_NOMINATIM_URL).replace(/\/+$/, '')
-    const res = await fetch(
-        `${baseUrl}/search?q=${encoded}&format=json&limit=1`,
-        { headers: { 'User-Agent': 'location-scouting-app/1.0' } }
-    )
-    const data = await res.json()
-    if (!data.length) return null
-    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
-}
-
+const logger = createLogger('locationService')
 
 export async function createLocation(
     userId: string,
@@ -42,17 +31,16 @@ export async function createLocation(
     const bucket = options?.bucket ?? defaultBucket
 
     if (options?.photoInput && options.photoInput.length > 500) {
-        return { success: false, code: ErrorCode.LIMIT_EXCEEDED, error: 'Maximum 500 photos per location' }
+        return fail(ErrorCode.LIMIT_EXCEEDED, 'Maximum 500 photos per location')
     }
 
     const parsed = CreateLocationScheme.safeParse(input)
     if (!parsed.success) {
-        return {
-            success: false,
-            code: ErrorCode.VALIDATION_FAILED,
-            error: 'Invalid Input. Please fix the highlighted fields and try again.',
-            fieldErrors: z.flattenError(parsed.error).fieldErrors
-        }
+        return fail(
+            ErrorCode.VALIDATION_FAILED,
+            'Invalid Input. Please fix the highlighted fields and try again.',
+            z.flattenError(parsed.error).fieldErrors
+        )
     }
 
     if (parsed.data.contactPhone) {
@@ -60,59 +48,79 @@ export async function createLocation(
     }
     const address = `${parsed.data.address}, ${parsed.data.city}, ${parsed.data.province}, ${parsed.data.postalCode}, ${parsed.data.country}`
 
-    let location : Location
-    try {
-        location = await db.location.create({data: { ...parsed.data, userId }})
-    } catch (error) {
-        if(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-            return { success: false, code: ErrorCode.ALREADY_EXISTS, error: 'Location already exists' }
-        }
-        throw error
-    }
-
-    geocoder(address)
-        .then(async coords => {
-            if (coords) {
-                await db.location.update({
-                    where: { id: location.id},
-                    data: { latitude: coords.lat, longitude: coords.lng }
-                })
+    return guard(logger, 'create location', async () => {
+        let location : Location
+        try {
+            location = await db.location.create({data: { ...parsed.data, userId }})
+        } catch (error) {
+            if (isUniqueViolation(error)) {
+                return fail(ErrorCode.ALREADY_EXISTS, 'Location already exists')
             }
-        })
-        .catch(() => {}) // swallow geocoding errors silently. Potentially add a queue system here to retry periodically or on a cron job
+            throw error
+        }
 
-    if(photoInput?.length) {
-        await addPhotosToLocation(userId, location.id, photoInput, { db, bucket })
-    }
+        // Fire and forget. Potentially add a queue system here to retry failed lookups periodically or on a cron job
+        geocoder(address)
+            .then(async coords => {
+                if (coords) {
+                    await db.location.update({
+                        where: { id: location.id},
+                        data: { latitude: coords.lat, longitude: coords.lng }
+                    })
+                }
+            })
+            .catch((error) => logger.warn(`Failed to geocode location ${location.id}`, error))
 
-    return { success: true, data: location }
+        if(photoInput?.length) {
+            const photos = await addPhotosToLocation(userId, location.id, photoInput, { db, bucket })
+            if (!photos.success) {
+                return fail(photos.code, `The location was saved, but its photos could not be uploaded: ${photos.error}`)
+            }
+        }
+
+        return ok(location)
+    })
 }
 
 
 
 export async function getLocationById(userId: string, id: string, options?: { db?: PrismaClient }) : Promise<Result<Location>> {
     const db = options?.db ?? defaultPrisma
-    const location = await db.location
-        .findFirst(
-            { where:
-                    {
-                        userId,
-                        id,
-                        status: { not: LocationStatus.DELETED}
-                    }
-            });
-    if (!location) {
-        return { success: false, code: ErrorCode.NOT_FOUND, error: 'Location not found' }
-    }
-    return { success: true, data: location }
+
+    return guard(logger, `get location ${id}`, async () => {
+        const location = await db.location.findFirst({
+            where: { userId, id, status: { not: LocationStatus.DELETED } }
+        })
+        if (!location) {
+            return fail(ErrorCode.NOT_FOUND, 'Location not found')
+        }
+        return ok(location)
+    })
 }
 
-export async function getLocationWithPhotos(userId: string, id: string, options?: { db?: PrismaClient }) {
+const withPhotos = {
+    photos: { orderBy: { displayOrder: 'asc' } }
+} satisfies Prisma.LocationInclude
+
+export type LocationWithPhotos = Prisma.LocationGetPayload<{ include: typeof withPhotos }>
+
+export async function getLocationWithPhotos(
+    userId: string,
+    id: string,
+    options?: { db?: PrismaClient }
+): Promise<Result<LocationWithPhotos>> {
     const db = options?.db ?? defaultPrisma
-    return db.location.findFirst({
-        where: { id, userId, status: { not: LocationStatus.DELETED }},
-        include: { photos: { orderBy: { displayOrder: 'asc' }}}
-    });
+
+    return guard(logger, `get location ${id}`, async () => {
+        const location = await db.location.findFirst({
+            where: { id, userId, status: { not: LocationStatus.DELETED }},
+            include: withPhotos
+        })
+        if (!location) {
+            return fail(ErrorCode.NOT_FOUND, 'Location not found')
+        }
+        return ok(location)
+    })
 }
 
 const ADDRESS_FIELDS = ['address', 'city', 'province', 'postalCode', 'country'] as const
@@ -137,12 +145,7 @@ export async function updateLocation(
     const validated = UpdateLocationScheme.safeParse(data)
 
     if (!validated.success) {
-        return {
-            success: false,
-            code: ErrorCode.VALIDATION_FAILED,
-            error: 'Invalid location data',
-            fieldErrors: z.flattenError(validated.error).fieldErrors
-        }
+        return fail(ErrorCode.VALIDATION_FAILED, 'Invalid location data', z.flattenError(validated.error).fieldErrors)
     }
 
     const updates = validated.data
@@ -150,59 +153,66 @@ export async function updateLocation(
         updates.contactPhone = normalizePhone(updates.contactPhone)
     }
 
-    let updatedLocation: Location
-    try {
-        updatedLocation = await db.location.update({ where: { id, userId },  data: updates });
-    } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-            return { success: false, code: ErrorCode.NOT_FOUND, error: 'Location not found' }
+    return guard(logger, `update location ${id}`, async () => {
+        let updatedLocation: Location
+        try {
+            updatedLocation = await db.location.update({ where: { id, userId },  data: updates });
+        } catch (error) {
+            if (isRecordNotFound(error)) {
+                return fail(ErrorCode.NOT_FOUND, 'Location not found')
+            }
+            throw error
         }
-        throw error
-    }
 
-    // Only re-geocode when the address changed, and always from the full saved address
-    const addressChanged = ADDRESS_FIELDS.some(field => updates[field] !== undefined)
-    if (addressChanged) {
-        geocoder(formatGeocodingAddress(updatedLocation))
-            .then(async coords => {
-                if (coords) {
-                    await db.location.update({
-                        where: { id },
-                        data: { latitude: coords.lat, longitude: coords.lng }
-                    })
-                }
-            })
-            // If geocoding fails, clear the coordinates so the old address doesn't keep pointing at the wrong place on a map
-            .catch(async () => {
-                try {
+        // Only re-geocode when the address changed, and always from the full saved address
+        const addressChanged = ADDRESS_FIELDS.some(field => updates[field] !== undefined)
+        if (addressChanged) {
+            geocoder(formatGeocodingAddress(updatedLocation))
+                .then(async coords => {
+                    if (coords) {
+                        await db.location.update({
+                            where: { id },
+                            data: { latitude: coords.lat, longitude: coords.lng }
+                        })
+                    }
+                })
+                // If geocoding fails, clear the coordinates so the old address doesn't keep pointing at the wrong place on a map
+                .catch(async () => {
                     await db.location.update({
                         where: { id },
                         data: { latitude: null, longitude: null }
-                    })
-                } catch (error) {
-                    console.error(error)
-                }
-            })
-    }
+                    }).catch((error) => logger.error(`Failed to clear coordinates for location ${id}`, error))
+                })
+        }
 
-    return { success: true, data: updatedLocation };
+        return ok(updatedLocation)
+    })
 }
 
 export async function deleteLocationById(userId: string, id: string, options?: { db?: PrismaClient }) : Promise<Result<void>> {
     const db = options?.db ?? defaultPrisma
-    const { count } = await db.location.updateMany({
-        where: { id, userId, deletedAt: null },
-        data: {
-            status: LocationStatus.DELETED,
-            deletedAt: new Date()
-        }
-    })
 
-    if (count === 0) {
-        return { success: false, code: ErrorCode.NOT_FOUND, error: 'Location not found or already deleted' }
-    }
-    return { success: true, data: undefined };
+    return guard(logger, `delete location ${id}`, async () => {
+        const { count } = await db.location.updateMany({
+            where: { id, userId, deletedAt: null },
+            data: {
+                status: LocationStatus.DELETED,
+                deletedAt: new Date()
+            }
+        })
+
+        if (count === 0) {
+            return fail(ErrorCode.NOT_FOUND, 'Location not found or already deleted')
+        }
+        return ok(undefined)
+    })
 }
+
+const withCoverPhoto = {
+    photos: { orderBy: { displayOrder: 'asc' }, take: 1 }
+} satisfies Prisma.LocationInclude
+
+export type LocationWithCoverPhoto = Prisma.LocationGetPayload<{ include: typeof withCoverPhoto }>
 
 export async function getLocations(
     userId: string,
@@ -211,7 +221,7 @@ export async function getLocations(
         query?: string
         keywords?: string[]
     }
-) {
+): Promise<Result<LocationWithCoverPhoto[]>> {
     const db = options?.db ?? defaultPrisma
     const where: Prisma.LocationWhereInput = {
         userId, status: { not: LocationStatus.DELETED }
@@ -228,14 +238,9 @@ export async function getLocations(
         where.keywords = { hasSome: options.keywords }
     }
 
-    return db.location.findMany({
+    return guard(logger, 'get locations', async () => ok(await db.location.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        include: {
-            photos: {
-                orderBy: { displayOrder: 'asc' },
-                take: 1
-            }
-        }
-    })
+        include: withCoverPhoto
+    })))
 }
