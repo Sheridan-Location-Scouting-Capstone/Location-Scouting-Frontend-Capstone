@@ -1,11 +1,24 @@
-import {Photo, Prisma, PrismaClient} from "@prisma/client";
+import {LocationStatus, Photo, Prisma, PrismaClient} from "@prisma/client";
 import {defaultBucket, deletePhoto, PhotoUploadResult, uploadPhoto, uploadPhotos} from "@/services/photoService";
-import {Result} from "@/schemas/result";
+import {ErrorCode, Result} from "@/schemas/result";
 import {PhotoUploadInput} from "@/schemas/photoUploadInput";
 import {prisma} from "@/lib/prisma";
 import { PhotoUpdateInput } from "@/schemas/photoUpdateInput";
 
+// Photos belong to a location, and a location belongs to a user.
+// Every operation first confirms the location is owned by the user before touching its photos.
+async function userOwnsLocation(db: PrismaClient, userId: string, locationId: string): Promise<boolean> {
+    const location = await db.location.findFirst({
+        where: { id: locationId, userId, status: { not: LocationStatus.DELETED } },
+        select: { id: true }
+    })
+    return location !== null
+}
+
+const locationNotFound = { success: false, code: ErrorCode.NOT_FOUND, error: 'Location not found' } as const
+
 export async function addPhotosToLocation(
+    userId: string,
     locationId: string,
     photoInput: PhotoUploadInput[],
     options?: { db?: PrismaClient, bucket?: string }):
@@ -13,6 +26,10 @@ export async function addPhotosToLocation(
 {
     const db = options?.db ?? prisma
     const bucket = options?.bucket ?? defaultBucket
+
+    if (!await userOwnsLocation(db, userId, locationId)) {
+        return locationNotFound
+    }
 
     const uploadedPhotos = await uploadPhotos(photoInput, bucket)
 
@@ -33,12 +50,12 @@ export async function addPhotosToLocation(
     const newKeywords = uploadedPhotos.flatMap(photo => photo.keywords ?? [])
     if (newKeywords.length > 0) {
         const existing = await db.location.findUnique({
-            where: { id: locationId },
+            where: { id: locationId, userId },
             select: { keywords: true }
         })
         const mergedKeywords = [...new Set([...existing?.keywords ?? [], ...newKeywords])].slice(0, 15)
         await db.location.update({
-            where: { id: locationId },
+            where: { id: locationId, userId },
             data: { keywords: mergedKeywords }
         })
     }
@@ -47,6 +64,7 @@ export async function addPhotosToLocation(
 }
 
 export async function removePhotosFromLocation(
+    userId: string,
     locationId: string,
     photoIds: string[],
     options?: { db?: PrismaClient, bucket?: string }): Promise<Result<void>>
@@ -54,70 +72,76 @@ export async function removePhotosFromLocation(
     const db = options?.db ?? prisma
     const bucket = options?.bucket ?? defaultBucket
 
+    if (!await userOwnsLocation(db, userId, locationId)) {
+        return locationNotFound
+    }
+
     let photos;
     if(photoIds.length > 0) {
         photos = await db.photo.findMany({
             where: {
                 id: {in: photoIds},
-                locationId: locationId
+                locationId: locationId,
+                location: { userId }
             }
         })
     } else {
         photos = await db.photo.findMany({
-            where: { locationId: locationId }
+            where: { locationId: locationId, location: { userId } }
         })
     }
 
     await Promise.all(photos.map(photo => deletePhoto(photo.storageKey, bucket)))
-    if(photoIds.length > 0) {
-        await db.photo.deleteMany({
-            where: {
-                id: {in: photos.map(p => p.id)},
-                locationId: locationId
-            }
-        })
-    } else {
-        await db.photo.deleteMany({
-            where: { locationId: locationId }
-        })
-    }
+    await db.photo.deleteMany({
+        where: {
+            id: {in: photos.map(p => p.id)},
+            locationId: locationId,
+            location: { userId }
+        }
+    })
 
     return { success: true, data: undefined }
 }
 
 export async function updatePhoto(
+    userId: string,
     photoId: string,
     updateInput: PhotoUpdateInput,
-    options?: { db? : PrismaClient }) : Promise<Result<any>>
+    options?: { db? : PrismaClient }) : Promise<Result<Photo>>
 {
     const db = options?.db ?? prisma
 
     try {
         const updated = await db.photo.update({
-            where: { id: photoId },
+            where: { id: photoId, location: { userId, status: { not: LocationStatus.DELETED } } },
             data: updateInput,
         })
         return { success: true, data: updated }
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-            return { success: false, error: 'Photo not found' }
+            return { success: false, code: ErrorCode.NOT_FOUND, error: 'Photo not found' }
         }
         throw error
     }
 }
 
 export async function updatePhotoDisplayOrder(
+    userId: string,
     locationId: string,
     orderedPhotoIds: string[],
     options?: { db?: PrismaClient }
 ): Promise<Result<void>> {
     const db = options?.db ?? prisma
 
+    if (!await userOwnsLocation(db, userId, locationId)) {
+        return locationNotFound
+    }
+
     try {
         await db.$transaction(
             orderedPhotoIds.map((id, index) =>
                 db.photo.update({
-                    where: { id, locationId },
+                    where: { id, locationId, location: { userId } },
                     data: { displayOrder: index },
                 })
             )
@@ -125,7 +149,7 @@ export async function updatePhotoDisplayOrder(
         return { success: true, data: undefined }
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-            return { success: false, error: 'One or more photos do not belong to this location' }
+            return { success: false, code: ErrorCode.NOT_FOUND, error: 'One or more photos do not belong to this location' }
         }
         throw error
     }

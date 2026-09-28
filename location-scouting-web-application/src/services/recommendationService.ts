@@ -3,7 +3,7 @@
 import { prisma as defaultPrisma } from '@/lib/prisma'
 import { PrismaClient, LocationStatus } from '@prisma/client'
 import { scoreLocation } from '@/services/scoringService'
-import { Result } from '@/schemas/result'
+import { ErrorCode, Result } from '@/schemas/result'
 
 type ScoredLocation = {
     locationId: string
@@ -11,7 +11,10 @@ type ScoredLocation = {
     score: number
 }
 
+// Recommendations only draw from the user's own location library, for a scene
+// whose parent project the user owns.
 export async function getRecommendations(
+    userId: string,
     sceneId: string,
     options?: { db?: PrismaClient; limit?: number }
 ): Promise<Result<ScoredLocation[]>> {
@@ -21,12 +24,12 @@ export async function getRecommendations(
     try {
         // 1. Load scene with project
         const scene = await db.scene.findUnique({
-            where: { id: sceneId },
+            where: { id: sceneId, project: { userId } },
             include: { project: true },
         })
 
         if (!scene) {
-            return { success: false, error: `Scene not found: ${sceneId}` }
+            return { success: false, code: ErrorCode.NOT_FOUND, error: `Scene not found: ${sceneId}` }
         }
 
         const projectCoords =
@@ -34,9 +37,9 @@ export async function getRecommendations(
                 ? { lat: scene.project.latitude, lng: scene.project.longitude }
                 : null
 
-        // 2. Load all active locations with photo counts
+        // 2. Load the user's active locations with photo counts
         const locations = await db.location.findMany({
-            where: { status: LocationStatus.ACTIVE },
+            where: { userId, status: LocationStatus.ACTIVE },
             include: {
                 _count: { select: { photos: true } },
             },
@@ -47,6 +50,7 @@ export async function getRecommendations(
             by: ['locationId'],
             where: {
                 locationId: { in: locations.map(l => l.id) },
+                scene: { project: { userId } },
                 selected: true,
             },
             _count: { id: true },
@@ -91,6 +95,7 @@ export async function getRecommendations(
 }
 
 export async function scoreCandidates(
+    userId: string,
     sceneId: string,
     options?: { db?: PrismaClient }
 ): Promise<Result<Map<string, number>>> {
@@ -98,10 +103,11 @@ export async function scoreCandidates(
 
     try {
         const scene = await db.scene.findUnique({
-            where: { id: sceneId },
+            where: { id: sceneId, project: { userId } },
             include: {
                 project: true,
                 candidates: {
+                    where: { location: { userId } },
                     include: {
                         location: {
                             include: { _count: { select: { photos: true } } },
@@ -112,7 +118,7 @@ export async function scoreCandidates(
         })
 
         if (!scene) {
-            return { success: false, error: `Scene not found: ${sceneId}` }
+            return { success: false, code: ErrorCode.NOT_FOUND, error: `Scene not found: ${sceneId}` }
         }
 
         const projectCoords =
@@ -126,6 +132,7 @@ export async function scoreCandidates(
             by: ['locationId'],
             where: {
                 locationId: { in: locationIds },
+                scene: { project: { userId } },
                 selected: true,
             },
             _count: { id: true },

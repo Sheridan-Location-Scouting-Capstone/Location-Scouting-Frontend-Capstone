@@ -1,4 +1,4 @@
-import {signUpSetup} from "@/test/e2e/fixtures";
+import {IntExt} from "@prisma/client";
 
 export function buildLocationInput({
     name = 'Downtown Alley',
@@ -10,4 +10,25 @@ export function buildLocationInput({
     contactPhone = undefined as string | undefined,
 } = {}) {
     return {name, address, city, province, postalCode, contactName, contactPhone }
+}
+
+export function buildProjectInput({
+    name = 'Test Production',
+    address = '456 Film St',
+    city = 'Vancouver',
+    province = 'BC',
+    postalCode = 'V5K 0A1',
+    country = 'Canada',
+} = {}) {
+    return { name, address, city, province, postalCode, country }
+}
+
+export function buildSceneInput(projectId: string, {
+    sceneNumber = 1,
+    intExt = IntExt.EXT as IntExt,
+    sceneLocation = 'CURTIS HOME - YARD',
+    sceneTimeOfDay = 'Day',
+    scriptSection = 'The unruly tropical backyard of the family house.',
+} = {}) {
+    return { sceneNumber, intExt, sceneLocation, sceneTimeOfDay, scriptSection, projectId }
 }

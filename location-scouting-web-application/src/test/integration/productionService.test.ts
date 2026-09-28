@@ -1,10 +1,22 @@
 import {prisma} from '@/test/setup'
 import {describe, expect, it, vi, beforeEach} from 'vitest'
-import {createProject, getProjectById, getProjects} from "@/services/productionService";
+import {
+    createProject,
+    getLocationsByProject,
+    getProjectById,
+    getProjects,
+    updateProject
+} from "@/services/productionService";
 import {Geocoder} from "@/schemas/geocoder";
-import {signUpSetup} from "@/test/e2e/fixtures";
+import {setupUserWithLocations, signUpSetup} from "@/test/e2e/fixtures";
 import {expectFailure, expectSuccess} from "@/test/helpers/result";
 import {ErrorCode} from "@/schemas/result";
+import {createScene} from "@/services/sceneService";
+import {createCandidate} from "@/services/candidateService";
+import {KeywordGenerator} from "@/services/keywordGenerator";
+import {buildProjectInput, buildSceneInput} from "@/test/helpers/builders";
+
+const dummyKeyWordGen: KeywordGenerator = async () => ({ success: true, data: ['generated'] })
 
 const mockLat = 43.6532
 const mockLong = -79.3832
@@ -161,6 +173,91 @@ describe('Production Service', () => {
 
             // Assert
             expect(result.code).toBe(ErrorCode.NOT_FOUND)
+        })
+    })
+
+    describe('getLocationsByProject', () => {
+        it('should return the distinct candidate locations across a project\'s scenes', async () => {
+            // Arrange - one location used as a candidate on two scenes
+            const owner = await setupUserWithLocations(1)
+            const ownerId = owner.user.userId
+            const locationId = owner.locations[0].id
+            const project = expectSuccess(await createProject(ownerId, buildProjectInput(), { db: prisma, geocoder: mockGeocoder }))
+            for (const sceneNumber of [1, 2]) {
+                const scene = expectSuccess(await createScene(ownerId, buildSceneInput(project.id, { sceneNumber }), { db: prisma, keywordGenerator: dummyKeyWordGen }))
+                expectSuccess(await createCandidate(ownerId, { sceneId: scene.id, locationId }, { db: prisma }))
+            }
+
+            // Act
+            const result = await getLocationsByProject(ownerId, { projectId: project.id }, { db: prisma })
+
+            // Assert
+            expect(result.data).toHaveLength(1)
+            expect(result.data[0].locationId).toBe(locationId)
+        })
+    })
+
+    describe('User isolation', () => {
+        let ownerId: string
+        let intruderId: string
+        let projectId: string
+
+        beforeEach(async () => {
+            // Arrange - owner has a project with a scene and a candidate location; intruder is a separate user
+            const owner = await setupUserWithLocations(1)
+            ownerId = owner.user.userId
+            intruderId = (await signUpSetup()).userId
+
+            projectId = expectSuccess(await createProject(ownerId, buildProjectInput(), { db: prisma, geocoder: mockGeocoder })).id
+            const scene = expectSuccess(await createScene(ownerId, buildSceneInput(projectId), { db: prisma, keywordGenerator: dummyKeyWordGen }))
+            expectSuccess(await createCandidate(ownerId, { sceneId: scene.id, locationId: owner.locations[0].id }, { db: prisma }))
+        })
+
+        it('should not list another user\'s productions', async () => {
+            // Act
+            const result = expectSuccess(await getProjects(intruderId, { db: prisma }))
+
+            // Assert
+            expect(result).toHaveLength(0)
+        })
+
+        it('should only list the user\'s own productions when both users have productions', async () => {
+            // Arrange
+            const intruderProject = expectSuccess(await createProject(intruderId, buildProjectInput({ name: 'Intruder Production' }), { db: prisma, geocoder: mockGeocoder }))
+
+            // Act
+            const ownerProjects = expectSuccess(await getProjects(ownerId, { db: prisma }))
+            const intruderProjects = expectSuccess(await getProjects(intruderId, { db: prisma }))
+
+            // Assert
+            expect(ownerProjects.map(p => p.id)).toEqual([projectId])
+            expect(intruderProjects.map(p => p.id)).toEqual([intruderProject.id])
+        })
+
+        it('should not return another user\'s production by id', async () => {
+            // Act
+            const result = expectFailure(await getProjectById(intruderId, projectId, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+        })
+
+        it('should not allow a user to update another user\'s production', async () => {
+            // Act
+            const result = expectFailure(await updateProject(intruderId, projectId, { name: 'Hijacked' }, { db: prisma, geocoder: mockGeocoder }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const project = expectSuccess(await getProjectById(ownerId, projectId, { db: prisma }))
+            expect(project.name).not.toBe('Hijacked')
+        })
+
+        it('should not return candidate locations for another user\'s production', async () => {
+            // Act
+            const result = await getLocationsByProject(intruderId, { projectId }, { db: prisma })
+
+            // Assert
+            expect(result.data).toHaveLength(0)
         })
     })
 })

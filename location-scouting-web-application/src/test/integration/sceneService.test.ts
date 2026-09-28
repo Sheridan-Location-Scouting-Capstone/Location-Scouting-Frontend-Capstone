@@ -2,7 +2,8 @@ import {prisma} from '@/test/setup'
 import {beforeEach, describe, expect, it, test, vi} from 'vitest'
 // @ts-ignore
 import {IntExt} from "@prisma/client";
-import {createScene, deleteScene, getSceneById, getScenesForProject} from "@/services/sceneService";
+import {createScene, deleteScene, getSceneById, getScenesForProject, updateScene} from "@/services/sceneService";
+import {buildProjectInput, buildSceneInput} from "@/test/helpers/builders";
 import {createProject} from "@/services/productionService";
 import {KeywordGenerator} from "@/services/keywordGenerator";
 import {createLocation} from "@/services/locationService";
@@ -318,6 +319,85 @@ describe('Scene Service', () => {
 
             // Assert
             expect(findCandidateResult.code).toBe(ErrorCode.NOT_FOUND)
+        })
+    })
+
+    describe('User isolation', () => {
+        let intruderId: string
+        let sceneId: string
+
+        beforeEach(async () => {
+            // Arrange - owner has a scene in their project (outer beforeEach); intruder is a separate user
+            intruderId = (await signUpSetup()).userId
+            sceneId = expectSuccess(await createScene(userId, buildSceneInput(projectId), {
+                db: prisma,
+                keywordGenerator: dummyKeyWordGen
+            })).id
+        })
+
+        it('should not allow a user to create a scene in another user\'s project', async () => {
+            // Act
+            const result = expectFailure(await createScene(intruderId, buildSceneInput(projectId, { sceneNumber: 99 }), {
+                db: prisma,
+                keywordGenerator: dummyKeyWordGen
+            }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const scenes = await prisma.scene.findMany({ where: { projectId } })
+            expect(scenes.map(s => s.id)).toEqual([sceneId])
+        })
+
+        it('should not return another user\'s scene by id', async () => {
+            // Act
+            const result = expectFailure(await getSceneById(intruderId, sceneId, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+        })
+
+        it('should not list scenes for another user\'s project', async () => {
+            // Act
+            const result = expectSuccess(await getScenesForProject(intruderId, projectId, { db: prisma }))
+
+            // Assert
+            expect(result).toHaveLength(0)
+        })
+
+        it('should not allow a user to update another user\'s scene', async () => {
+            // Act
+            const result = expectFailure(await updateScene(intruderId, sceneId, { sceneLocation: 'HIJACKED' }, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const scene = expectSuccess(await getSceneById(userId, sceneId, { db: prisma }))
+            expect(scene.sceneLocation).not.toBe('HIJACKED')
+        })
+
+        it('should not allow a user to move their scene into another user\'s project', async () => {
+            // Arrange - intruder owns a project and scene of their own
+            const intruderProject = expectSuccess(await createProject(intruderId, buildProjectInput(), { db: prisma }))
+            const intruderScene = expectSuccess(await createScene(intruderId, buildSceneInput(intruderProject.id), {
+                db: prisma,
+                keywordGenerator: dummyKeyWordGen
+            }))
+
+            // Act - intruder tries to re-parent their scene under the owner's project
+            const result = expectFailure(await updateScene(intruderId, intruderScene.id, { projectId }, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const scenes = expectSuccess(await getScenesForProject(userId, projectId, { db: prisma }))
+            expect(scenes.map(s => s.id)).toEqual([sceneId])
+        })
+
+        it('should not allow a user to delete another user\'s scene', async () => {
+            // Act
+            const result = expectFailure(await deleteScene(intruderId, sceneId, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            expectSuccess(await getSceneById(userId, sceneId, { db: prisma }))
         })
     })
 

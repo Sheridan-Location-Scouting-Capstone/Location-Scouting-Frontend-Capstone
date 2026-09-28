@@ -13,6 +13,13 @@ const candidateInclude = {
 
 export type CandidateWithDetails = Prisma.CandidateGetPayload<{ include: typeof candidateInclude }>
 
+// A candidate links a scene and a location, so the user must own both parents:
+// the scene's project and the location.
+const ownedBy = (userId: string) => ({
+    location: { userId },
+    scene: { project: { userId } }
+}) satisfies Prisma.CandidateWhereInput
+
 
 export async function createCandidate(
     userId: string,
@@ -68,8 +75,7 @@ export async function getCandidatesForScene(
         const candidates = await db.candidate.findMany({
             where: {
                 sceneId: sceneId,
-                location: { userId },
-                scene: { project: { userId } }
+                ...ownedBy(userId)
             },
             include: candidateInclude
         })
@@ -95,7 +101,7 @@ export async function removeCandidateFromScene(
         await db.candidate.delete({
             where: {
                 id : candidateId,
-                location: { userId }
+                ...ownedBy(userId)
             }
         })
         return { success: true, data: undefined }
@@ -124,7 +130,7 @@ export async function toggleCandidateSelected(
 
     try {
         const result = await db.candidate.update({
-            where: { id: candidateId, location: { userId } },
+            where: { id: candidateId, ...ownedBy(userId) },
             data: { selected: selected }
         })
         return {success: true, data: result }
@@ -147,7 +153,7 @@ export async function getCandidateById(
 
     try{
         const result = await db.candidate.findUnique({
-            where: { id: candidateId, location: { userId } }
+            where: { id: candidateId, ...ownedBy(userId) }
         })
 
         if(!result){

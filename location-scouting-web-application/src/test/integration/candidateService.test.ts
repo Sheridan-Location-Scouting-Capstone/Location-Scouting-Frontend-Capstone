@@ -7,6 +7,7 @@ import {KeywordGenerator} from "@/services/keywordGenerator";
 import {createScene} from "@/services/sceneService";
 import {
     createCandidate,
+    getCandidateById,
     getCandidatesForScene,
     removeCandidateFromScene,
     toggleCandidateSelected
@@ -15,7 +16,9 @@ import {addPhotosToLocation} from "@/services/locationPhotoService";
 import {Geocoder} from "@/schemas/geocoder";
 import {PhotoUploadInput} from "@/schemas/photoUploadInput";
 import {setupUserWithLocations} from "@/test/e2e/fixtures";
-import { expectSuccess } from "@/test/helpers/result";
+import { expectFailure, expectSuccess } from "@/test/helpers/result";
+import { buildProjectInput, buildSceneInput } from "@/test/helpers/builders";
+import { ErrorCode } from "@/schemas/result";
 
 const dummyKeyWordGen: KeywordGenerator = async() => ({ success: true, data: ['house', 'generated', 'gothic'] })
 const mockGeocoder: Geocoder = async () => ({ lat: 43.6532, lng: -79.3832 })
@@ -79,13 +82,10 @@ describe('Candidate Services', () => {
             projectId: projectId
         }
 
-        const sceneResult = await createScene(sceneInput, { db: prisma, keywordGenerator: dummyKeyWordGen})
-        expect(sceneResult.success).toBe(true)
-        expect(sceneResult.data.id).not.toBeNull()
-        expect(sceneResult.data.projectId).toBe(projectId)
-        if(sceneResult.success) {
-            sceneId = sceneResult.data.id
-        }
+        const scene = expectSuccess(await createScene(userId, sceneInput, { db: prisma, keywordGenerator: dummyKeyWordGen}))
+        expect(scene.id).not.toBeNull()
+        expect(scene.projectId).toBe(projectId)
+        sceneId = scene.id
     })
 
     describe('Create Candidate', () => {
@@ -97,7 +97,7 @@ describe('Candidate Services', () => {
             }
 
             // Act
-            const result = await createCandidate(candidateInput, {db: prisma})
+            const result = await createCandidate(userId, candidateInput, {db: prisma})
 
             // Assert
             expect(result.success).toBe(true)
@@ -123,7 +123,7 @@ describe('Candidate Services', () => {
                     mimeType: 'image/jpeg'
                 }]
 
-            const photoResult = await addPhotosToLocation(locationId, photoInput, { db: prisma })
+            const photoResult = await addPhotosToLocation(userId, locationId, photoInput, { db: prisma })
             expect(photoResult.success).toBe(true)
             let photoIds: string[] = []
             if(photoResult.success) {
@@ -138,7 +138,7 @@ describe('Candidate Services', () => {
             }
 
             // Act
-            const result = await createCandidate(candidateInput, { db: prisma })
+            const result = await createCandidate(userId, candidateInput, { db: prisma })
 
             // Assert
             expect(result.success).toBe(true)
@@ -164,7 +164,7 @@ describe('Candidate Services', () => {
             }
 
             // Act
-            const result = await createCandidate(candidateInput, { db: prisma })
+            const result = await createCandidate(userId, candidateInput, { db: prisma })
 
             // Assert
             expect(result.success).toBe(true)
@@ -194,7 +194,7 @@ describe('Candidate Services', () => {
             }
 
             // Act
-            const result = await createCandidate( candidateInput, { db: prisma })
+            const result = await createCandidate(userId, candidateInput, { db: prisma })
 
             // Assert
             expect(result.success).toBe(false)
@@ -207,11 +207,11 @@ describe('Candidate Services', () => {
                 locationId: locationId
             }
 
-            const setupResult = await createCandidate(candidateInput, { db: prisma })
+            const setupResult = await createCandidate(userId, candidateInput, { db: prisma })
             expect(setupResult.success).toBe(true)
 
             // Act
-            const result = await createCandidate(candidateInput, { db: prisma })
+            const result = await createCandidate(userId, candidateInput, { db: prisma })
 
             // Assert
             expect(result.success).toBe(false)
@@ -254,8 +254,8 @@ describe('Candidate Services', () => {
             }
 
             // Act - create first and second candidates
-            const firstCandidateResult = await createCandidate(firstCandidateInput, { db: prisma })
-            const secondCandidateResult = await createCandidate(secondCandidateInput, { db: prisma })
+            const firstCandidateResult = await createCandidate(userId, firstCandidateInput, { db: prisma })
+            const secondCandidateResult = await createCandidate(userId, secondCandidateInput, { db: prisma })
 
             expect(firstCandidateResult.success).toBe(true)
             expect(secondCandidateResult.success).toBe(true)
@@ -283,7 +283,7 @@ describe('Candidate Services', () => {
 
         it(' should get all candidates by scene id', async () => {
             // Arrange & Act
-            const result = await getCandidatesForScene(sceneId, { db: prisma })
+            const result = await getCandidatesForScene(userId, sceneId, { db: prisma })
 
             // Assert
             expect(result).toBeDefined()
@@ -297,7 +297,7 @@ describe('Candidate Services', () => {
 
         it(' should include the locations', async() => {
             // Act
-            const result = await getCandidatesForScene(sceneId, { db: prisma })
+            const result = await getCandidatesForScene(userId, sceneId, { db: prisma })
 
             // Assert
             expect(result).toBeDefined()
@@ -327,7 +327,7 @@ describe('Candidate Services', () => {
                 }]
 
             // Arrange-Act
-            const photoUploadResult = await addPhotosToLocation(locationId, photoInput, {db: prisma })
+            const photoUploadResult = await addPhotosToLocation(userId, locationId, photoInput, {db: prisma })
 
             // Arrange-Assert
             expect(photoUploadResult.success).toBe(true)
@@ -344,18 +344,18 @@ describe('Candidate Services', () => {
             }
 
             // Arrange -> Act
-            const candidateCreateResult = await createCandidate(candidateInput, { db: prisma })
+            const candidateCreateResult = await createCandidate(userId, candidateInput, { db: prisma })
 
             // Arrange -> Assert
             expect(candidateCreateResult.success).toBe(true)
             if(!candidateCreateResult.success) return
 
             // Act
-            const result = await removeCandidateFromScene(candidateCreateResult.data.id, {db: prisma })
+            const result = await removeCandidateFromScene(userId, candidateCreateResult.data.id, {db: prisma })
 
             // Assert
             expect(result.success).toBe(true)
-            const candidatesResult = await getCandidatesForScene(sceneId, { db: prisma })
+            const candidatesResult = await getCandidatesForScene(userId, sceneId, { db: prisma })
             expect(candidatesResult.success).toBe(true)
             if(!candidatesResult.success) return
             expect(candidatesResult.data.find(c => c.id === candidateCreateResult.data.id)).toBeUndefined()
@@ -371,7 +371,7 @@ describe('Candidate Services', () => {
                 locationId: locationId,
             }
 
-            const candidateResult = await createCandidate(candidateInput, { db: prisma })
+            const candidateResult = await createCandidate(userId, candidateInput, { db: prisma })
             expect(candidateResult.success).toBe(true)
             if(!candidateResult.success) return
 
@@ -384,7 +384,7 @@ describe('Candidate Services', () => {
             { selected: false }
         ])(' should set the candidate status to input: $selected', async ({selected}) => {
             // Arrange & Act
-            const result = await toggleCandidateSelected(candidateId, selected, { db: prisma })
+            const result = await toggleCandidateSelected(userId, candidateId, selected, { db: prisma })
 
             // Assert
             expect(result.success).toBe(true)
@@ -412,21 +412,117 @@ describe('Candidate Services', () => {
                 sceneId: sceneId,
             }
 
-            const arrangeResult = await createCandidate(candidateInput, { db: prisma })
+            const arrangeResult = await createCandidate(userId, candidateInput, { db: prisma })
             expect(arrangeResult.success).toBe(true)
             if(!arrangeResult.success) return
             const secondCandidateId = arrangeResult.data.id
 
             // Arrange - set other candidate as selected
-            const selectedResult = await toggleCandidateSelected(candidateId, true, { db: prisma })
+            const selectedResult = await toggleCandidateSelected(userId, candidateId, true, { db: prisma })
 
             // Act - set newly generated candidate as selected
-            const result = await toggleCandidateSelected(secondCandidateId, true, { db: prisma })
+            const result = await toggleCandidateSelected(userId, secondCandidateId, true, { db: prisma })
 
             // Assert
             expect(result.success).toBe(true)
             if(!result.success) return
             expect(result.data!.selected).toBe(true)
+        })
+    })
+
+    describe('User isolation', () => {
+        let intruderId: string
+        let intruderLocationId: string
+        let intruderSceneId: string
+        let ownerCandidateId: string
+
+        beforeEach(async () => {
+            // Arrange - owner already has a scene + location (outer beforeEach); give them a candidate
+            ownerCandidateId = expectSuccess(await createCandidate(userId, { sceneId, locationId }, { db: prisma })).id
+
+            // Arrange - intruder with their own location, project and scene
+            const intruder = await setupUserWithLocations(1)
+            intruderId = intruder.user.userId
+            intruderLocationId = intruder.locations[0].id
+            const intruderProject = expectSuccess(await createProject(intruderId, buildProjectInput(), { db: prisma }))
+            intruderSceneId = expectSuccess(await createScene(intruderId, buildSceneInput(intruderProject.id), {
+                db: prisma,
+                keywordGenerator: dummyKeyWordGen
+            })).id
+        })
+
+        it('should not allow a user to add a candidate to another user\'s scene', async () => {
+            // Act
+            const result = expectFailure(await createCandidate(intruderId, { sceneId, locationId: intruderLocationId }, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const candidates = await prisma.candidate.findMany({ where: { sceneId } })
+            expect(candidates.map(c => c.id)).toEqual([ownerCandidateId])
+        })
+
+        it('should not allow a user to add another user\'s location as a candidate on their own scene', async () => {
+            // Act
+            const result = expectFailure(await createCandidate(intruderId, { sceneId: intruderSceneId, locationId }, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const candidates = await prisma.candidate.findMany({ where: { sceneId: intruderSceneId } })
+            expect(candidates).toHaveLength(0)
+        })
+
+        it('should not allow a user to attach another user\'s photos to their own candidate', async () => {
+            // Arrange - owner's location has a photo
+            const ownerPhotos = expectSuccess(await addPhotosToLocation(userId, locationId, [
+                { buffer: Buffer.from('owner photo'), filename: 'owner.jpg', mimeType: 'image/jpeg' }
+            ], { db: prisma }))
+
+            // Act - intruder uses their own scene + location but references the owner's photo id
+            const result = expectFailure(await createCandidate(intruderId, {
+                sceneId: intruderSceneId,
+                locationId: intruderLocationId,
+                photos: [ownerPhotos[0].id]
+            }, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const candidatePhotos = await prisma.candidatePhoto.findMany({ where: { photoId: ownerPhotos[0].id } })
+            expect(candidatePhotos).toHaveLength(0)
+        })
+
+        it('should not return another user\'s candidates for a scene', async () => {
+            // Act
+            const result = expectSuccess(await getCandidatesForScene(intruderId, sceneId, { db: prisma }))
+
+            // Assert
+            expect(result).toHaveLength(0)
+        })
+
+        it('should not return another user\'s candidate by id', async () => {
+            // Act
+            const result = expectFailure(await getCandidateById(intruderId, ownerCandidateId, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+        })
+
+        it('should not allow a user to change the selected status of another user\'s candidate', async () => {
+            // Act
+            const result = expectFailure(await toggleCandidateSelected(intruderId, ownerCandidateId, true, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            const candidate = expectSuccess(await getCandidateById(userId, ownerCandidateId, { db: prisma }))
+            expect(candidate.selected).toBe(false)
+        })
+
+        it('should not allow a user to remove another user\'s candidate', async () => {
+            // Act
+            const result = expectFailure(await removeCandidateFromScene(intruderId, ownerCandidateId, { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+            expectSuccess(await getCandidateById(userId, ownerCandidateId, { db: prisma }))
         })
     })
 

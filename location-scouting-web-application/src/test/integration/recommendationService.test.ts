@@ -1,10 +1,20 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { prisma } from '../setup'
 import { getRecommendations, scoreCandidates } from '@/services/recommendationService'
+import { signUpSetup } from '@/test/e2e/fixtures'
+import { expectFailure, expectSuccess } from '@/test/helpers/result'
+import { ErrorCode } from '@/schemas/result'
 
 // ─── Helpers ────────────────────────────────────────────────
 
-async function createProject(overrides?: Partial<Parameters<typeof prisma.project.create>[0]['data']>) {
+// The signed-in user for each test. Helpers create records owned by this user unless told otherwise.
+let userId: string
+
+beforeEach(async () => {
+    userId = (await signUpSetup()).userId
+})
+
+async function createProject(overrides?: Record<string, unknown>) {
     return prisma.project.create({
         data: {
             name: 'Test Production',
@@ -14,6 +24,7 @@ async function createProject(overrides?: Partial<Parameters<typeof prisma.projec
             postalCode: 'M5H 2N2',
             latitude: 43.6532,
             longitude: -79.3832,
+            userId,
             ...overrides,
         },
     })
@@ -41,6 +52,7 @@ async function createLocation(overrides?: Record<string, unknown>) {
             province: 'ON',
             postalCode: 'M5V 1A1',
             keywords: [],
+            userId,
             ...overrides,
         },
     })
@@ -99,7 +111,7 @@ describe('getRecommendations', () => {
         })
 
         // Act
-        const result = await getRecommendations(scene.id, { db: prisma })
+        const result = await getRecommendations(userId, scene.id,{ db: prisma })
 
         // Assert
         expect(result.success).toBe(true)
@@ -120,7 +132,7 @@ describe('getRecommendations', () => {
         }
 
         // Act
-        const result = await getRecommendations(scene.id, { db: prisma, limit: 2 })
+        const result = await getRecommendations(userId, scene.id,{ db: prisma, limit: 2 })
 
         // Assert
         expect(result.success).toBe(true)
@@ -138,7 +150,7 @@ describe('getRecommendations', () => {
         }
 
         // Act
-        const result = await getRecommendations(scene.id, { db: prisma })
+        const result = await getRecommendations(userId, scene.id,{ db: prisma })
 
         // Assert
         expect(result.success).toBe(true)
@@ -156,7 +168,7 @@ describe('getRecommendations', () => {
         await createLocation({ name: 'Archived', keywords: ['kitchen'], status: 'ARCHIVED' })
 
         // Act
-        const result = await getRecommendations(scene.id, { db: prisma })
+        const result = await getRecommendations(userId, scene.id,{ db: prisma })
 
         // Assert
         expect(result.success).toBe(true)
@@ -200,7 +212,7 @@ describe('getRecommendations', () => {
         }
 
         // Act
-        const result = await getRecommendations(scene.id, { db: prisma })
+        const result = await getRecommendations(userId, scene.id,{ db: prisma })
 
         // Assert
         expect(result.success).toBe(true)
@@ -234,7 +246,7 @@ describe('getRecommendations', () => {
         await addPhotos(manyPhotos.id, 10)
 
         // Act
-        const result = await getRecommendations(scene.id, { db: prisma })
+        const result = await getRecommendations(userId, scene.id,{ db: prisma })
 
         // Assert
         expect(result.success).toBe(true)
@@ -270,7 +282,7 @@ describe('getRecommendations', () => {
         })
 
         // Act
-        const result = await getRecommendations(scene.id, { db: prisma })
+        const result = await getRecommendations(userId, scene.id,{ db: prisma })
 
         // Assert
         expect(result.success).toBe(true)
@@ -294,7 +306,7 @@ describe('getRecommendations', () => {
         })
 
         // Act
-        const result = await getRecommendations(scene.id, { db: prisma })
+        const result = await getRecommendations(userId, scene.id,{ db: prisma })
 
         // Assert
         expect(result.success).toBe(true)
@@ -316,7 +328,7 @@ describe('getRecommendations', () => {
         })
 
         // Act
-        const result = await getRecommendations(scene.id, { db: prisma })
+        const result = await getRecommendations(userId, scene.id,{ db: prisma })
 
         // Assert
         expect(result.success).toBe(true)
@@ -326,7 +338,7 @@ describe('getRecommendations', () => {
 
     it('should return error for non-existent scene', async () => {
         // Act
-        const result = await getRecommendations('non-existent-id', { db: prisma })
+        const result = await getRecommendations(userId, 'non-existent-id',{ db: prisma })
 
         // Assert
         expect(result.success).toBe(false)
@@ -340,7 +352,7 @@ describe('getRecommendations', () => {
         const scene = await createScene(project.id)
 
         // Act
-        const result = await getRecommendations(scene.id, { db: prisma })
+        const result = await getRecommendations(userId, scene.id,{ db: prisma })
 
         // Assert
         expect(result.success).toBe(true)
@@ -364,7 +376,7 @@ describe('scoreCandidates', () => {
         const c2 = await createCandidate(scene.id, loc2.id)
 
         // Act
-        const result = await scoreCandidates(scene.id, { db: prisma })
+        const result = await scoreCandidates(userId, scene.id,{ db: prisma })
 
         // Assert
         expect(result.success).toBe(true)
@@ -377,7 +389,7 @@ describe('scoreCandidates', () => {
     })
 
     it('should return error for non-existent scene', async () => {
-        const result = await scoreCandidates('non-existent-id', { db: prisma })
+        const result = await scoreCandidates(userId, 'non-existent-id',{ db: prisma })
 
         expect(result.success).toBe(false)
     })
@@ -388,11 +400,104 @@ describe('scoreCandidates', () => {
         const scene = await createScene(project.id)
 
         // Act
-        const result = await scoreCandidates(scene.id, { db: prisma })
+        const result = await scoreCandidates(userId, scene.id,{ db: prisma })
 
         // Assert
         expect(result.success).toBe(true)
         if (!result.success) return
         expect(result.data.size).toBe(0)
+    })
+})
+
+// ─── User isolation ─────────────────────────────────────────
+
+describe('Recommendation user isolation', () => {
+    let intruderId: string
+
+    beforeEach(async () => {
+        intruderId = (await signUpSetup()).userId
+    })
+
+    it('getRecommendations should return NOT_FOUND for a scene in another user\'s project', async () => {
+        // Arrange
+        const project = await createProject()
+        const scene = await createScene(project.id, { keywords: ['kitchen'] })
+        await createLocation({ name: 'Owner Kitchen', keywords: ['kitchen'] })
+
+        // Act
+        const result = expectFailure(await getRecommendations(intruderId, scene.id, { db: prisma }))
+
+        // Assert
+        expect(result.code).toBe(ErrorCode.NOT_FOUND)
+    })
+
+    it('getRecommendations should only recommend the user\'s own locations', async () => {
+        // Arrange - owner scene, plus a perfectly matching location in another user's library
+        const project = await createProject()
+        const scene = await createScene(project.id, { keywords: ['kitchen', 'modern'] })
+        const ownLocation = await createLocation({ name: 'Own Spot', keywords: ['kitchen'] })
+        await createLocation({ name: 'Intruder Perfect Match', keywords: ['kitchen', 'modern'], userId: intruderId })
+
+        // Act
+        const result = expectSuccess(await getRecommendations(userId, scene.id, { db: prisma, limit: 10 }))
+
+        // Assert
+        expect(result).toHaveLength(1)
+        expect(result[0].locationId).toBe(ownLocation.id)
+    })
+
+    it('getRecommendations should ignore another user\'s selections when computing historical score', async () => {
+        // Arrange - two identical owner locations
+        const project = await createProject()
+        const scene = await createScene(project.id, { keywords: ['kitchen'] })
+        const first = await createLocation({ name: 'First', keywords: ['kitchen'], latitude: 43.66, longitude: -79.39 })
+        const second = await createLocation({ name: 'Second', keywords: ['kitchen'], latitude: 43.66, longitude: -79.39 })
+
+        // Seed candidate rows directly (bypassing the service) that pair another user's scenes with
+        // the owner's first location. The service must not count these toward the owner's history.
+        const intruderProject = await createProject({ userId: intruderId })
+        for (let i = 0; i < 4; i++) {
+            const s = await createScene(intruderProject.id, { sceneNumber: 10 + i, keywords: [] })
+            await createCandidate(s.id, first.id, true)
+        }
+
+        // Act
+        const result = expectSuccess(await getRecommendations(userId, scene.id, { db: prisma }))
+
+        // Assert
+        const firstScore = result.find(r => r.locationId === first.id)!.score
+        const secondScore = result.find(r => r.locationId === second.id)!.score
+        expect(firstScore).toBe(secondScore)
+    })
+
+    it('scoreCandidates should return NOT_FOUND for a scene in another user\'s project', async () => {
+        // Arrange
+        const project = await createProject()
+        const scene = await createScene(project.id)
+        const location = await createLocation({ keywords: ['kitchen'] })
+        await createCandidate(scene.id, location.id)
+
+        // Act
+        const result = expectFailure(await scoreCandidates(intruderId, scene.id, { db: prisma }))
+
+        // Assert
+        expect(result.code).toBe(ErrorCode.NOT_FOUND)
+    })
+
+    it('scoreCandidates should not score candidates whose location belongs to another user', async () => {
+        // Arrange - a candidate row linking the owner's scene to another user's location
+        const project = await createProject()
+        const scene = await createScene(project.id, { keywords: ['kitchen'] })
+        const own = await createLocation({ keywords: ['kitchen'] })
+        const foreign = await createLocation({ keywords: ['kitchen'], userId: intruderId })
+        const ownCandidate = await createCandidate(scene.id, own.id)
+        const foreignCandidate = await createCandidate(scene.id, foreign.id)
+
+        // Act
+        const result = expectSuccess(await scoreCandidates(userId, scene.id, { db: prisma }))
+
+        // Assert
+        expect(result.has(ownCandidate.id)).toBe(true)
+        expect(result.has(foreignCandidate.id)).toBe(false)
     })
 })

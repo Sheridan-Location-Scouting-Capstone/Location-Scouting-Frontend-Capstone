@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { prisma } from '@/test/setup'
 import {
     getAnalyticsSummary,
@@ -7,6 +7,9 @@ import {
     getKeywordGaps,
     getKeywordDistribution,
 } from '@/services/analyticsService'
+import { signUpSetup } from '@/test/e2e/fixtures'
+import { expectFailure, expectSuccess } from '@/test/helpers/result'
+import { ErrorCode, Result } from '@/schemas/result'
 
 // ─── Fixture ────────────────────────────────────────────────
 // Creates a known dataset:
@@ -37,7 +40,7 @@ type FixtureIds = {
     projectId: string
 }
 
-async function buildAnalyticsFixture(db: typeof prisma): Promise<FixtureIds> {
+async function buildAnalyticsFixture(db: typeof prisma, userId: string): Promise<FixtureIds> {
 
     const project = await db.project.create({
         data: {
@@ -46,13 +49,15 @@ async function buildAnalyticsFixture(db: typeof prisma): Promise<FixtureIds> {
             city: 'Oakville',
             province: 'ON',
             country: 'Canada',
-            postalCode: 'L6H 0Y1'
+            postalCode: 'L6H 0Y1',
+            userId,
         }
     })
 
     const [locA, locB, locC] = await Promise.all([
         db.location.create({
             data: {
+                userId,
                 name: 'Test House',
                 address: '123 Main St',
                 city: 'Oakville',
@@ -67,6 +72,7 @@ async function buildAnalyticsFixture(db: typeof prisma): Promise<FixtureIds> {
         }),
         db.location.create({
             data: {
+                userId,
                 name: 'Downtown Alley',
                 address: '456 Queen St',
                 city: 'Toronto',
@@ -81,6 +87,7 @@ async function buildAnalyticsFixture(db: typeof prisma): Promise<FixtureIds> {
         }),
         db.location.create({
             data: {
+                userId,
                 name: 'City Park',
                 address: '789 Park Ave',
                 city: 'Mississauga',
@@ -173,17 +180,19 @@ async function buildAnalyticsFixture(db: typeof prisma): Promise<FixtureIds> {
 
 describe('Analytics Service', () => {
     let projectId: string
+    let userId: string
 
-    // Arrange
-    beforeAll(async () => {
-        const fixture = await buildAnalyticsFixture(prisma)
+    // Arrange - setup.ts truncates every table before each test, so the fixture must be rebuilt per test
+    beforeEach(async () => {
+        userId = (await signUpSetup()).userId
+        const fixture = await buildAnalyticsFixture(prisma, userId)
         projectId = fixture.projectId
     })
 
     describe('getAnalyticsSummary', () => {
         it('should return correct scene counts and keyword stats', async () => {
             // Act
-            const result = await getAnalyticsSummary(projectId, { db: prisma })
+            const result = await getAnalyticsSummary(userId, projectId, { db: prisma })
             expect(result.success).toBe(true)
             if (!result.success) return
 
@@ -202,7 +211,7 @@ describe('Analytics Service', () => {
 
     describe('getLocationPoints', () => {
         it('should return deduplicated coordinates excluding null lat/lng', async () => {
-            const result = await getLocationPoints(projectId, { db: prisma })
+            const result = await getLocationPoints(userId, projectId, { db: prisma })
             expect(result.success).toBe(true)
             if (!result.success) return
 
@@ -216,7 +225,7 @@ describe('Analytics Service', () => {
 
     describe('getSceneCoverage', () => {
         it('should bucket scenes into selected, candidateOnly, and noCandidates', async () => {
-            const result = await getSceneCoverage(projectId, { db: prisma })
+            const result = await getSceneCoverage(userId, projectId, { db: prisma })
             expect(result.success).toBe(true)
             if (!result.success) return
 
@@ -228,7 +237,7 @@ describe('Analytics Service', () => {
 
     describe('getKeywordGaps', () => {
         it('should return scene keywords not found in any active location', async () => {
-            const result = await getKeywordGaps(projectId, { db: prisma })
+            const result = await getKeywordGaps(userId, projectId, { db: prisma })
             expect(result.success).toBe(true)
             if (!result.success) return
 
@@ -243,7 +252,7 @@ describe('Analytics Service', () => {
         })
 
         it('should be sorted by sceneCount descending', async () => {
-            const result = await getKeywordGaps(projectId, { db: prisma })
+            const result = await getKeywordGaps(userId, projectId, { db: prisma })
             if (!result.success) return
 
             for (let i = 1; i < result.data.length; i++) {
@@ -256,7 +265,7 @@ describe('Analytics Service', () => {
 
     describe('getKeywordDistribution', () => {
         it('should return keyword frequencies sorted descending', async () => {
-            const result = await getKeywordDistribution(projectId, 10, { db: prisma })
+            const result = await getKeywordDistribution(userId, projectId, 10, { db: prisma })
             expect(result.success).toBe(true)
             if (!result.success) return
 
@@ -271,10 +280,79 @@ describe('Analytics Service', () => {
         })
 
         it('should respect the limit parameter', async () => {
-            const result = await getKeywordDistribution(projectId, 3, { db: prisma })
+            const result = await getKeywordDistribution(userId, projectId, 3, { db: prisma })
             if (!result.success) return
 
             expect(result.data.length).toBeLessThanOrEqual(3)
+        })
+    })
+
+    describe('User isolation', () => {
+        let intruderId: string
+
+        beforeEach(async () => {
+            intruderId = (await signUpSetup()).userId
+        })
+
+        const analyticsQueries: [string, (uid: string, pid: string) => Promise<Result<unknown>>][] = [
+            ['getAnalyticsSummary', (uid, pid) => getAnalyticsSummary(uid, pid, { db: prisma })],
+            ['getLocationPoints', (uid, pid) => getLocationPoints(uid, pid, { db: prisma })],
+            ['getSceneCoverage', (uid, pid) => getSceneCoverage(uid, pid, { db: prisma })],
+            ['getKeywordGaps', (uid, pid) => getKeywordGaps(uid, pid, { db: prisma })],
+            ['getKeywordDistribution', (uid, pid) => getKeywordDistribution(uid, pid, 10, { db: prisma })],
+        ]
+
+        it.each(analyticsQueries)('%s should return NOT_FOUND for a project the user does not own', async (_name, fn) => {
+            // Act
+            const result = expectFailure(await fn(intruderId, projectId))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+        })
+
+        it('should not match scene keywords against another user\'s location library', async () => {
+            // Arrange - intruder has locations covering every "gap" keyword in the owner's project
+            await prisma.location.create({
+                data: {
+                    userId: intruderId,
+                    name: 'Intruder Library',
+                    address: '1 Other St',
+                    city: 'Toronto',
+                    province: 'ON',
+                    postalCode: 'M5V 1A1',
+                    keywords: ['residential', 'industrial', 'rural', 'field', 'rooftop'],
+                    status: 'ACTIVE',
+                },
+            })
+
+            // Act
+            const summary = expectSuccess(await getAnalyticsSummary(userId, projectId, { db: prisma }))
+            const gaps = expectSuccess(await getKeywordGaps(userId, projectId, { db: prisma }))
+
+            // Assert - owner's results are unchanged by the other user's library
+            expect(summary.matchedKeywords).toBe(4)
+            expect(summary.unmatchedKeywords).toBe(5)
+            expect(gaps.map(g => g.keyword.toLowerCase())).toEqual(
+                expect.arrayContaining(['residential', 'industrial', 'rural', 'field', 'rooftop'])
+            )
+        })
+
+        it('should not include another user\'s data in the owner\'s results', async () => {
+            // Arrange - intruder builds an identical dataset of their own
+            await buildAnalyticsFixture(prisma, intruderId)
+
+            // Act
+            const summary = expectSuccess(await getAnalyticsSummary(userId, projectId, { db: prisma }))
+            const points = expectSuccess(await getLocationPoints(userId, projectId, { db: prisma }))
+            const coverage = expectSuccess(await getSceneCoverage(userId, projectId, { db: prisma }))
+            const distribution = expectSuccess(await getKeywordDistribution(userId, projectId, 10, { db: prisma }))
+
+            // Assert - numbers match the single-user fixture exactly
+            expect(summary.totalScenes).toBe(4)
+            expect(summary.scenesWithCandidates).toBe(3)
+            expect(points).toHaveLength(2)
+            expect(coverage).toEqual({ selected: 1, candidateOnly: 2, noCandidates: 1 })
+            expect(distribution[0].sceneCount).toBe(2)
         })
     })
 })
