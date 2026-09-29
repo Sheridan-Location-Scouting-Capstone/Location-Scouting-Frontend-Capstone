@@ -84,7 +84,7 @@ export async function getCandidatesForScene(
         const photos = await withPhotoUrls(
             userId,
             candidates.flatMap(candidate => candidate.photos.map(candidatePhoto => candidatePhoto.photo)),
-            { objectStore: options?.objectStore }
+            { db, objectStore: options?.objectStore }
         )
         if (!photos.success) return photos
         const photoById = new Map(photos.data.map(photo => [photo.id, photo]))

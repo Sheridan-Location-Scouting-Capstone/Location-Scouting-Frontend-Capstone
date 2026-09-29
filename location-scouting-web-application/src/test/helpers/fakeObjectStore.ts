@@ -31,6 +31,13 @@ export class FakeObjectStore implements ObjectStore {
         return ok(this.objects.has(key))
     }
 
+    async copy(sourceKey: string, destinationKey: string) {
+        const object = this.objects.get(sourceKey)
+        if (!object) return fail(ErrorCode.NOT_FOUND, `No stored object at ${sourceKey}`)
+        this.objects.set(destinationKey, { ...object })
+        return ok(undefined)
+    }
+
     async presignGet(key: string, ttlSeconds: number) {
         return ok({ url: `${FAKE_STORAGE_URL}/${key}?ttl=${ttlSeconds}`, expiresAt: new Date(Date.now() + ttlSeconds * 1000) })
     }

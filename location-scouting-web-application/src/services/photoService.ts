@@ -1,15 +1,17 @@
-import { randomUUID } from 'node:crypto'
-import path from 'node:path'
+import { PrismaClient } from '@prisma/client'
 import { getObjectStore, getPhotoUrlTtlSeconds, ObjectStore } from '@/infrastructure/storage'
 import { PhotoUploadInput } from '@/schemas/photoUploadInput'
-import { ok, Result } from '@/schemas/result'
+import { ErrorCode, fail, ok, Result } from '@/schemas/result'
 import { createLogger } from '@/lib/logger'
+import { prisma } from '@/lib/prisma'
+import { newPhotoKey } from '@/lib/photoKeys'
 import { guard } from '@/services/serviceResult'
 
 // Photo files in object storage. Label detection is separate (visionService) so a Vision outage can't break uploads.
 //
 // The database keeps only each photo's storage key; the bucket is private. Clients (the web app now, native apps later)
-// get a presigned URL instead, minted by withPhotoUrls every time photos are loaded.
+// get a presigned URL instead, minted by withPhotoUrls every time photos are loaded, and only for photos they own.
+// See docs/decisions/photo-access.md.
 
 const logger = createLogger('photoService')
 
@@ -17,16 +19,17 @@ const logger = createLogger('photoService')
 const PHOTO_CACHE_CONTROL = 'private, max-age=31536000, immutable'
 
 /** A photo row as it goes to a client: its storage key replaced by a URL the client can load until urlExpiresAt */
-export type PhotoWithUrl<P extends { storageKey: string }> = Omit<P, 'storageKey'> & { url: string; urlExpiresAt: Date }
+export type PhotoWithUrl<P extends { id: string }> = Omit<P, 'storageKey'> & { url: string; urlExpiresAt: Date }
 
-/** Uploads the photos, all or nothing, and returns their storage keys in the same order */
+/** Uploads the photos to the owner's storage prefix, all or nothing, and returns their keys in the same order */
 export async function storePhotos(
+    userId: string,
     inputs: PhotoUploadInput[],
     options?: { objectStore?: ObjectStore }
 ): Promise<Result<string[]>> {
     return guard(logger, 'store photos', async () => {
         const objectStore = options?.objectStore ?? getObjectStore()
-        const keys = inputs.map((input) => photoKey(input.filename))
+        const keys = inputs.map((input) => newPhotoKey(userId, input.filename))
 
         const results = await Promise.all(inputs.map((input, index) =>
             objectStore.put(keys[index], input.buffer, { contentType: input.mimeType, cacheControl: PHOTO_CACHE_CONTROL })))
@@ -53,31 +56,52 @@ export async function deletePhotos(keys: string[], options?: { objectStore?: Obj
 }
 
 /**
- * Replaces each photo's storage key with a presigned URL. Every photo URL the app hands out is minted here, so this is
- * the one place to decide who may see a photo.
+ * Adds a presigned URL to each photo, if the user owns every one of them, and drops any storage key the caller passed.
+ *
+ * This is the gate to the photo bytes: every photo URL the app hands out is minted here, and only after checking that
+ * the photo's location belongs to the user. The key that gets signed is read from the database alongside that check,
+ * never taken from the caller, so a row with the wrong key attached can't be used to reach someone else's file.
+ *
+ * A photo the user doesn't own fails the whole call with NOT_FOUND (rather than FORBIDDEN, so it doesn't confirm the
+ * photo exists), and no URL is minted for any of them. Callers only pass photos they loaded for this user, so a
+ * refusal here means a bug or a probe, and it's logged.
  */
-export async function withPhotoUrls<P extends { storageKey: string }>(
+export async function withPhotoUrls<P extends { id: string }>(
     userId: string,
     photos: P[],
-    options?: { objectStore?: ObjectStore, ttlSeconds?: number }
+    options?: { db?: PrismaClient, objectStore?: ObjectStore, ttlSeconds?: number }
 ): Promise<Result<PhotoWithUrl<P>[]>> {
-    // TODO(LS-182): check that userId may see these photos before minting their URLs
+    const db = options?.db ?? prisma
+
     return guard(logger, 'sign photo URLs', async () => {
+        if (photos.length === 0) return ok([])
         const objectStore = options?.objectStore ?? getObjectStore()
         const ttlSeconds = options?.ttlSeconds ?? getPhotoUrlTtlSeconds()
 
+        const owned = await db.photo.findMany({
+            where: { id: { in: [...new Set(photos.map((photo) => photo.id))] }, location: { userId } },
+            select: { id: true, storageKey: true },
+        })
+        const keyById = new Map(owned.map((photo) => [photo.id, photo.storageKey]))
+
+        const notOwned = photos.filter((photo) => !keyById.has(photo.id))
+        if (notOwned.length > 0) {
+            logger.warn(`Refused to sign URLs for ${notOwned.length} photo(s) that user ${userId} doesn't own`)
+            return fail(ErrorCode.NOT_FOUND, 'Photo not found')
+        }
+
         const withUrls: PhotoWithUrl<P>[] = []
-        for (const { storageKey, ...photo } of photos) {
-            const presigned = await objectStore.presignGet(storageKey, ttlSeconds)
+        for (const photo of photos) {
+            const presigned = await objectStore.presignGet(keyById.get(photo.id)!, ttlSeconds)
             if (!presigned.success) return presigned
-            withUrls.push({ ...photo, url: presigned.data.url, urlExpiresAt: presigned.data.expiresAt })
+            withUrls.push({ ...withoutStorageKey(photo), url: presigned.data.url, urlExpiresAt: presigned.data.expiresAt })
         }
         return ok(withUrls)
     })
 }
 
-/** photos/<uuid>.<ext>: unique per upload, and free of the user's file name apart from a plain extension */
-function photoKey(filename: string) {
-    const extension = path.extname(filename).toLowerCase()
-    return `photos/${randomUUID()}${/^\.[a-z0-9]{1,10}$/.test(extension) ? extension : ''}`
+function withoutStorageKey<P extends object>(photo: P): Omit<P, 'storageKey'> {
+    const copy: Partial<P> & { storageKey?: unknown } = { ...photo }
+    delete copy.storageKey
+    return copy as Omit<P, 'storageKey'>
 }

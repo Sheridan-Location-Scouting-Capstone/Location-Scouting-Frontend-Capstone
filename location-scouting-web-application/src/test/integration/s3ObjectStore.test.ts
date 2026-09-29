@@ -42,6 +42,28 @@ describe('S3 object store on Garage', () => {
         expect(expectSuccess(await store.exists('photos/a.jpg'))).toBe(false)
     })
 
+    it('should copy an object to a new key, keeping its bytes, content type and cache header', async () => {
+        // Arrange - a key with a space, as older uploads named after the camera file had
+        expectSuccess(await store.put('1700000000000-Back Alley.jpg', Buffer.from('image bytes'), { ...jpeg, cacheControl: 'private, max-age=60' }))
+
+        // Act
+        expectSuccess(await store.copy('1700000000000-Back Alley.jpg', 'users/u1/photos/a.jpg'))
+
+        // Assert
+        const copied = expectSuccess(await store.get('users/u1/photos/a.jpg'))
+        expect(await readAll(copied.body)).toBe('image bytes')
+        expect(copied.contentType).toBe('image/jpeg')
+        const response = await fetch(expectSuccess(await store.presignGet('users/u1/photos/a.jpg', 60)).url)
+        expect(response.headers.get('cache-control')).toBe('private, max-age=60')
+        expect(expectSuccess(await store.exists('1700000000000-Back Alley.jpg'))).toBe(true)
+    })
+
+    it('should report NOT_FOUND when copying from a missing object', async () => {
+        // Act & Assert
+        expect(expectFailure(await store.copy('photos/missing.jpg', 'users/u1/photos/a.jpg')).code).toBe(ErrorCode.NOT_FOUND)
+        expect(expectSuccess(await store.exists('users/u1/photos/a.jpg'))).toBe(false)
+    })
+
     it('should report NOT_FOUND when reading a missing object', async () => {
         // Act & Assert
         expect(expectFailure(await store.get('photos/missing.jpg')).code).toBe(ErrorCode.NOT_FOUND)

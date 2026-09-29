@@ -55,8 +55,12 @@ service in `docker-compose.yml` (config: `garage/garage.toml`). It replaces MinI
 - Copy the `OBJECT_STORE_*` and `GARAGE_RPC_SECRET` lines from `.env.example` into `.env`. On its first start Garage
   creates the access key and bucket named there.
 - The bucket is private. The database stores each photo's object key, and the server hands clients a presigned URL
-  that expires after `PHOTO_URL_TTL_SECONDS` (an hour by default). The server refuses to start if the storage settings
-  are missing or invalid.
+  that expires after `PHOTO_URL_TTL_SECONDS` (an hour by default), only for photos they own. The server refuses to
+  start if the storage settings are missing or invalid. Why it works this way, and how look book sharing and edge
+  caching fit in: [docs/decisions/photo-access.md](docs/decisions/photo-access.md).
+- Photos are stored under their owner's prefix, `users/<userId>/photos/`. Photos stored before that (LS-182) are moved
+  there by a one-off command, safe to run again: `npm run storage:migrate-photo-keys` (add `-- --dry-run` to see what
+  it would do first). It reads `DATABASE_URL` and the `OBJECT_STORE_*` settings from `.env`.
 - Presigned URLs only work from the host they were signed for, `OBJECT_STORE_PUBLIC_ENDPOINT`. To view photos from a
   phone or emulator, set it to an address the device can reach (e.g. your machine's LAN IP).
 - Garage won't start if `OBJECT_STORE_SECRET_ACCESS_KEY` changes after its first start. Reset its data to pick up new

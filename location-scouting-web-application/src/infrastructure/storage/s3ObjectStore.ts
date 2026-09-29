@@ -2,6 +2,7 @@
 
 import type { Readable } from 'node:stream'
 import {
+    CopyObjectCommand,
     DeleteObjectCommand,
     GetObjectCommand,
     HeadObjectCommand,
@@ -80,6 +81,16 @@ export function createS3ObjectStore(config: ObjectStoreConfig, options?: { now?:
                 if (isMissingObject(error)) return ok(false)
                 throw error
             }
+        }),
+
+        copy: (sourceKey, destinationKey) => attempt(`copy ${sourceKey} to ${destinationKey}`, destinationKey, async () => {
+            const invalid = checkKey(sourceKey)
+            if (invalid) return invalid
+            // CopySource is "<bucket>/<key>", URL-encoded apart from the slashes. The source's metadata (content type,
+            // cache header) comes along by default.
+            const CopySource = `${Bucket}/${sourceKey.split('/').map(encodeURIComponent).join('/')}`
+            await client.send(new CopyObjectCommand({ Bucket, Key: destinationKey, CopySource }))
+            return ok(undefined)
         }),
 
         presignGet: async (key, ttlSeconds) => {

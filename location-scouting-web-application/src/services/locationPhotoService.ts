@@ -40,7 +40,7 @@ export async function addPhotosToLocation(
             return locationNotFound()
         }
 
-        const stored = await storePhotos(photoInput, { objectStore })
+        const stored = await storePhotos(userId, photoInput, { objectStore })
         if (!stored.success) return stored
         const keys = stored.data
 

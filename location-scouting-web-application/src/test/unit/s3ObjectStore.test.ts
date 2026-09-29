@@ -146,6 +146,23 @@ describe('S3 object store', () => {
             expect(result.code).toBe(ErrorCode.NOT_FOUND)
         })
 
+        it('should report NOT_FOUND when copying from a missing object', async () => {
+            // Arrange
+            vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(new NoSuchKey({ message: 'NoSuchKey', $metadata: { httpStatusCode: 404 } }))
+
+            // Act
+            const result = expectFailure(await createS3ObjectStore(config).copy('photos/missing.jpg', 'users/u1/photos/a.jpg'))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.NOT_FOUND)
+        })
+
+        it('should reject a copy without both keys', async () => {
+            // Act & Assert
+            expect(expectFailure(await createS3ObjectStore(config).copy('', 'users/u1/photos/a.jpg')).code).toBe(ErrorCode.VALIDATION_FAILED)
+            expect(expectFailure(await createS3ObjectStore(config).copy('photos/a.jpg', '')).code).toBe(ErrorCode.VALIDATION_FAILED)
+        })
+
         it('should answer false rather than fail when checking for a missing object', async () => {
             // Arrange
             vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(new NotFound({ message: 'NotFound', $metadata: { httpStatusCode: 404 } }))
@@ -169,6 +186,7 @@ describe('S3 object store', () => {
             expect(expectFailure(await store.get('photos/a.jpg')).code).toBe(code)
             expect(expectFailure(await store.exists('photos/a.jpg')).code).toBe(code)
             expect(expectFailure(await store.delete('photos/a.jpg')).code).toBe(code)
+            expect(expectFailure(await store.copy('photos/a.jpg', 'photos/b.jpg')).code).toBe(code)
         })
 
         it('should report UNAVAILABLE when nothing is listening at the endpoint', async () => {
