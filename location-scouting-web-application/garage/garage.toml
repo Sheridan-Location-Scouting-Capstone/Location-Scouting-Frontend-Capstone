@@ -1,0 +1,26 @@
+# Garage (S3-compatible object storage): a single node with no replication, for local development and the tests.
+# Used by docker-compose.yml and by the test containers (src/test/containers.ts).
+#
+# Secrets come from the environment, not from this file:
+#   GARAGE_RPC_SECRET          32 random bytes as hex (openssl rand -hex 32). Required even on a single node.
+#   GARAGE_DEFAULT_ACCESS_KEY  `garage server --single-node --default-bucket` creates this key and bucket on first
+#   GARAGE_DEFAULT_SECRET_KEY  start and leaves them alone afterwards. The secret must be at least 16 characters, and
+#   GARAGE_DEFAULT_BUCKET      Garage refuses to start if it later changes (reset the volume to change it).
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+replication_factor = 1
+
+# 0.0.0.0 rather than [::] throughout: Garage fails to start on Docker hosts without IPv6
+rpc_bind_addr = "0.0.0.0:3901"
+rpc_public_addr = "127.0.0.1:3901"
+
+[s3_api]
+# OBJECT_STORE_REGION must match
+s3_region = "garage"
+api_bind_addr = "0.0.0.0:3900"
+
+[admin]
+# No admin token is set, so only GET /health answers; it's the readiness check
+api_bind_addr = "0.0.0.0:3903"

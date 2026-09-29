@@ -335,6 +335,25 @@ describe('Candidate Services', () => {
         })
     })
 
+    describe('getCandidatesForScene', () => {
+        it('should give candidate photos presigned URLs in place of their storage keys', async () => {
+            // Arrange
+            const [uploaded] = expectSuccess(await addPhotosToLocation(userId, locationId, [
+                { buffer: Buffer.from('candidate bytes'), filename: 'candidate.jpg', mimeType: 'image/jpeg' },
+            ], { db: prisma, labelDetector: async () => [] }))
+            expectSuccess(await createCandidate(userId, { sceneId, locationId, photos: [uploaded.id] }, { db: prisma }))
+
+            // Act
+            const [candidate] = expectSuccess(await getCandidatesForScene(userId, sceneId, { db: prisma }))
+
+            // Assert
+            const { photo } = candidate.photos[0]
+            expect(photo.id).toBe(uploaded.id)
+            expect(photo).not.toHaveProperty('storageKey')
+            expect(await (await fetch(photo.url)).text()).toBe('candidate bytes')
+        })
+    })
+
     describe('Delete Candidate: removeCandidateFromScene', () => {
         it(' should remove a candidate from a scene', async () => {
             //Arrange -> Arrange

@@ -87,8 +87,8 @@ describe('AddCandidateModal', () => {
         // Arrange
         const user = userEvent.setup()
         vi.mocked(getLocationAction).mockResolvedValue(fullLocation([
-            { id: 'ph1', url: 'http://minio/1.jpg', name: 'Front', displayOrder: 0 },
-            { id: 'ph2', url: 'http://minio/2.jpg', name: 'Back', displayOrder: 1 },
+            { id: 'ph1', url: 'https://storage.test/1.jpg', name: 'Front', displayOrder: 0 },
+            { id: 'ph2', url: 'https://storage.test/2.jpg', name: 'Back', displayOrder: 1 },
         ]))
         vi.mocked(addCandidateAction).mockResolvedValue({ success: true, data: {} as never })
         const onClose = renderModal()

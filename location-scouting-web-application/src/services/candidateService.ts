@@ -1,10 +1,12 @@
 import {ErrorCode, fail, ok, Result} from "@/schemas/result";
-import {Candidate, LocationStatus, Prisma} from "@prisma/client";
+import {Candidate, LocationStatus, Photo, Prisma} from "@prisma/client";
 import { prisma as defaultPrisma } from '@/lib/prisma'
 import { z } from 'zod'
 import {CreateCandidateSchema} from "@/schemas/candidateSchema"
 import {createLogger} from "@/lib/logger";
 import {guard, isRecordNotFound, isUniqueViolation} from "@/services/serviceResult";
+import {PhotoWithUrl, withPhotoUrls} from "@/services/photoService";
+import {ObjectStore} from "@/infrastructure/storage";
 
 const logger = createLogger('candidateService')
 
@@ -15,7 +17,12 @@ const candidateInclude = {
     photos: { include: { photo: true } }
 } satisfies Prisma.CandidateInclude
 
-export type CandidateWithDetails = Prisma.CandidateGetPayload<{ include: typeof candidateInclude }>
+type CandidateRow = Prisma.CandidateGetPayload<{ include: typeof candidateInclude }>
+type CandidatePhotoRow = CandidateRow['photos'][number]
+
+export type CandidateWithDetails = Omit<CandidateRow, 'photos'> & {
+    photos: (Omit<CandidatePhotoRow, 'photo'> & { photo: PhotoWithUrl<Photo> })[]
+}
 
 // A candidate links a scene and a location, so the user must own both parents:
 // the scene's project and the location.
@@ -64,7 +71,7 @@ export async function createCandidate(
 export async function getCandidatesForScene(
     userId: string,
     sceneId: string,
-    options?: {db?: typeof defaultPrisma}
+    options?: {db?: typeof defaultPrisma, objectStore?: ObjectStore}
 ) : Promise<Result<CandidateWithDetails[]>> {
     const db = options?.db ?? defaultPrisma
 
@@ -73,7 +80,19 @@ export async function getCandidatesForScene(
             where: { sceneId, ...ownedBy(userId) },
             include: candidateInclude
         })
-        return ok(candidates)
+
+        const photos = await withPhotoUrls(
+            userId,
+            candidates.flatMap(candidate => candidate.photos.map(candidatePhoto => candidatePhoto.photo)),
+            { objectStore: options?.objectStore }
+        )
+        if (!photos.success) return photos
+        const photoById = new Map(photos.data.map(photo => [photo.id, photo]))
+
+        return ok(candidates.map(candidate => ({
+            ...candidate,
+            photos: candidate.photos.map(candidatePhoto => ({ ...candidatePhoto, photo: photoById.get(candidatePhoto.photoId)! }))
+        })))
     })
 }
 

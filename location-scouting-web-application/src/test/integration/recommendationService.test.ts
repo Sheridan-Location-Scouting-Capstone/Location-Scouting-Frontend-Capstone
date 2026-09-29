@@ -69,7 +69,6 @@ async function addPhotos(locationId: string, count: number) {
     for (let i = 0; i < count; i++) {
         await prisma.photo.create({
             data: {
-                url: `http://minio/test-${i}.jpg`,
                 storageKey: `test-${locationId}-${i}`,
                 locationId,
             },

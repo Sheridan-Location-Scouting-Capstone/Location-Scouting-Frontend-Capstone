@@ -5,7 +5,7 @@ import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers'
 import { execSync } from 'node:child_process'
 
 let pg: StartedPostgreSqlContainer
-let minio: StartedTestContainer
+let garage: StartedTestContainer
 let externalMocks: StartedTestContainer | undefined
 
 const reuse = process.env.TESTCONTAINERS_REUSE === 'true'
@@ -13,7 +13,7 @@ const reuse = process.env.TESTCONTAINERS_REUSE === 'true'
 // Fixed host ports so the connection strings are knowable before anything starts.
 // This is what lets the Playwright webServer and the test process agree on a DB.
 const PG_HOST_PORT = 15432
-const MINIO_HOST_PORT = 19000
+const GARAGE_HOST_PORT = 13900
 export const EXTERNAL_MOCKS_HOST_PORT = 18089
 export const EXTERNAL_MOCKS_URL = `http://localhost:${EXTERNAL_MOCKS_HOST_PORT}`
 
@@ -36,6 +36,22 @@ export function externalServiceMockEnv() {
     }
 }
 
+/**
+ * Object storage settings for the Garage test container. Garage creates this key and bucket when it starts, and the
+ * app and the tests both reach it on localhost, so the internal and public endpoints are the same.
+ */
+export function objectStoreTestEnv() {
+    const url = `http://localhost:${GARAGE_HOST_PORT}`
+    return {
+        OBJECT_STORE_ENDPOINT: url,
+        OBJECT_STORE_PUBLIC_ENDPOINT: url,
+        OBJECT_STORE_REGION: 'garage',
+        OBJECT_STORE_BUCKET: 'location-photos-test',
+        OBJECT_STORE_ACCESS_KEY_ID: 'GKtestaccesskey',
+        OBJECT_STORE_SECRET_ACCESS_KEY: 'test-secret-key-not-for-production',
+    }
+}
+
 export async function startContainers() {
     const pgBuilder = new PostgreSqlContainer('postgres:16-alpine')
         .withDatabase('location_scouting_test')
@@ -43,14 +59,19 @@ export async function startContainers() {
         .withPassword('postgres')
         .withExposedPorts({ container: 5432, host: PG_HOST_PORT })
 
-    const minioBuilder = new GenericContainer('minio/minio')
-        .withCommand(['server', '/data'])
+    const storage = objectStoreTestEnv()
+    const garageBuilder = new GenericContainer('dxflrs/garage:v2.4.1')
+        .withCopyFilesToContainer([{ source: path.join(__dirname, '../../garage/garage.toml'), target: '/etc/garage.toml' }])
         .withEnvironment({
-            MINIO_ROOT_USER: 'minioadmin',
-            MINIO_ROOT_PASSWORD: 'minioadmin',
+            GARAGE_RPC_SECRET: 'a'.repeat(64),
+            GARAGE_DEFAULT_ACCESS_KEY: storage.OBJECT_STORE_ACCESS_KEY_ID,
+            GARAGE_DEFAULT_SECRET_KEY: storage.OBJECT_STORE_SECRET_ACCESS_KEY,
+            GARAGE_DEFAULT_BUCKET: storage.OBJECT_STORE_BUCKET,
         })
-        .withExposedPorts({ container: 9000, host: MINIO_HOST_PORT })
-        .withWaitStrategy(Wait.forHttp('/minio/health/live', 9000).forStatusCode(200))
+        .withCommand(['/garage', 'server', '--single-node', '--default-bucket'])
+        .withExposedPorts({ container: 3900, host: GARAGE_HOST_PORT }, 3903)
+        // The key and bucket already exist by the time the admin API reports healthy
+        .withWaitStrategy(Wait.forHttp('/health', 3903))
 
     const mocksBuilder = new GenericContainer('wiremock/wiremock:3.13.1')
         .withCopyDirectoriesToContainer([{ source: path.join(__dirname, '../../mocks/wiremock'), target: '/home/wiremock' }])
@@ -58,9 +79,9 @@ export async function startContainers() {
         .withExposedPorts({ container: 8080, host: EXTERNAL_MOCKS_HOST_PORT })
         .withWaitStrategy(Wait.forHttp('/__admin/health', 8080))
 
-    ;[pg, minio, externalMocks] = await Promise.all([
+    ;[pg, garage, externalMocks] = await Promise.all([
         (reuse ? pgBuilder.withReuse() : pgBuilder).start(),
-        (reuse ? minioBuilder.withReuse() : minioBuilder).start(),
+        (reuse ? garageBuilder.withReuse() : garageBuilder).start(),
         externalServiceMocksEnabled() ? (reuse ? mocksBuilder.withReuse() : mocksBuilder).start() : undefined,
     ])
 
@@ -69,11 +90,8 @@ export async function startContainers() {
 
     process.env.DATABASE_URL = databaseUrl
     process.env.TEST_DATABASE_URL = databaseUrl
-    process.env.MINIO_ENDPOINT = 'localhost'
-    process.env.MINIO_PORT = String(MINIO_HOST_PORT)
-    process.env.MINIO_ACCESS_KEY = 'minioadmin'
-    process.env.MINIO_SECRET_KEY = 'minioadmin'
-    process.env.MINIO_TEST_BUCKET = 'location-photos-test'
+    // Set before the test workers start, so the .env values they load can't replace them
+    Object.assign(process.env, storage)
     if (externalMocks) {
         // Set before the test workers start, so the .env values they load can't replace them
         Object.assign(process.env, externalServiceMockEnv())
@@ -86,7 +104,7 @@ export async function startContainers() {
 
     return async () => {
         if (reuse) return
-        await Promise.all([minio.stop(), pg.stop(), externalMocks?.stop()])
+        await Promise.all([garage.stop(), pg.stop(), externalMocks?.stop()])
     }
 }
 

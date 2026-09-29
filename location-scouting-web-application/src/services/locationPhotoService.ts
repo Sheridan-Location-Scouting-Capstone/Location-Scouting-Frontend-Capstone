@@ -1,5 +1,5 @@
 import {LocationStatus, Photo, PrismaClient} from "@prisma/client";
-import {defaultBucket, deletePhoto, uploadPhotos} from "@/services/photoService";
+import {deletePhotos, storePhotos} from "@/services/photoService";
 import {detectLabels, LabelDetector} from "@/services/visionService";
 import {ErrorCode, fail, ok, Result} from "@/schemas/result";
 import {PhotoUploadInput} from "@/schemas/photoUploadInput";
@@ -7,6 +7,7 @@ import {prisma} from "@/lib/prisma";
 import { PhotoUpdateInput } from "@/schemas/photoUpdateInput";
 import {createLogger} from "@/lib/logger";
 import {guard, isRecordNotFound} from "@/services/serviceResult";
+import {getObjectStore, ObjectStore} from "@/infrastructure/storage";
 
 const logger = createLogger('locationPhotoService')
 
@@ -26,33 +27,42 @@ export async function addPhotosToLocation(
     userId: string,
     locationId: string,
     photoInput: PhotoUploadInput[],
-    options?: { db?: PrismaClient, bucket?: string, labelDetector?: LabelDetector }):
+    options?: { db?: PrismaClient, objectStore?: ObjectStore, labelDetector?: LabelDetector }):
     Promise<Result<Photo[]>>
 {
     const db = options?.db ?? prisma
-    const bucket = options?.bucket ?? defaultBucket
     const labelDetector = options?.labelDetector ?? detectLabels
 
     return guard(logger, `add photos to location ${locationId}`, async () => {
+        const objectStore = options?.objectStore ?? getObjectStore()
+
         if (!await userOwnsLocation(db, userId, locationId)) {
             return locationNotFound()
         }
 
-        const uploadedPhotos = await uploadPhotos(photoInput, bucket)
+        const stored = await storePhotos(photoInput, { objectStore })
+        if (!stored.success) return stored
+        const keys = stored.data
 
-        const existingCount = await db.photo.count({
-            where: { locationId }
-        })
+        let result: Photo[]
+        try {
+            const existingCount = await db.photo.count({
+                where: { locationId }
+            })
 
-        const result = await db.photo.createManyAndReturn({
-            data: uploadedPhotos.map((result, index) => ({
-                name: photoInput[index].name || photoInput[index].filename,
-                url: result.url,
-                storageKey: result.key,
-                locationId: locationId,
-                displayOrder: photoInput[index].displayOrder ?? (existingCount + index)
-            }))
-        })
+            result = await db.photo.createManyAndReturn({
+                data: keys.map((key, index) => ({
+                    name: photoInput[index].name || photoInput[index].filename,
+                    storageKey: key,
+                    locationId: locationId,
+                    displayOrder: photoInput[index].displayOrder ?? (existingCount + index)
+                }))
+            })
+        } catch (error) {
+            // Don't leave files in storage that no photo row points to
+            await deletePhotos(keys, { objectStore })
+            throw error
+        }
 
         // Best-effort: a detector that fails returns no labels, so it never undoes a successful upload
         const labelsPerPhoto = await Promise.all(photoInput.map(photo => labelDetector(photo.buffer)))
@@ -77,12 +87,13 @@ export async function removePhotosFromLocation(
     userId: string,
     locationId: string,
     photoIds: string[],
-    options?: { db?: PrismaClient, bucket?: string }): Promise<Result<void>>
+    options?: { db?: PrismaClient, objectStore?: ObjectStore }): Promise<Result<void>>
 {
     const db = options?.db ?? prisma
-    const bucket = options?.bucket ?? defaultBucket
 
     return guard(logger, `remove photos from location ${locationId}`, async () => {
+        const objectStore = options?.objectStore ?? getObjectStore()
+
         if (!await userOwnsLocation(db, userId, locationId)) {
             return locationNotFound()
         }
@@ -102,7 +113,10 @@ export async function removePhotosFromLocation(
             })
         }
 
-        await Promise.all(photos.map(photo => deletePhoto(photo.storageKey, bucket)))
+        // Files first: if storage fails, the rows stay and the delete can simply be retried
+        const deleted = await deletePhotos(photos.map(photo => photo.storageKey), { objectStore })
+        if (!deleted.success) return deleted
+
         await db.photo.deleteMany({
             where: {
                 id: {in: photos.map(p => p.id)},

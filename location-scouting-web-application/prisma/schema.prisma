@@ -50,7 +50,7 @@ model Location {
 model Photo {
   id         String  @id @default(cuid())
   name       String?
-  url        String
+  // Object storage key. Clients never get it: they get a presigned URL (see services/photoService.ts withPhotoUrls)
   storageKey String
 
   displayOrder Int @default(0)

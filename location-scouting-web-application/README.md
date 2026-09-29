@@ -49,6 +49,23 @@ Note: schemas in Next/React.Js are equivalent to DOAs (Data Objects), and they a
 - `docker build`
 - Run container from *Docker GUI*
 
+## Object storage (Garage)
+Photos are stored in [Garage](https://garagehq.deuxfleurs.fr/), an S3-compatible object store, run by the `garage`
+service in `docker-compose.yml` (config: `garage/garage.toml`). It replaces MinIO.
+- Copy the `OBJECT_STORE_*` and `GARAGE_RPC_SECRET` lines from `.env.example` into `.env`. On its first start Garage
+  creates the access key and bucket named there.
+- The bucket is private. The database stores each photo's object key, and the server hands clients a presigned URL
+  that expires after `PHOTO_URL_TTL_SECONDS` (an hour by default). The server refuses to start if the storage settings
+  are missing or invalid.
+- Presigned URLs only work from the host they were signed for, `OBJECT_STORE_PUBLIC_ENDPOINT`. To view photos from a
+  phone or emulator, set it to an address the device can reach (e.g. your machine's LAN IP).
+- Garage won't start if `OBJECT_STORE_SECRET_ACCESS_KEY` changes after its first start. Reset its data to pick up new
+  values: `docker compose rm -sf garage && docker volume rm location-scouting-web-application_garage_data`
+  (`docker volume ls` shows the exact name).
+- Coming from MinIO: no files carry over, so existing photo rows point at nothing. Reset the dev database
+  (`npx prisma migrate reset`) or delete those locations, and remove the old container and volume
+  (`docker rm -f location-scouting-minio`, then the volume ending in `_minio_data`).
+
 ## Prisma Setup
 - `npx prisma generate`
 - `npx prisma migrate deploy`
