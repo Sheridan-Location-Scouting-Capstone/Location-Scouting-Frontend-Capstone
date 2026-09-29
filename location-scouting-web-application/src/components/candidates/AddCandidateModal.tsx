@@ -1,6 +1,6 @@
 'use client'
 
-/* eslint-disable @next/next/no-img-element -- photos are served from MinIO at runtime-configured hosts */
+/* eslint-disable @next/next/no-img-element -- photos are presigned object storage URLs that change as they're re-signed; next/image would re-optimize every new signature */
 import { useState, useMemo } from 'react'
 import {
     Alert,

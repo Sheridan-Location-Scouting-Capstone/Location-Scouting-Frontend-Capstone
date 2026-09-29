@@ -371,6 +371,27 @@ describe('Location Services', () => {
             expect(result.photos[1].locationId).toBe(createdLocation.id)
         })
 
+        it('should give each photo a presigned URL in place of its storage key', async () => {
+            // Arrange
+            const user = await signUpSetup()
+            const location = expectSuccess(await createLocation(user.userId, buildLocationInput(), {
+                db: prisma,
+                photoInput: [{ buffer: Buffer.from('front bytes'), filename: 'front.jpg', mimeType: 'image/jpeg' }],
+            }))
+
+            // Act
+            const result = expectSuccess(await getLocationWithPhotos(user.userId, location.id, { db: prisma }))
+
+            // Assert
+            const [photo] = result.photos
+            expect(photo).not.toHaveProperty('storageKey')
+            expect(photo.url.startsWith(`${process.env.OBJECT_STORE_PUBLIC_ENDPOINT}/`)).toBe(true)
+            expect(photo.urlExpiresAt.getTime()).toBeGreaterThan(Date.now())
+            const response = await fetch(photo.url)
+            expect(response.status).toBe(200)
+            expect(await response.text()).toBe('front bytes')
+        })
+
         it('should return an empty photos array if location has no associated photos', async () => {
             // Arrange
             const locationInput = {
@@ -704,6 +725,25 @@ describe('Location Services', () => {
             expect(locationNames).toContain(activeLocationInput.name)
             expect(locationNames).toContain(secondActiveLocationInput.name)
             expect(locationNames).not.toContain(deletedLocation.name)
+        })
+
+        it('should include only the first photo, as a cover with a presigned URL', async () => {
+            // Arrange
+            const user = await signUpSetup()
+            const location = expectSuccess(await createLocation(user.userId, buildLocationInput(), { db: prisma }))
+            expectSuccess(await addPhotosToLocation(user.userId, location.id, [
+                { buffer: Buffer.from('cover bytes'), filename: 'cover.jpg', mimeType: 'image/jpeg', displayOrder: 0 },
+                { buffer: Buffer.from('other bytes'), filename: 'other.jpg', mimeType: 'image/jpeg', displayOrder: 1 },
+            ], { db: prisma, labelDetector: async () => [] }))
+
+            // Act
+            const [result] = expectSuccess(await getLocations(user.userId, { db: prisma }))
+
+            // Assert
+            expect(result.photos).toHaveLength(1)
+            expect(result.photos[0].name).toBe('cover.jpg')
+            expect(result.photos[0]).not.toHaveProperty('storageKey')
+            expect(await (await fetch(result.photos[0].url)).text()).toBe('cover bytes')
         })
     })
 

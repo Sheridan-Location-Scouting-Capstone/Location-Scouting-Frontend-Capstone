@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, it, vi } from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {createLocation, deleteLocationById} from "@/services/locationService";
 import {prisma} from "@/test/setup";
 import {
@@ -12,6 +12,7 @@ import {expectFailure, expectSuccess} from "@/test/helpers/result";
 import {buildLocationInput} from "@/test/helpers/builders";
 import {ErrorCode} from "@/schemas/result";
 import {LabelDetector} from "@/services/visionService";
+import {listTestBucket} from "@/test/helpers/testBucket";
 
 describe('Location Photo Service', () => {
     let userId: string
@@ -19,6 +20,10 @@ describe('Location Photo Service', () => {
     beforeEach(async () => {
         const user = await signUpSetup()
         userId = user.userId
+    })
+
+    afterEach(() => {
+        vi.restoreAllMocks()
     })
 
     describe('addPhotosToLocation', async() => {
@@ -128,6 +133,21 @@ describe('Location Photo Service', () => {
 
             // Assert
             expect(result.code).toBe(ErrorCode.NOT_FOUND)
+        })
+
+        it('should remove the uploaded files when the photo rows cannot be saved', async () => {
+            // Arrange
+            vi.spyOn(prisma.photo, 'createManyAndReturn').mockRejectedValueOnce(new Error('database unavailable'))
+            vi.spyOn(console, 'error').mockImplementation(() => {})
+
+            // Act
+            const result = expectFailure(await addPhotosToLocation(userId, locationId, [
+                { buffer: Buffer.from('photo'), filename: 'a.jpg', mimeType: 'image/jpeg' }
+            ], { db: prisma }))
+
+            // Assert
+            expect(result.code).toBe(ErrorCode.INTERNAL_SERVER_ERROR)
+            expect(await listTestBucket()).toEqual([])
         })
     })
 
@@ -241,6 +261,21 @@ describe('Location Photo Service', () => {
             const remaining = await prisma.photo.findMany({ where: { locationId: location.id } })
             expect(remaining).toHaveLength(1)
             expect(remaining[0].id).toBe(photos[1].id)
+        })
+
+        it('should delete the removed photos\' files from storage', async () => {
+            // Arrange
+            const location = expectSuccess(await createLocation(userId, buildLocationInput(), { db: prisma }))
+            const photos = expectSuccess(await addPhotosToLocation(userId, location.id, [
+                { buffer: Buffer.from('photo1'), filename: 'first.jpg', mimeType: 'image/jpeg' },
+                { buffer: Buffer.from('photo2'), filename: 'second.jpg', mimeType: 'image/jpeg' },
+            ], { db: prisma }))
+
+            // Act
+            expectSuccess(await removePhotosFromLocation(userId, location.id, [photos[0].id], { db: prisma }))
+
+            // Assert
+            expect(await listTestBucket()).toEqual([photos[1].storageKey])
         })
     })
 

@@ -4,7 +4,7 @@ import {given} from "@/test/preconditions";
 import {Page} from "@playwright/test";
 import {createLocation} from "@/services/locationService";
 import {buildLocationInput} from "@/test/helpers/builders";
-import { prisma } from '@/test/setup'
+import { prisma } from '@/test/testDatabase'
 import {KeywordGenerator} from "@/services/keywordGenerator";
 import {Geocoder} from "@/schemas/geocoder";
 import {PrismaClient} from "@prisma/client";

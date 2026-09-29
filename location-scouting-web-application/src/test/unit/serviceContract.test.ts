@@ -22,13 +22,14 @@ type DomainServices = {
     keywordGenerator: typeof import('@/services/keywordGenerator')
     locationPhotoService: typeof import('@/services/locationPhotoService')
     locationService: typeof import('@/services/locationService')
+    photoService: typeof import('@/services/photoService')
     productionService: typeof import('@/services/productionService')
     recommendationService: typeof import('@/services/recommendationService')
     sceneService: typeof import('@/services/sceneService')
 }
 
 // Not domain services: infrastructure adapters, pure scoring maths, and the Result plumbing itself
-const EXEMPT = ['geocodingService', 'photoService', 'scoringService', 'serviceResult', 'visionService']
+const EXEMPT = ['geocodingService', 'scoringService', 'serviceResult', 'visionService']
 
 const CHECKED: Record<keyof DomainServices, true> = {
     analyticsService: true,
@@ -36,6 +37,7 @@ const CHECKED: Record<keyof DomainServices, true> = {
     keywordGenerator: true,
     locationPhotoService: true,
     locationService: true,
+    photoService: true,
     productionService: true,
     recommendationService: true,
     sceneService: true,
@@ -48,6 +50,7 @@ describe('Service layer contract', () => {
         expectTypeOf<NonResultExports<DomainServices['keywordGenerator']>>().toEqualTypeOf<never>()
         expectTypeOf<NonResultExports<DomainServices['locationPhotoService']>>().toEqualTypeOf<never>()
         expectTypeOf<NonResultExports<DomainServices['locationService']>>().toEqualTypeOf<never>()
+        expectTypeOf<NonResultExports<DomainServices['photoService']>>().toEqualTypeOf<never>()
         expectTypeOf<NonResultExports<DomainServices['productionService']>>().toEqualTypeOf<never>()
         expectTypeOf<NonResultExports<DomainServices['recommendationService']>>().toEqualTypeOf<never>()
         expectTypeOf<NonResultExports<DomainServices['sceneService']>>().toEqualTypeOf<never>()

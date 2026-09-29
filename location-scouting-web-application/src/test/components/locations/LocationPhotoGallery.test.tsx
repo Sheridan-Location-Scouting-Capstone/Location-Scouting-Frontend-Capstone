@@ -13,9 +13,9 @@ vi.mock('@/actions/locationActions', () => ({
 }))
 
 const photos: GalleryPhoto[] = [
-    { id: 'p1', name: 'Front', url: 'http://minio/front.jpg', displayOrder: 0 },
-    { id: 'p2', name: 'Back', url: 'http://minio/back.jpg', displayOrder: 1 },
-    { id: 'p3', name: 'Side', url: 'http://minio/side.jpg', displayOrder: 2 },
+    { id: 'p1', name: 'Front', url: 'https://storage.test/front.jpg', displayOrder: 0 },
+    { id: 'p2', name: 'Back', url: 'https://storage.test/back.jpg', displayOrder: 1 },
+    { id: 'p3', name: 'Side', url: 'https://storage.test/side.jpg', displayOrder: 2 },
 ]
 
 const preview = () => screen.getByTestId('gallery-preview')
@@ -41,13 +41,13 @@ describe('LocationPhotoGallery', () => {
         // Arrange
         const user = userEvent.setup()
         render(<LocationPhotoGallery photos={photos} locationId="loc-1" />)
-        expect(preview()).toHaveAttribute('src', 'http://minio/front.jpg')
+        expect(preview()).toHaveAttribute('src', 'https://storage.test/front.jpg')
 
         // Act
         await user.click(screen.getByAltText('Side'))
 
         // Assert
-        expect(preview()).toHaveAttribute('src', 'http://minio/side.jpg')
+        expect(preview()).toHaveAttribute('src', 'https://storage.test/side.jpg')
     })
 
     it('should keep previewing the selected photo when the photos arrive in a new order', async () => {
@@ -60,7 +60,7 @@ describe('LocationPhotoGallery', () => {
         rerender(<LocationPhotoGallery photos={[photos[2], photos[1], photos[0]]} locationId="loc-1" />)
 
         // Assert - selection follows the photo, not its old position
-        expect(preview()).toHaveAttribute('src', 'http://minio/side.jpg')
+        expect(preview()).toHaveAttribute('src', 'https://storage.test/side.jpg')
         const sideThumbnail = screen.getAllByTestId('gallery-thumbnail').find((thumbnail) => within(thumbnail).queryByAltText('Side'))
         expect(sideThumbnail).toHaveAttribute('aria-selected', 'true')
     })
@@ -107,7 +107,7 @@ describe('LocationPhotoGallery', () => {
 
         // Assert
         expect(await screen.findByText('Location not found')).toBeInTheDocument()
-        expect(preview()).toHaveAttribute('src', 'http://minio/front.jpg')
+        expect(preview()).toHaveAttribute('src', 'https://storage.test/front.jpg')
     })
 
     it('should upload chosen files, and allow the same file to be chosen again', async () => {

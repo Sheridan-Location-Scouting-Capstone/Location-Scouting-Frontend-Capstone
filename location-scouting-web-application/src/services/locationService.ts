@@ -1,10 +1,11 @@
 import { prisma as defaultPrisma} from '@/lib/prisma'
-import {$Enums, Location, Prisma, PrismaClient} from "@prisma/client";
+import {$Enums, Location, Photo, Prisma, PrismaClient} from "@prisma/client";
 import {CreateLocationScheme, UpdateLocationScheme} from "@/schemas/locationSchema";
 import {Geocoder} from "@/schemas/geocoder";
 import {defaultGeocoder} from "@/services/geocodingService";
 import {PhotoUploadInput} from "@/schemas/photoUploadInput";
-import { defaultBucket } from "@/services/photoService";
+import {PhotoWithUrl, withPhotoUrls} from "@/services/photoService";
+import {ObjectStore} from "@/infrastructure/storage";
 import LocationStatus = $Enums.LocationStatus;
 import {addPhotosToLocation} from "@/services/locationPhotoService";
 import { z } from 'zod';
@@ -21,14 +22,14 @@ export async function createLocation(
         db?: PrismaClient
         geocoder?: Geocoder
         photoInput?: PhotoUploadInput[]
-        bucket?: string
+        objectStore?: ObjectStore
     }
 ): Promise<Result<Location>> {
     // Default settings
     const db = options?.db ?? defaultPrisma
     const geocoder = options?.geocoder ?? defaultGeocoder
     const photoInput = options?.photoInput
-    const bucket = options?.bucket ?? defaultBucket
+    const objectStore = options?.objectStore
 
     if (options?.photoInput && options.photoInput.length > 500) {
         return fail(ErrorCode.LIMIT_EXCEEDED, 'Maximum 500 photos per location')
@@ -72,7 +73,7 @@ export async function createLocation(
             .catch((error) => logger.warn(`Failed to geocode location ${location.id}`, error))
 
         if(photoInput?.length) {
-            const photos = await addPhotosToLocation(userId, location.id, photoInput, { db, bucket })
+            const photos = await addPhotosToLocation(userId, location.id, photoInput, { db, objectStore })
             if (!photos.success) {
                 return fail(photos.code, `The location was saved, but its photos could not be uploaded: ${photos.error}`)
             }
@@ -102,12 +103,12 @@ const withPhotos = {
     photos: { orderBy: { displayOrder: 'asc' } }
 } satisfies Prisma.LocationInclude
 
-export type LocationWithPhotos = Prisma.LocationGetPayload<{ include: typeof withPhotos }>
+export type LocationWithPhotos = Location & { photos: PhotoWithUrl<Photo>[] }
 
 export async function getLocationWithPhotos(
     userId: string,
     id: string,
-    options?: { db?: PrismaClient }
+    options?: { db?: PrismaClient, objectStore?: ObjectStore }
 ): Promise<Result<LocationWithPhotos>> {
     const db = options?.db ?? defaultPrisma
 
@@ -119,7 +120,10 @@ export async function getLocationWithPhotos(
         if (!location) {
             return fail(ErrorCode.NOT_FOUND, 'Location not found')
         }
-        return ok(location)
+
+        const photos = await withPhotoUrls(userId, location.photos, { objectStore: options?.objectStore })
+        if (!photos.success) return photos
+        return ok({ ...location, photos: photos.data })
     })
 }
 
@@ -212,12 +216,14 @@ const withCoverPhoto = {
     photos: { orderBy: { displayOrder: 'asc' }, take: 1 }
 } satisfies Prisma.LocationInclude
 
-export type LocationWithCoverPhoto = Prisma.LocationGetPayload<{ include: typeof withCoverPhoto }>
+/** A location with at most one photo, its cover */
+export type LocationWithCoverPhoto = Location & { photos: PhotoWithUrl<Photo>[] }
 
 export async function getLocations(
     userId: string,
     options?: {
         db?: PrismaClient
+        objectStore?: ObjectStore
         query?: string
         keywords?: string[]
     }
@@ -238,9 +244,20 @@ export async function getLocations(
         where.keywords = { hasSome: options.keywords }
     }
 
-    return guard(logger, 'get locations', async () => ok(await db.location.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        include: withCoverPhoto
-    })))
+    return guard(logger, 'get locations', async () => {
+        const locations = await db.location.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            include: withCoverPhoto
+        })
+
+        const covers = await withPhotoUrls(userId, locations.flatMap(location => location.photos), { objectStore: options?.objectStore })
+        if (!covers.success) return covers
+        const coverById = new Map(covers.data.map(cover => [cover.id, cover]))
+
+        return ok(locations.map(location => ({
+            ...location,
+            photos: location.photos.map(photo => coverById.get(photo.id)!)
+        })))
+    })
 }

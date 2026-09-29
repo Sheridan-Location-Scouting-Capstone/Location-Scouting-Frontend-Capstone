@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { prisma } from '@/test/setup'
 import { revalidatePath } from 'next/cache'
 import { LocationStatus } from '@prisma/client'
@@ -16,7 +16,6 @@ import {
     updatePhotoNameAction,
 } from '@/actions/locationActions'
 import { createLocation } from '@/services/locationService'
-import { defaultBucket, ensureBucketExists } from '@/services/photoService'
 import { signUpSetup } from '@/test/e2e/fixtures'
 import { expectFailure, expectSuccess } from '@/test/helpers/result'
 import { buildLocationInput } from '@/test/helpers/builders'
@@ -33,7 +32,7 @@ const mockGeocoder: Geocoder = async () => ({ lat: 43.6532, lng: -79.3832 })
 // Photo rows are seeded directly rather than uploaded, so these tests don't depend on the Vision API
 async function seedPhoto(locationId: string, name: string, displayOrder: number) {
     return prisma.photo.create({
-        data: { locationId, name, displayOrder, url: `http://minio/${name}`, storageKey: `seed-${locationId}-${name}` }
+        data: { locationId, name, displayOrder, storageKey: `seed-${locationId}-${name}` }
     })
 }
 
@@ -41,11 +40,6 @@ describe('Location Actions', () => {
     let ownerId: string
     let intruderId: string
     let locationId: string
-
-    beforeAll(async () => {
-        // deletePhotoAction removes objects from the app's default bucket
-        await ensureBucketExists(defaultBucket)
-    })
 
     beforeEach(async () => {
         vi.clearAllMocks()
