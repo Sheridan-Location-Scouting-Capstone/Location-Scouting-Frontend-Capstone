@@ -165,7 +165,7 @@ export async function updateLocation(
         }
 
         // Only re-geocode when the address changed, and always from the full saved address
-        const addressChanged = ADDRESS_FIELDS.some(field => updates[field] !== undefined)
+        const addressChanged : boolean = ADDRESS_FIELDS.some(field => updates[field] !== undefined)
         if (addressChanged) {
             geocoder(formatGeocodingAddress(updatedLocation))
                 .then(async coords => {

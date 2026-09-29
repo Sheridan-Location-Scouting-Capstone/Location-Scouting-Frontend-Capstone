@@ -61,5 +61,6 @@ export async function scoreCandidatesAction(sceneId: string): Promise<Result<Rec
 export async function getRecommendationsAction(sceneId: string) {
     const user = await requireUser()
     const result = await getRecommendations(user.id, sceneId)
+    if(!result.success) return result
     return result
 }

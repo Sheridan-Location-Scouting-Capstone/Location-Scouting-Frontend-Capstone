@@ -130,6 +130,7 @@ export async function scoreCandidates(
             by: ['locationId'],
             where: {
                 locationId: { in: locationIds },
+                sceneId: { not: sceneId },
                 scene: { project: { userId } },
                 selected: true,
             },

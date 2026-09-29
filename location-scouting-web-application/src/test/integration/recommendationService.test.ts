@@ -4,6 +4,7 @@ import { getRecommendations, scoreCandidates } from '@/services/recommendationSe
 import { signUpSetup } from '@/test/e2e/fixtures'
 import { expectFailure, expectSuccess } from '@/test/helpers/result'
 import { ErrorCode } from '@/schemas/result'
+import {toggleCandidateSelected} from "@/services/candidateService";
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -407,6 +408,55 @@ describe('scoreCandidates', () => {
         if (!result.success) return
         expect(result.data.size).toBe(0)
     })
+
+    it('ignores a locations selection for the scene being scored', async () => {
+        // Arrange
+        const project = await createProject()
+        const scene = await createScene(project.id, { keywords: ['kitchen'] })
+        const location = await createLocation({ name: 'Loc', keywords: ['kitchen'] })
+        const candidate = await createCandidate(scene.id, location.id, false)
+        const result = expectSuccess(await scoreCandidates(userId, scene.id,{ db: prisma }))
+        const scoreBeforeSelection = result.get(candidate.id);
+
+
+        // Act
+        expectSuccess(await toggleCandidateSelected(userId, candidate.id, true,{ db: prisma }))
+
+        const scoreAfterSelection = expectSuccess(await scoreCandidates(userId, scene.id,{ db: prisma })).get(candidate.id);
+
+        // Assert
+        expect(scoreBeforeSelection).toBeDefined();
+        expect(scoreAfterSelection).toBeDefined();
+        expect(scoreBeforeSelection).toEqual(scoreAfterSelection);
+    })
+
+    it('counts selections of the location for other scenes', async () => {
+        // Arrange
+        const project = await createProject()
+        const scene1 = await createScene(project.id, { keywords: ['kitchen'] })
+        const scene2 = await createScene(project.id, { keywords: ['kitchen'] })
+        const location = await createLocation({ name: 'Loc', keywords: ['kitchen'] })
+        const candidate1 = await createCandidate(scene1.id, location.id, true)
+        const candidate2 = await createCandidate(scene2.id, location.id, false)
+
+        const resultBeforeSelection = expectSuccess(await scoreCandidates(userId, scene2.id,{ db: prisma }))
+        const scoreBeforeSelection = resultBeforeSelection.get(candidate2.id);
+
+        // Act
+        expectSuccess(await toggleCandidateSelected(userId, candidate1.id, true,{ db: prisma }))
+
+        const resultAfterSelection = expectSuccess(await scoreCandidates(userId, scene2.id,{ db: prisma }))
+        const scoreAfterSelection = resultAfterSelection.get(candidate2.id);
+
+        // Assert
+        expect(scoreBeforeSelection).toBeDefined();
+        expect(scoreAfterSelection).toBeDefined();
+        if (scoreBeforeSelection === undefined || scoreAfterSelection === undefined) {
+            throw new Error('Scores should not be undefined');
+        }
+        expect(scoreAfterSelection).toBeGreaterThan(scoreBeforeSelection);
+    })
+
 })
 
 // ─── User isolation ─────────────────────────────────────────
