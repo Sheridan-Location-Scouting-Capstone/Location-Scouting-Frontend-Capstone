@@ -483,6 +483,34 @@ describe('scoreCandidates', () => {
         expect(scoreAfterUnselection).toBeLessThan(scoreBeforeUnselection);
     })
 
+    it('counts selections for a location for other scenes in other projects', async () => {
+        // Arrange
+        const project1 = await createProject()
+        const project2 = await createProject()
+        const scene1 = await createScene(project1.id, { keywords: ['kitchen'] })
+        const scene2 = await createScene(project2.id, { keywords: ['kitchen'] })
+
+        const location = await createLocation({ name: 'Location', keywords: ['kitchen'] })
+
+        // Create both of the candidates, unselected
+        const candidate1 = await createCandidate(scene1.id, location.id, false);
+        const candidate2 = await createCandidate(scene2.id, location.id, false);
+
+        const scoreBeforeSelection = expectSuccess(await scoreCandidates(userId, scene2.id, { db: prisma })).get(candidate2.id);
+
+        // Act
+        expectSuccess(await toggleCandidateSelected(userId, candidate1.id, true, { db: prisma }))
+        const scoreAfterSelection = expectSuccess(await scoreCandidates(userId, scene2.id, { db: prisma })).get(candidate2.id);
+
+        // Assert
+        expect(scoreBeforeSelection).toBeDefined();
+        expect(scoreAfterSelection).toBeDefined();
+        if(scoreBeforeSelection === undefined || scoreAfterSelection === undefined) {
+            throw new Error('Scores should not be undefined');
+        }
+        expect(scoreAfterSelection).toBeGreaterThan(scoreBeforeSelection)
+    })
+
 })
 
 // ─── User isolation ─────────────────────────────────────────
