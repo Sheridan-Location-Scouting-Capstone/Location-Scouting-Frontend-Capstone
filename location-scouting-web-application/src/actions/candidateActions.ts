@@ -6,7 +6,7 @@ import {
     getCandidatesForScene,
     createCandidate,
     removeCandidateFromScene,
-    toggleCandidateSelected,
+    toggleCandidateSelected, getCandidateWithLocationByCandidateId,
 } from '@/services/candidateService'
 import {getRecommendations, scoreCandidates} from "@/services/recommendationService";
 import {requireUser} from "@/lib/auth-session";
@@ -22,6 +22,11 @@ export async function getCandidatesAction(sceneId: string) {
 export async function getCandidateAction(candidateId: string) {
     const user = await requireUser()
     return await getCandidateById(user.id, candidateId)
+}
+
+export async function getCandidateWithLocationAction(candidateId: string) {
+    const user = await requireUser()
+    return await getCandidateWithLocationByCandidateId(user.id, candidateId)
 }
 
 export async function addCandidateAction(sceneId: string, locationId: string, projectId: string, photoIds: string[]) {

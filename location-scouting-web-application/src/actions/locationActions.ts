@@ -33,6 +33,11 @@ export async function getLocationAction(id: string) {
   return await getLocationWithPhotos(user.id, id)
 }
 
+export async function getLocationWithNoPhotosAction(id: string) {
+  const user = await requireUser()
+  return await getLocationById(user.id, id)
+}
+
 // ─── Create ─────────────────────────────────────────────────
 
 export async function createLocationAction(formData: FormData) {

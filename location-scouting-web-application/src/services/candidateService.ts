@@ -7,6 +7,7 @@ import {createLogger} from "@/lib/logger";
 import {guard, isRecordNotFound, isUniqueViolation} from "@/services/serviceResult";
 import {PhotoWithUrl, withPhotoUrls} from "@/services/photoService";
 import {ObjectStore} from "@/infrastructure/storage";
+import {candidateWithLocation, CandidateWithLocation} from "@/schemas/candidate.types";
 
 const logger = createLogger('candidateService')
 
@@ -150,6 +151,25 @@ export async function getCandidateById(
     return guard(logger, `get candidate ${candidateId}`, async () => {
         const candidate = await db.candidate.findUnique({ where: { id: candidateId, ...ownedBy(userId) } })
         if (!candidate) {
+            return fail(ErrorCode.NOT_FOUND, `Candidate not found: ${candidateId}`)
+        }
+        return ok(candidate)
+    })
+}
+
+export async function getCandidateWithLocationByCandidateId(
+    userId: string,
+    candidateId: string,
+    options?: { db?: typeof defaultPrisma }
+) : Promise<Result<CandidateWithLocation>> {
+    const db = options?.db ?? defaultPrisma
+
+    return guard(logger, `get candidate ${candidateId} with location`, async() => {
+        const candidate = await db.candidate.findUnique({
+            where: { id: candidateId, ...ownedBy(userId) },
+            ... candidateWithLocation
+        })
+        if(!candidate) {
             return fail(ErrorCode.NOT_FOUND, `Candidate not found: ${candidateId}`)
         }
         return ok(candidate)
