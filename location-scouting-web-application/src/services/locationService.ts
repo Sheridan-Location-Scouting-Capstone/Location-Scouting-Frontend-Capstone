@@ -121,7 +121,7 @@ export async function getLocationWithPhotos(
             return fail(ErrorCode.NOT_FOUND, 'Location not found')
         }
 
-        const photos = await withPhotoUrls(userId, location.photos, { objectStore: options?.objectStore })
+        const photos = await withPhotoUrls(userId, location.photos, { db, objectStore: options?.objectStore })
         if (!photos.success) return photos
         return ok({ ...location, photos: photos.data })
     })
@@ -251,7 +251,7 @@ export async function getLocations(
             include: withCoverPhoto
         })
 
-        const covers = await withPhotoUrls(userId, locations.flatMap(location => location.photos), { objectStore: options?.objectStore })
+        const covers = await withPhotoUrls(userId, locations.flatMap(location => location.photos), { db, objectStore: options?.objectStore })
         if (!covers.success) return covers
         const coverById = new Map(covers.data.map(cover => [cover.id, cover]))
 

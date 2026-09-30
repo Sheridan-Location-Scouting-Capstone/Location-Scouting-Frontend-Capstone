@@ -35,6 +35,9 @@ export interface ObjectStore {
 
     exists(key: string): Promise<Result<boolean>>
 
+    /** Copies an object, with its content type and cache header, to another key. NOT_FOUND when the source is missing. */
+    copy(sourceKey: string, destinationKey: string): Promise<Result<void>>
+
     /** A URL anyone holding it can download the object from, for at least `ttlSeconds` */
     presignGet(key: string, ttlSeconds: number): Promise<Result<PresignedUrl>>
 
