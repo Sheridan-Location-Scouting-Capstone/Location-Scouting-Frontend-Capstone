@@ -5,6 +5,7 @@ import LinkButton from '@/components/common/LinkButton'
 
 type PageHeaderProps = {
     title: ReactNode
+    titleAdornment?: ReactNode
     /** Where the Back button goes. No Back button when omitted. */
     backHref?: string
     /** Trail shown next to the Back button, e.g. ['My Film', 'Scenes', 'Scene 3']. The last entry is emphasised. */
@@ -14,7 +15,7 @@ type PageHeaderProps = {
 }
 
 /** Standard page header: optional back link and breadcrumb trail, then the title with actions on the right */
-export default function PageHeader({ title, backHref, breadcrumbs, actions }: PageHeaderProps) {
+export default function PageHeader({ title, titleAdornment, backHref, breadcrumbs, actions }: PageHeaderProps) {
     const hasNavRow = Boolean(backHref || breadcrumbs?.length)
 
     return (
@@ -49,7 +50,10 @@ export default function PageHeader({ title, backHref, breadcrumbs, actions }: Pa
             )}
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                <Typography variant="h4" component="h1">{title}</Typography>
+                <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                    <Typography variant="h4" component="h1">{title}</Typography>
+                    {titleAdornment}
+                </Box>
                 {actions && <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>{actions}</Box>}
             </Box>
         </Box>

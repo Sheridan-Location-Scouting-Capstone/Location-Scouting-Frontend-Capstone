@@ -4,6 +4,13 @@ import {getCandidateAction, getCandidateWithLocationAction} from '@/actions/cand
 import { unwrapForPage } from '@/lib/pageResult'
 import PageHeader from '@/components/common/PageHeader'
 import {getLocationAction} from "@/actions/locationActions";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import Chip from "@mui/material/Chip"
+import {Brightness1Rounded, Slideshow} from "@mui/icons-material";
+import {alpha, Box, Button} from "@mui/material";
+import StatusChip from "@/components/candidates/StatusChip";
+import LinkButton from "@/components/common/LinkButton";
+import PresentationMode from "@/components/common/PresentationMode"
 
 // Candidate detail is still a stub: it only confirms the candidate exists and shows which scene it's for
 export default async function CandidateDetailPage({
@@ -26,9 +33,30 @@ export default async function CandidateDetailPage({
 
     return (
         <PageHeader
-            title={`Scene ${scene.sceneNumber} - Candidate`}
+            title={`Scene ${scene.sceneNumber} - ${candidate.location.name}`}
+            titleAdornment={
+                candidate.selected && (
+                    <StatusChip label="Selected" datatest-id="candidate-selected-chip" />
+                )
+            }
             backHref={`/productions/${projectId}/scenes/${sceneId}`}
-            breadcrumbs={[project.name, 'Scenes', `Scene ${scene.sceneNumber}`, 'Candidate']}
+            breadcrumbs={[ project.name, 'Scenes', `Scene ${scene.sceneNumber}`, `Candidate`]}
+            actions={
+                <>
+                    <LinkButton href={`/locations/${candidate.location.id}`} variant="outlined" data-testid="view-candidate-button-view-location">
+                        View Location
+                    </LinkButton>
+                    <PresentationMode photos={
+                        candidate.photos.map
+                        (cp => ({
+                            url: cp.photo.url,
+                            title: `${cp.name ?? cp.photo.name ?? candidate.location.name ?? ''}`,
+                            description: `${candidate.location.address}, ${candidate.location.city}\n${scene.sceneLocation}`,
+                            alt: cp.name ?? cp.photo.name ?? undefined })
+                        )}
+                    />
+                </>
+            }
         />
 
 

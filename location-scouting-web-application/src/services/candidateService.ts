@@ -160,19 +160,24 @@ export async function getCandidateById(
 export async function getCandidateWithLocationByCandidateId(
     userId: string,
     candidateId: string,
-    options?: { db?: typeof defaultPrisma }
-) : Promise<Result<CandidateWithLocation>> {
+    options?: { db?: typeof defaultPrisma, objectStore?: ObjectStore }
+) : Promise<Result<CandidateWithDetails>> {
     const db = options?.db ?? defaultPrisma
 
     return guard(logger, `get candidate ${candidateId} with location`, async() => {
         const candidate = await db.candidate.findUnique({
             where: { id: candidateId, ...ownedBy(userId) },
-            ... candidateWithLocation
+            include: candidateInclude  // loads location + photos.photo
         })
         if(!candidate) {
             return fail(ErrorCode.NOT_FOUND, `Candidate not found: ${candidateId}`)
         }
-        return ok(candidate)
+
+        const photos = await withPhotoUrls(userId,
+            candidate.photos.map(cp =>  cp.photo), { db, objectStore: options?.objectStore })
+        if(!photos.success) return photos
+
+        return ok({ ...candidate, photos: candidate.photos.map((cp, i) => ({ ...cp, photo: photos.data[i] })) })
     })
 }
 //
