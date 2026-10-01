@@ -6,7 +6,7 @@ import 'yet-another-react-lightbox/styles.css'
 import 'yet-another-react-lightbox/plugins/thumbnails.css'
 import "yet-another-react-lightbox/plugins/counter.css";
 import {Counter, Inline, Thumbnails} from "yet-another-react-lightbox/plugins";
-import {Box, Paper} from "@mui/material";
+import {Box, Paper, Typography} from "@mui/material";
 
 type CandidateCarouselProps = {
     photos: { url: string }[]
@@ -44,7 +44,7 @@ export default function CandidateCarousel({ photos } : CandidateCarouselProps ) 
                     },
                 }}
             >
-                <Lightbox
+                {photos.length > 0 ? (<Lightbox
                     index={index}
                     slides= {photos.map(p => ({src: p.url}))}
                     plugins={[Inline, Thumbnails, Counter]}
@@ -85,7 +85,15 @@ export default function CandidateCarousel({ photos } : CandidateCarouselProps ) 
                         vignette: false,
                     }}
                 >
-                </Lightbox>
+                </Lightbox>) : (
+                    <Typography
+                        color='text.secondary'
+                        sx={{ py: 6, textAlign: 'center'}}
+                        data-testid='view-candidate-carousel-empty-state-message'
+                    >
+                        No photos selected for this candidate yet
+                    </Typography>
+                )}
             </Paper>
         </>
     )
