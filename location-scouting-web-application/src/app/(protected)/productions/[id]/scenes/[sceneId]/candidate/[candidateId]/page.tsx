@@ -8,6 +8,8 @@ import LinkButton from "@/components/common/LinkButton";
 import PresentationMode from "@/components/common/PresentationMode"
 import 'yet-another-react-lightbox/styles.css';
 import CandidateCarousel from "@/components/candidates/CandidateCarousel";
+import {Grid, Stack} from "@mui/material"
+import CandidateTravelStats from "@/components/candidates/CandidateTravelStats";
 
 // TODO: Add side panels, keyword match panel, map, etc...
 // Candidate detail is in progress
@@ -34,8 +36,10 @@ export default async function CandidateDetailPage({
                 title={`${candidate.location.name}`}
                 subTitle={`${candidate.location.address}, ${candidate.location.city}, ${candidate.location.province}`}
                 titleAdornment={
-                    candidate.selected && (
-                        <StatusChip label="Selected" data-testid="candidate-selected-chip" />
+                    candidate.selected ? (
+                        <StatusChip label='Selected' data-testid="candidate-selected-chip" />
+                    ) : (
+                        <StatusChip label='Candidate' color='warning' data-testid='candidate-chip' />
                     )
                 }
                 backHref={`/productions/${projectId}/scenes/${sceneId}`}
@@ -57,14 +61,27 @@ export default async function CandidateDetailPage({
                     </>
                 }
             />
-            <CandidateCarousel
-                photos={
-                    candidate.photos.map(cp => ({
-                        url: cp.photo.url,
-                    }))
-                }
-            >
-            </CandidateCarousel>
+            <Grid container spacing={3}>
+                <Grid size={{ xs: 12, md: 8 }}>
+                    <CandidateCarousel
+                        photos={
+                            candidate.photos.map(cp => ({
+                                url: cp.photo.url,
+                            }))
+                        }
+                    >
+                    </CandidateCarousel>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                    <Stack spacing={2}>
+                        {/* TODO: Replace these hard-coded value with calculated values fetched from the backend*/}
+                        <CandidateTravelStats
+                            distanceMeters = { 4200 }
+                            durationSeconds = { 5000 }
+                        />
+                    </Stack>
+                </Grid>
+            </Grid>
         </>
     )
 }

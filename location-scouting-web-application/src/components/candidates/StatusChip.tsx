@@ -5,6 +5,7 @@ import { alpha } from '@mui/material/styles'
 
 type StatusChipProps = {
     label: string
+
     color?: 'success' | 'warning' | 'error' | 'info' | 'primary'
     'data-testid'?: string
 }
