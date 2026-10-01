@@ -33,7 +33,8 @@ export default async function CandidateDetailPage({
 
     return (
         <PageHeader
-            title={`Scene ${scene.sceneNumber} - ${candidate.location.name}`}
+            title={`${candidate.location.name}`}
+            subTitle={`${candidate.location.address}, ${candidate.location.city}, ${candidate.location.province}`}
             titleAdornment={
                 candidate.selected && (
                     <StatusChip label="Selected" datatest-id="candidate-selected-chip" />
@@ -57,6 +58,8 @@ export default async function CandidateDetailPage({
                     />
                 </>
             }
+
+
         />
 
 
