@@ -2,8 +2,8 @@
 //
 // Self-hosted OSRM is the primary source (LS-303 dev, LS-304 prod). When OSRM isn't configured, is slow, unreachable,
 // or answers with an error, every destination falls back to the detour-index estimate: the straight-line (Haversine)
-// distance times a detour multiplier, with the time from an average speed. Routing never throws; the fallback reason
-// is logged.
+// distance times a detour multiplier. Estimates have no duration (durationMin: null). Routing never throws; the
+// fallback reason is logged.
 //
 // Configuration (.env):
 //   OSRM_URL  Base URL of the OSRM server, e.g. http://localhost:5000. Leave unset to always use the estimate.
@@ -25,8 +25,6 @@ export const ROUTING_DEFAULTS = {
     maxSnapDistanceM: 1_000,
     /** Road distance ≈ straight-line distance × this. Typical detour indices for road networks are 1.2–1.4 */
     detourIndex: 1.35,
-    /** Average driving speed assumed by the estimate, mixing city streets and highways */
-    averageSpeedKmh: 40,
 }
 
 export type RoutingConfig = typeof ROUTING_DEFAULTS & { osrmUrl: string | undefined }
@@ -44,14 +42,10 @@ export function estimateDrivingDistance(haversineKm: number, options?: { multipl
     return haversineKm * (options?.multiplier ?? ROUTING_DEFAULTS.detourIndex)
 }
 
-export function estimateDrivingTime(drivingDistanceKm: number, averageSpeedKmh: number = ROUTING_DEFAULTS.averageSpeedKmh): number {
-    return (drivingDistanceKm / averageSpeedKmh) * 60
-}
-
 export function estimateRoute(origin: Coordinate, destination: Coordinate, config: RoutingConfig = routingConfig()): RouteResult {
     const straightLineKm = haversineDistance(origin.lat, origin.lng, destination.lat, destination.lng)
     const distanceKm = estimateDrivingDistance(straightLineKm, { multiplier: config.detourIndex })
-    return { distanceKm, durationMin: estimateDrivingTime(distanceKm, config.averageSpeedKmh), estimated: true }
+    return { distanceKm, durationMin: null, estimated: true }
 }
 
 // ------ OSRM table adapter ---------------------------

@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
     createRoutingService,
     estimateDrivingDistance,
-    estimateDrivingTime,
     estimateRoute,
     ROUTING_DEFAULTS,
     routingConfig,
@@ -40,23 +39,13 @@ describe('detour-index estimate', () => {
         expect(estimateDrivingDistance(10, { multiplier: 1.2 })).toBeCloseTo(12)
     })
 
-    it('should turn a distance into minutes at the average speed', () => {
-        expect(estimateDrivingTime(20, 40)).toBeCloseTo(30)
-    })
-
-    it('should default to 40 km/h', () => {
-        expect(estimateDrivingTime(10)).toBeCloseTo(15)
-    })
-
-    it('should estimate a route from the Haversine distance', () => {
+    it('should estimate a route from the Haversine distance, with no duration', () => {
         // One degree of latitude along a meridian is 6371 × π / 180 ≈ 111.19 km in a straight line
         const config = { ...ROUTING_DEFAULTS, osrmUrl: undefined }
 
         const route = estimateRoute({ lat: 0, lng: 0 }, { lat: 1, lng: 0 }, config)
 
-        expect(route!.distanceKm).toBeCloseTo(111.19 * 1.35, 1)
-        expect(route!.durationMin).toBeCloseTo((111.19 * 1.35 / 40) * 60, 0)
-        expect(route!.estimated).toBe(true)
+        expect(route).toEqual({ distanceKm: expect.closeTo(111.19 * 1.35, 1), durationMin: null, estimated: true })
     })
 })
 
@@ -231,10 +220,13 @@ describe('createRoutingService', () => {
         // Act
         const routes = await service.oneToMany(cnTower, [portLands, liberty])
 
-        // Assert
+        // Assert: straight-line distances are 4.2307 km to the Port Lands and 2.6885 km to Liberty Village.
+        // Estimates carry no duration; callers rank them by distance.
         expect(fetchImpl).not.toHaveBeenCalled()
-        expect(routes).toEqual([estimateRoute(cnTower, portLands, config), estimateRoute(cnTower, liberty, config)])
-        expect(routes.every((route) => route!.estimated)).toBe(true)
+        expect(routes).toEqual([
+            { distanceKm: expect.closeTo(4.2307 * 1.35, 3), durationMin: null, estimated: true },
+            { distanceKm: expect.closeTo(2.6885 * 1.35, 3), durationMin: null, estimated: true },
+        ])
         expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('OSRM_URL is not set'))
     })
 
@@ -250,7 +242,7 @@ describe('createRoutingService', () => {
         const routes = await service.oneToMany(cnTower, [portLands])
 
         // Assert
-        expect(routes).toEqual([estimateRoute(cnTower, portLands, config)])
+        expect(routes).toEqual([{ distanceKm: expect.closeTo(4.2307 * 1.35, 3), durationMin: null, estimated: true }])
         expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('timed out after 20 ms'))
     })
 
@@ -261,7 +253,10 @@ describe('createRoutingService', () => {
 
         const routes = await service.oneToMany(cnTower, [portLands, liberty])
 
-        expect(routes).toEqual([estimateRoute(cnTower, portLands, config), estimateRoute(cnTower, liberty, config)])
+        expect(routes).toEqual([
+            { distanceKm: expect.closeTo(4.2307 * 1.35, 3), durationMin: null, estimated: true },
+            { distanceKm: expect.closeTo(2.6885 * 1.35, 3), durationMin: null, estimated: true },
+        ])
         expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('fetch failed'))
     })
 
@@ -272,7 +267,7 @@ describe('createRoutingService', () => {
 
         const routes = await service.oneToMany(cnTower, [portLands])
 
-        expect(routes).toEqual([estimateRoute(cnTower, portLands, config)])
+        expect(routes).toEqual([{ distanceKm: expect.closeTo(4.2307 * 1.35, 3), durationMin: null, estimated: true }])
         expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('InvalidQuery'))
     })
 
@@ -283,7 +278,7 @@ describe('createRoutingService', () => {
 
         const routes = await service.oneToMany(cnTower, [portLands])
 
-        expect(routes).toEqual([estimateRoute(cnTower, portLands, config)])
+        expect(routes).toEqual([{ distanceKm: expect.closeTo(4.2307 * 1.35, 3), durationMin: null, estimated: true }])
     })
 
     it('should estimate every destination when an Ok response is missing the distances', async () => {
@@ -302,7 +297,7 @@ describe('createRoutingService', () => {
 
         const routes = await service.oneToMany(cnTower, [portLands])
 
-        expect(routes).toEqual([estimateRoute(cnTower, portLands, config)])
+        expect(routes).toEqual([{ distanceKm: expect.closeTo(4.2307 * 1.35, 3), durationMin: null, estimated: true }])
         expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('malformed'))
     })
 })
