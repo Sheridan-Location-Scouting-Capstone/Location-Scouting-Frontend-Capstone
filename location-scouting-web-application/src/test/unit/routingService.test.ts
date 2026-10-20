@@ -20,6 +20,27 @@ function jsonResponse(body: unknown, status = 200) {
     return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 }
 
+/**
+ * A fake OSRM table endpoint for the batching tests: it answers any table URL, routing destination n (placed at
+ * lng -79.4 + n × 0.0001 by numberedDestination) in n minutes over n km, so results can be matched back to their
+ * destination whichever request carried them.
+ */
+async function fakeOsrmTable(url: string | URL | Request) {
+    const coordinates = String(url).split('/table/v1/driving/')[1].split('?')[0].split(';')
+    const destinationNumbers = coordinates.slice(1).map((pair) => Math.round((Number(pair.split(',')[0]) + 79.4) / 0.0001))
+    return jsonResponse({
+        code: 'Ok',
+        durations: [[0, ...destinationNumbers.map((n) => n * 60)]],
+        distances: [[0, ...destinationNumbers.map((n) => n * 1000)]],
+        sources: [{ distance: 0, location: [-79.3871, 43.6426] }],
+        destinations: coordinates.map(() => ({ distance: 0, location: [0, 0] })),
+    })
+}
+
+function numberedDestination(n: number) {
+    return { lat: 43.65, lng: -79.4 + n * 0.0001 }
+}
+
 describe('routingConfig', () => {
     it('should leave OSRM unset when OSRM_URL is missing', () => {
         expect(routingConfig({})).toEqual({ ...ROUTING_DEFAULTS, osrmUrl: undefined })
@@ -299,5 +320,67 @@ describe('createRoutingService', () => {
 
         expect(routes).toEqual([{ distanceKm: expect.closeTo(4.2307 * 1.35, 3), durationMin: null, estimated: true }])
         expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('malformed'))
+    })
+
+    it('should send 99 destinations in a single request', async () => {
+        // Arrange
+        const fetchImpl = vi.fn<typeof fetch>(fakeOsrmTable)
+        const service = createRoutingService({ config: { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }, fetch: fetchImpl })
+        const destinations = Array.from({ length: 99 }, (_, n) => numberedDestination(n))
+
+        // Act
+        const routes = await service.oneToMany(cnTower, destinations)
+
+        // Assert: one origin + 99 destinations is exactly OSRM's 100-coordinate limit
+        expect(fetchImpl).toHaveBeenCalledTimes(1)
+        expect(String(fetchImpl.mock.calls[0][0]).split(';')).toHaveLength(100)
+        expect(routes.map((route) => route!.durationMin)).toEqual(Array.from({ length: 99 }, (_, n) => n))
+    })
+
+    it('should split 100 destinations into two requests and keep the results in destination order', async () => {
+        // Arrange
+        const fetchImpl = vi.fn<typeof fetch>(fakeOsrmTable)
+        const service = createRoutingService({ config: { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }, fetch: fetchImpl })
+        const destinations = Array.from({ length: 100 }, (_, n) => numberedDestination(n))
+
+        // Act
+        const routes = await service.oneToMany(cnTower, destinations)
+
+        // Assert: 99 destinations in the first request, the 100th in the second, each with the origin first
+        expect(fetchImpl).toHaveBeenCalledTimes(2)
+        const [firstUrl, secondUrl] = fetchImpl.mock.calls.map(([url]) => String(url))
+        expect(firstUrl.split(';')).toHaveLength(100)
+        expect(secondUrl).toContain(`/table/v1/driving/-79.3871,43.6426;${numberedDestination(99).lng},43.65?`)
+        expect(routes).toHaveLength(100)
+        expect(routes.map((route) => route!.durationMin)).toEqual(Array.from({ length: 100 }, (_, n) => n))
+        expect(routes.map((route) => route!.distanceKm)).toEqual(Array.from({ length: 100 }, (_, n) => n))
+        expect(routes.every((route) => route!.estimated === false)).toBe(true)
+    })
+
+    it('should estimate only the destinations in a failed batch, keeping the OSRM routes from the others', async () => {
+        // Arrange: batches of two, so five destinations go out as [0, 1], [2, 3] and [4]. The [2, 3] request fails.
+        const failingCoordinate = `${numberedDestination(2).lng},${numberedDestination(2).lat}`
+        const fetchImpl = vi.fn<typeof fetch>(async (url) => {
+            if (String(url).includes(failingCoordinate)) throw new TypeError('fetch failed')
+            return fakeOsrmTable(url)
+        })
+        const config = { ...ROUTING_DEFAULTS, maxDestinationsPerRequest: 2, osrmUrl: 'http://osrm.test' }
+        const service = createRoutingService({ config, fetch: fetchImpl })
+        const destinations = Array.from({ length: 5 }, (_, n) => numberedDestination(n))
+
+        // Act
+        const routes = await service.oneToMany(cnTower, destinations)
+
+        // Assert
+        expect(fetchImpl).toHaveBeenCalledTimes(3)
+        expect(routes).toEqual([
+            { durationMin: 0, distanceKm: 0, estimated: false },
+            { durationMin: 1, distanceKm: 1, estimated: false },
+            { durationMin: null, distanceKm: expect.any(Number), estimated: true },
+            { durationMin: null, distanceKm: expect.any(Number), estimated: true },
+            { durationMin: 4, distanceKm: 4, estimated: false },
+        ])
+        expect(console.warn).toHaveBeenCalledTimes(1)
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('fetch failed'))
     })
 })

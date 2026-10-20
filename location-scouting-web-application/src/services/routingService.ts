@@ -1,9 +1,12 @@
 // Driving distance and time from one origin (the studio) to many destinations (candidate locations).
 //
 // Self-hosted OSRM is the primary source (LS-303 dev, LS-304 prod). When OSRM isn't configured, is slow, unreachable,
-// or answers with an error, every destination falls back to the detour-index estimate: the straight-line (Haversine)
+// or answers with an error, destinations fall back to the detour-index estimate: the straight-line (Haversine)
 // distance times a detour multiplier. Estimates have no duration (durationMin: null). Routing never throws; the
 // fallback reason is logged.
+//
+// OSRM caps a table at 100 coordinates by default (osrm-routed --max-table-size), so destinations go out in concurrent
+// batches of at most 99 alongside the origin. A batch that fails falls back on its own; the others keep their routes.
 //
 // Configuration (.env):
 //   OSRM_URL  Base URL of the OSRM server, e.g. http://localhost:5000. Leave unset to always use the estimate.
@@ -25,6 +28,8 @@ export const ROUTING_DEFAULTS = {
     maxSnapDistanceM: 1_000,
     /** Road distance ≈ straight-line distance × this. Typical detour indices for road networks are 1.2–1.4 */
     detourIndex: 1.35,
+    /** Destinations per OSRM request. One origin + 99 destinations = osrm-routed's default 100-coordinate limit */
+    maxDestinationsPerRequest: 99,
 }
 
 export type RoutingConfig = typeof ROUTING_DEFAULTS & { osrmUrl: string | undefined }
@@ -93,18 +98,17 @@ export function routesFromTable(table: TableResponse, destinationCount: number, 
     })
 }
 
-/** OSRM's routes, or the reason it couldn't be used */
+/** OSRM's routes for one batch of destinations, or the reason it couldn't be used */
 async function fetchOsrmRoutes(
+    osrmUrl: string,
     config: RoutingConfig,
     fetchImpl: typeof fetch,
     origin: Coordinate,
     destinations: Coordinate[],
 ): Promise<{ routes: RouteResult[] } | { reason: string }> {
-    if (!config.osrmUrl) return { reason: 'OSRM_URL is not set' }
-
     let body: unknown
     try {
-        const response = await fetchImpl(osrmTableUrl(config.osrmUrl, origin, destinations), {
+        const response = await fetchImpl(osrmTableUrl(osrmUrl, origin, destinations), {
             signal: AbortSignal.timeout(config.timeoutMs),
         })
         body = await response.json()
@@ -122,18 +126,34 @@ async function fetchOsrmRoutes(
     return { routes: routesFromTable(table.data, destinations.length, config.maxSnapDistanceM) }
 }
 
+function chunk<T>(items: T[], size: number): T[][] {
+    return Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, (i + 1) * size))
+}
+
 export function createRoutingService(options?: { config?: RoutingConfig; fetch?: typeof fetch }): RoutingService {
     return {
         async oneToMany(origin, destinations) {
             const config = options?.config ?? routingConfig()
             const fetchImpl = options?.fetch ?? globalThis.fetch
+            const estimateAll = (batch: Coordinate[]) => batch.map((destination) => estimateRoute(origin, destination, config))
             if (destinations.length === 0) return []
 
-            const osrm = await fetchOsrmRoutes(config, fetchImpl, origin, destinations)
-            if ('routes' in osrm) return osrm.routes
+            const osrmUrl = config.osrmUrl
+            if (!osrmUrl) {
+                logger.warn('OSRM unavailable (OSRM_URL is not set); using detour-index distance estimates')
+                return estimateAll(destinations)
+            }
 
-            logger.warn(`OSRM unavailable (${osrm.reason}); using detour-index estimates`)
-            return destinations.map((destination) => estimateRoute(origin, destination, config))
+            const batches = chunk(destinations, config.maxDestinationsPerRequest)
+            const results = await Promise.all(batches.map(async (batch) => {
+                const osrm = await fetchOsrmRoutes(osrmUrl, config, fetchImpl, origin, batch)
+                if ('routes' in osrm) return osrm.routes
+
+                logger.warn(`OSRM unavailable (${osrm.reason}); using detour-index distance estimates for ${batch.length} destination(s)`)
+                return estimateAll(batch)
+            }))
+            // Batches are in destination order and Promise.all keeps that order, so flattening restores it
+            return results.flat()
         },
     }
 }
