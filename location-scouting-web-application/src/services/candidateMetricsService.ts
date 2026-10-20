@@ -10,7 +10,7 @@ export async function getKeywordOverlap(userId: string, candidateId: string, opt
     return guard(logger, `get keyword overlap for candidate ${candidateId}`, async () => {
         const candidate = await db.candidate.findUnique({
             where: { id: candidateId, scene: { project: { userId } } },
-            include: {
+            select: {
                 location: { select: { keywords: true } },
                 scene: { select: { keywords: true } },
             }
