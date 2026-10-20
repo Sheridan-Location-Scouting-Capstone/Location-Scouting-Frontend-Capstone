@@ -1,0 +1,386 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+    createRoutingService,
+    estimateDrivingDistance,
+    estimateRoute,
+    ROUTING_DEFAULTS,
+    routingConfig,
+} from '@/services/routingService'
+
+// Fixtures follow the real shape of an OSRM table response for
+// /table/v1/driving/{origin};{dest};...?sources=0&annotations=duration,distance&generate_hints=false
+// Every coordinate (origin included) comes back as a destination, so destination i is column i + 1.
+
+const cnTower = { lat: 43.6426, lng: -79.3871 }
+const portLands = { lat: 43.6532, lng: -79.3366 }
+const liberty = { lat: 43.6380, lng: -79.4199 }
+const montreal = { lat: 45.5017, lng: -73.5673 }
+
+function jsonResponse(body: unknown, status = 200) {
+    return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
+/**
+ * A fake OSRM table endpoint for the batching tests: it answers any table URL, routing destination n (placed at
+ * lng -79.4 + n × 0.0001 by numberedDestination) in n minutes over n km, so results can be matched back to their
+ * destination whichever request carried them.
+ */
+async function fakeOsrmTable(url: string | URL | Request) {
+    const coordinates = String(url).split('/table/v1/driving/')[1].split('?')[0].split(';')
+    const destinationNumbers = coordinates.slice(1).map((pair) => Math.round((Number(pair.split(',')[0]) + 79.4) / 0.0001))
+    return jsonResponse({
+        code: 'Ok',
+        durations: [[0, ...destinationNumbers.map((n) => n * 60)]],
+        distances: [[0, ...destinationNumbers.map((n) => n * 1000)]],
+        sources: [{ distance: 0, location: [-79.3871, 43.6426] }],
+        destinations: coordinates.map(() => ({ distance: 0, location: [0, 0] })),
+    })
+}
+
+function numberedDestination(n: number) {
+    return { lat: 43.65, lng: -79.4 + n * 0.0001 }
+}
+
+describe('routingConfig', () => {
+    it('should leave OSRM unset when OSRM_URL is missing', () => {
+        expect(routingConfig({})).toEqual({ ...ROUTING_DEFAULTS, osrmUrl: undefined })
+    })
+
+    it('should read OSRM_URL, dropping a trailing slash', () => {
+        expect(routingConfig({ OSRM_URL: 'http://localhost:5000/' }).osrmUrl).toBe('http://localhost:5000')
+    })
+})
+
+describe('detour-index estimate', () => {
+    it('should multiply the straight-line distance by 1.35 by default', () => {
+        expect(estimateDrivingDistance(10)).toBeCloseTo(13.5)
+    })
+
+    it('should use a custom multiplier', () => {
+        expect(estimateDrivingDistance(10, { multiplier: 1.2 })).toBeCloseTo(12)
+    })
+
+    it('should estimate a route from the Haversine distance, with no duration', () => {
+        // One degree of latitude along a meridian is 6371 × π / 180 ≈ 111.19 km in a straight line
+        const config = { ...ROUTING_DEFAULTS, osrmUrl: undefined }
+
+        const route = estimateRoute({ lat: 0, lng: 0 }, { lat: 1, lng: 0 }, config)
+
+        expect(route).toEqual({ distanceKm: expect.closeTo(111.19 * 1.35, 1), durationMin: null, estimated: true })
+    })
+})
+
+describe('createRoutingService', () => {
+    beforeEach(() => {
+        vi.spyOn(console, 'warn').mockImplementation(() => {})
+    })
+
+    afterEach(() => {
+        vi.restoreAllMocks()
+    })
+
+    it('should map the real OSRM response for three destinations', async () => {
+        // Arrange: the response from our OSRM server for CN Tower → Port Lands, Liberty Village, Montreal
+        const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse({
+            code: 'Ok',
+            distances: [[0, 5039.9, 3487.2, 525458]],
+            destinations: [
+                { distance: 102.4581952, name: 'Bremner Boulevard', location: [-79.386412, 43.641825] },
+                { distance: 17.00321716, name: '', location: [-79.336491, 43.653069] },
+                { distance: 5.704421899, name: '', location: [-79.419832, 43.638014] },
+                { distance: 60414.94185, name: 'Chemin du Haut-de-la-Chute', location: [-74.338844, 45.472727] },
+            ],
+            durations: [[0, 436.3, 393.4, 22889.3]],
+            sources: [{ distance: 102.4581952, name: 'Bremner Boulevard', location: [-79.386412, 43.641825] }],
+        }))
+        const service = createRoutingService({ config: { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }, fetch: fetchImpl })
+
+        // Act
+        const routes = await service.oneToMany(cnTower, [portLands, liberty, montreal])
+
+        // Assert: Montreal is outside the Ontario extract and snaps 60 km away, so it has no route
+        expect(routes).toHaveLength(3)
+        expect(routes[0]!.distanceKm).toBeCloseTo(5.0399)
+        expect(routes[0]!.durationMin).toBeCloseTo(436.3 / 60)
+        expect(routes[0]!.estimated).toBe(false)
+        expect(routes[1]!.distanceKm).toBeCloseTo(3.4872)
+        expect(routes[1]!.durationMin).toBeCloseTo(393.4 / 60)
+        expect(routes[1]!.estimated).toBe(false)
+        expect(routes[2]).toBeNull()
+    })
+
+    it('should send coordinates as lon,lat with the origin first and the table query parameters', async () => {
+        const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse({
+            code: 'Ok',
+            durations: [[0, 436.3]],
+            distances: [[0, 5039.9]],
+            sources: [{ distance: 102.5, location: [-79.386412, 43.641825] }],
+            destinations: [
+                { distance: 102.5, location: [-79.386412, 43.641825] },
+                { distance: 17.0, location: [-79.336491, 43.653069] },
+            ],
+        }))
+        const service = createRoutingService({ config: { ...ROUTING_DEFAULTS, osrmUrl: 'http://localhost:5000' }, fetch: fetchImpl })
+
+        await service.oneToMany(cnTower, [portLands])
+
+        expect(fetchImpl.mock.calls[0][0]).toBe(
+            'http://localhost:5000/table/v1/driving/-79.3871,43.6426;-79.3366,43.6532'
+            + '?sources=0&annotations=duration,distance&generate_hints=false',
+        )
+    })
+
+    it('should convert seconds to minutes and metres to kilometres', async () => {
+        const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse({
+            code: 'Ok',
+            durations: [[0, 600]],
+            distances: [[0, 12_500]],
+            sources: [{ distance: 0, location: [-79.3871, 43.6426] }],
+            destinations: [
+                { distance: 0, location: [-79.3871, 43.6426] },
+                { distance: 0, location: [-79.3366, 43.6532] },
+            ],
+        }))
+        const service = createRoutingService({ config: { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }, fetch: fetchImpl })
+
+        const routes = await service.oneToMany(cnTower, [portLands])
+
+        expect(routes).toEqual([{ durationMin: 10, distanceKm: 12.5, estimated: false }])
+    })
+
+    it('should return null for a destination snapped further than the threshold, keeping the others', async () => {
+        const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse({
+            code: 'Ok',
+            durations: [[0, 600, 900]],
+            distances: [[0, 5000, 8000]],
+            sources: [{ distance: 10, location: [-79.3871, 43.6426] }],
+            destinations: [
+                { distance: 10, location: [-79.3871, 43.6426] },
+                { distance: 1000.1, location: [-79.3366, 43.6532] },
+                { distance: 999, location: [-79.4199, 43.6380] },
+            ],
+        }))
+        const service = createRoutingService({ config: { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }, fetch: fetchImpl })
+
+        const routes = await service.oneToMany(cnTower, [portLands, liberty])
+
+        expect(routes).toEqual([null, { durationMin: 15, distanceKm: 8, estimated: false }])
+    })
+
+    it('should use a configured snap threshold', async () => {
+        const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse({
+            code: 'Ok',
+            durations: [[0, 600]],
+            distances: [[0, 5000]],
+            sources: [{ distance: 10, location: [-79.3871, 43.6426] }],
+            destinations: [
+                { distance: 10, location: [-79.3871, 43.6426] },
+                { distance: 300, location: [-79.3366, 43.6532] },
+            ],
+        }))
+        const service = createRoutingService({
+            config: { ...ROUTING_DEFAULTS, maxSnapDistanceM: 250, osrmUrl: 'http://osrm.test' },
+            fetch: fetchImpl,
+        })
+
+        expect(await service.oneToMany(cnTower, [portLands])).toEqual([null])
+    })
+
+    it('should return null for every destination when the origin is snapped further than the threshold', async () => {
+        const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse({
+            code: 'Ok',
+            durations: [[0, 600, 900]],
+            distances: [[0, 5000, 8000]],
+            sources: [{ distance: 60414.9, location: [-74.338844, 45.472727] }],
+            destinations: [
+                { distance: 60414.9, location: [-74.338844, 45.472727] },
+                { distance: 17, location: [-79.3366, 43.6532] },
+                { distance: 5, location: [-79.4199, 43.6380] },
+            ],
+        }))
+        const service = createRoutingService({ config: { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }, fetch: fetchImpl })
+
+        const routes = await service.oneToMany(montreal, [portLands, liberty])
+
+        expect(routes).toEqual([null, null])
+    })
+
+    it('should return null for a null cell in the matrix without estimating it', async () => {
+        const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse({
+            code: 'Ok',
+            durations: [[0, null, 900]],
+            distances: [[0, null, 8000]],
+            sources: [{ distance: 10, location: [-79.3871, 43.6426] }],
+            destinations: [
+                { distance: 10, location: [-79.3871, 43.6426] },
+                { distance: 17, location: [-79.3366, 43.6532] },
+                { distance: 5, location: [-79.4199, 43.6380] },
+            ],
+        }))
+        const service = createRoutingService({ config: { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }, fetch: fetchImpl })
+
+        const routes = await service.oneToMany(cnTower, [portLands, liberty])
+
+        expect(routes).toEqual([null, { durationMin: 15, distanceKm: 8, estimated: false }])
+    })
+
+    it('should not call OSRM when there are no destinations', async () => {
+        const fetchImpl = vi.fn<typeof fetch>()
+        const service = createRoutingService({ config: { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }, fetch: fetchImpl })
+
+        expect(await service.oneToMany(cnTower, [])).toEqual([])
+        expect(fetchImpl).not.toHaveBeenCalled()
+    })
+
+    it('should estimate every destination without calling OSRM when OSRM_URL is unset', async () => {
+        // Arrange
+        const fetchImpl = vi.fn<typeof fetch>()
+        const config = { ...ROUTING_DEFAULTS, osrmUrl: undefined }
+        const service = createRoutingService({ config, fetch: fetchImpl })
+
+        // Act
+        const routes = await service.oneToMany(cnTower, [portLands, liberty])
+
+        // Assert: straight-line distances are 4.2307 km to the Port Lands and 2.6885 km to Liberty Village.
+        // Estimates carry no duration; callers rank them by distance.
+        expect(fetchImpl).not.toHaveBeenCalled()
+        expect(routes).toEqual([
+            { distanceKm: expect.closeTo(4.2307 * 1.35, 3), durationMin: null, estimated: true },
+            { distanceKm: expect.closeTo(2.6885 * 1.35, 3), durationMin: null, estimated: true },
+        ])
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('OSRM_URL is not set'))
+    })
+
+    it('should estimate every destination when OSRM is slower than the timeout', async () => {
+        // Arrange: a request that only settles when its abort signal fires
+        const fetchImpl = vi.fn<typeof fetch>((_url, init) => new Promise((_resolve, reject) => {
+            init!.signal!.addEventListener('abort', () => reject(init!.signal!.reason))
+        }))
+        const config = { ...ROUTING_DEFAULTS, timeoutMs: 20, osrmUrl: 'http://osrm.test' }
+        const service = createRoutingService({ config, fetch: fetchImpl })
+
+        // Act
+        const routes = await service.oneToMany(cnTower, [portLands])
+
+        // Assert
+        expect(routes).toEqual([{ distanceKm: expect.closeTo(4.2307 * 1.35, 3), durationMin: null, estimated: true }])
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('timed out after 20 ms'))
+    })
+
+    it('should estimate every destination when OSRM is unreachable', async () => {
+        const fetchImpl = vi.fn<typeof fetch>(async () => { throw new TypeError('fetch failed') })
+        const config = { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }
+        const service = createRoutingService({ config, fetch: fetchImpl })
+
+        const routes = await service.oneToMany(cnTower, [portLands, liberty])
+
+        expect(routes).toEqual([
+            { distanceKm: expect.closeTo(4.2307 * 1.35, 3), durationMin: null, estimated: true },
+            { distanceKm: expect.closeTo(2.6885 * 1.35, 3), durationMin: null, estimated: true },
+        ])
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('fetch failed'))
+    })
+
+    it('should estimate every destination when OSRM responds with a non-Ok code', async () => {
+        const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse({ code: 'InvalidQuery', message: 'Query string malformed close to position 30' }, 400))
+        const config = { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }
+        const service = createRoutingService({ config, fetch: fetchImpl })
+
+        const routes = await service.oneToMany(cnTower, [portLands])
+
+        expect(routes).toEqual([{ distanceKm: expect.closeTo(4.2307 * 1.35, 3), durationMin: null, estimated: true }])
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('InvalidQuery'))
+    })
+
+    it('should estimate every destination when OSRM responds with something other than JSON', async () => {
+        const fetchImpl = vi.fn<typeof fetch>(async () => new Response('<html>502 Bad Gateway</html>', { status: 502 }))
+        const config = { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }
+        const service = createRoutingService({ config, fetch: fetchImpl })
+
+        const routes = await service.oneToMany(cnTower, [portLands])
+
+        expect(routes).toEqual([{ distanceKm: expect.closeTo(4.2307 * 1.35, 3), durationMin: null, estimated: true }])
+    })
+
+    it('should estimate every destination when an Ok response is missing the distances', async () => {
+        // OSRM leaves distances out when annotations=distance isn't honoured
+        const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse({
+            code: 'Ok',
+            durations: [[0, 600]],
+            sources: [{ distance: 10, location: [-79.3871, 43.6426] }],
+            destinations: [
+                { distance: 10, location: [-79.3871, 43.6426] },
+                { distance: 17, location: [-79.3366, 43.6532] },
+            ],
+        }))
+        const config = { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }
+        const service = createRoutingService({ config, fetch: fetchImpl })
+
+        const routes = await service.oneToMany(cnTower, [portLands])
+
+        expect(routes).toEqual([{ distanceKm: expect.closeTo(4.2307 * 1.35, 3), durationMin: null, estimated: true }])
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('malformed'))
+    })
+
+    it('should send 99 destinations in a single request', async () => {
+        // Arrange
+        const fetchImpl = vi.fn<typeof fetch>(fakeOsrmTable)
+        const service = createRoutingService({ config: { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }, fetch: fetchImpl })
+        const destinations = Array.from({ length: 99 }, (_, n) => numberedDestination(n))
+
+        // Act
+        const routes = await service.oneToMany(cnTower, destinations)
+
+        // Assert: one origin + 99 destinations is exactly OSRM's 100-coordinate limit
+        expect(fetchImpl).toHaveBeenCalledTimes(1)
+        expect(String(fetchImpl.mock.calls[0][0]).split(';')).toHaveLength(100)
+        expect(routes.map((route) => route!.durationMin)).toEqual(Array.from({ length: 99 }, (_, n) => n))
+    })
+
+    it('should split 100 destinations into two requests and keep the results in destination order', async () => {
+        // Arrange
+        const fetchImpl = vi.fn<typeof fetch>(fakeOsrmTable)
+        const service = createRoutingService({ config: { ...ROUTING_DEFAULTS, osrmUrl: 'http://osrm.test' }, fetch: fetchImpl })
+        const destinations = Array.from({ length: 100 }, (_, n) => numberedDestination(n))
+
+        // Act
+        const routes = await service.oneToMany(cnTower, destinations)
+
+        // Assert: 99 destinations in the first request, the 100th in the second, each with the origin first
+        expect(fetchImpl).toHaveBeenCalledTimes(2)
+        const [firstUrl, secondUrl] = fetchImpl.mock.calls.map(([url]) => String(url))
+        expect(firstUrl.split(';')).toHaveLength(100)
+        expect(secondUrl).toContain(`/table/v1/driving/-79.3871,43.6426;${numberedDestination(99).lng},43.65?`)
+        expect(routes).toHaveLength(100)
+        expect(routes.map((route) => route!.durationMin)).toEqual(Array.from({ length: 100 }, (_, n) => n))
+        expect(routes.map((route) => route!.distanceKm)).toEqual(Array.from({ length: 100 }, (_, n) => n))
+        expect(routes.every((route) => route!.estimated === false)).toBe(true)
+    })
+
+    it('should estimate only the destinations in a failed batch, keeping the OSRM routes from the others', async () => {
+        // Arrange: batches of two, so five destinations go out as [0, 1], [2, 3] and [4]. The [2, 3] request fails.
+        const failingCoordinate = `${numberedDestination(2).lng},${numberedDestination(2).lat}`
+        const fetchImpl = vi.fn<typeof fetch>(async (url) => {
+            if (String(url).includes(failingCoordinate)) throw new TypeError('fetch failed')
+            return fakeOsrmTable(url)
+        })
+        const config = { ...ROUTING_DEFAULTS, maxDestinationsPerRequest: 2, osrmUrl: 'http://osrm.test' }
+        const service = createRoutingService({ config, fetch: fetchImpl })
+        const destinations = Array.from({ length: 5 }, (_, n) => numberedDestination(n))
+
+        // Act
+        const routes = await service.oneToMany(cnTower, destinations)
+
+        // Assert
+        expect(fetchImpl).toHaveBeenCalledTimes(3)
+        expect(routes).toEqual([
+            { durationMin: 0, distanceKm: 0, estimated: false },
+            { durationMin: 1, distanceKm: 1, estimated: false },
+            { durationMin: null, distanceKm: expect.any(Number), estimated: true },
+            { durationMin: null, distanceKm: expect.any(Number), estimated: true },
+            { durationMin: 4, distanceKm: 4, estimated: false },
+        ])
+        expect(console.warn).toHaveBeenCalledTimes(1)
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('fetch failed'))
+    })
+})

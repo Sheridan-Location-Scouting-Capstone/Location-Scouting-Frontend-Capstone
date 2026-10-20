@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { prisma } from '../setup'
 import { getKeywordOverlap, getNearestSelectedDistance } from '@/services/candidateMetricsService'
 import { signUpSetup } from '@/test/e2e/fixtures'
@@ -13,6 +13,11 @@ let userId: string
 
 beforeEach(async () => {
     userId = (await signUpSetup()).userId
+})
+
+afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
 })
 
 async function createProject(overrides?: Record<string, unknown>) {
@@ -498,17 +503,29 @@ describe('getNearestSelectedDistance', () => {
         expect(expectSuccess(result)).toBeNull()
     })
 
-    it('should fail with INTERNAL_SERVER_ERROR when no router is configured', async () => {
-        // Arrange
+    it('should use the real routing service when no router is passed', async () => {
+        // Arrange: with OSRM_URL unset the real service answers with its distance-only estimate, which is deterministic.
+        // Spadina Loft → Queen St Studio is 1.3383 km in a straight line; × 1.35 detour index ≈ 1.8067 km by road.
+        vi.stubEnv('OSRM_URL', '')
+        vi.spyOn(console, 'warn').mockImplementation(() => {})
         const project = await createProject()
         const scene = await createScene(project.id)
         const location = await createLocation({ name: 'Spadina Loft', latitude: 43.6520, longitude: -79.3970 })
+        const locked = await createLocation({ name: 'Queen St Studio', latitude: 43.6544, longitude: -79.3807 })
         const candidate = await createCandidate(scene.id, location.id, false)
+        await createCandidate(scene.id, locked.id, true)
 
         // Act
         const result = await getNearestSelectedDistance(userId, candidate.id, { db: prisma })
 
         // Assert
-        expect(expectFailure(result).code).toBe(ErrorCode.INTERNAL_SERVER_ERROR)
+        expect(expectSuccess(result)).toEqual({
+            nearestLocationId: locked.id,
+            locationName: 'Queen St Studio',
+            distanceKm: expect.closeTo(1.8067, 3),
+            durationMin: null,
+            estimated: true,
+        })
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('OSRM_URL is not set'))
     })
 })

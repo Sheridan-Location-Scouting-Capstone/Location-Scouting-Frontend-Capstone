@@ -2,6 +2,7 @@ import {createLogger} from "@/lib/logger";
 import {ErrorCode, Result, fail, ok} from "@/schemas/result";
 import {Coordinate, RoutingService} from "@/schemas/routing";
 import { prisma as defaultPrisma } from '@/lib/prisma'
+import {routingService} from "@/services/routingService";
 import {guard} from "@/services/serviceResult";
 
 const logger = createLogger('candidateMetricsService')
@@ -44,11 +45,7 @@ export type NearestSelectedDistance = {
 export async function getNearestSelectedDistance(userId: string, candidateId: string, options?: { db?: typeof defaultPrisma, router?: RoutingService }): Promise<Result<NearestSelectedDistance | null>> {
     const db = options?.db || defaultPrisma;
     return guard(logger, `get nearest selected distance for candidate ${candidateId}`, async () => {
-        // No default router on this branch yet: LS-306 adds the OSRM-backed routingService
-        const router = options?.router;
-        if (!router) {
-            throw new Error('getNearestSelectedDistance needs a routing service: pass options.router');
-        }
+        const router = options?.router ?? routingService;
 
         const candidate = await db.candidate.findUnique({
             where: { id: candidateId, scene: { project: { userId } } },
