@@ -14,7 +14,8 @@
     "test:e2e": "next build && playwright test",
     "test:e2e:ui": "playwright test --ui",
     "migrate": "prisma migrate dev",
-    "storage:migrate-photo-keys": "tsx scripts/migrate-photo-keys.ts"
+    "storage:migrate-photo-keys": "tsx scripts/migrate-photo-keys.ts",
+    "admin:reset-password": "tsx scripts/reset-password.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1142.0",
