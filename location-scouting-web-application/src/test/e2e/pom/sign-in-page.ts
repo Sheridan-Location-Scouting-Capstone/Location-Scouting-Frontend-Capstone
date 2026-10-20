@@ -10,6 +10,7 @@ export class SignInPage {
     readonly passwordError: Locator;
     readonly submitButton: Locator;
     readonly signUpLink: Locator;
+    readonly forgotPasswordNote: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -21,6 +22,7 @@ export class SignInPage {
         this.passwordError = this.form.getByTestId('signin-password-error');
         this.submitButton = this.form.getByTestId('signin-submit-button');
         this.signUpLink = page.getByTestId('signin-signup-link');
+        this.forgotPasswordNote = page.getByTestId('signin-forgot-password-note');
     }
 
     async goto() {
