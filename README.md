@@ -259,6 +259,28 @@ Auth strategy: each test signs up its own fresh user (email built from `randomUU
 
 ---
 
+## Admin: resetting a tester's password
+
+Alpha testers can't reset their own password yet (self-service reset is LS-150, email is LS-183). The sign-in page tells them to contact the operator, who resets it with a script. The contact text is `PASSWORD_HELP_CONTACT` in `src/lib/alphaSupport.ts`.
+
+**Procedure**
+
+1. **Verify the requester out-of-band first.** Confirm it's really the tester, for example by calling a phone number you already have for them. Don't act on the request message alone.
+2. Run the reset from `location-scouting-web-application/`. It uses `DATABASE_URL` and `BETTER_AUTH_*` from `.env`, so point those at the database the tester uses.
+
+   ```bash
+   npm run admin:reset-password -- --email tester@example.com
+   ```
+
+   This generates a strong temporary password and prints it to stdout, once. The confirmation goes to stderr. To choose the password yourself, add `--password '<temporary password>'` (8 to 128 characters). It won't be printed back, but it will stay in your shell history, so prefer the generated one.
+3. **Send the temporary password over a different channel from the request** if you can (e.g. they emailed, so text it). Ask the tester to change it after they sign in.
+
+The script sets the password through Better Auth's own hashing and account APIs (`auth.$context`), never by writing a hash into the database, and signs the tester out of every session. An unknown email exits with code 1 and changes nothing. The logic lives in `src/maintenance/passwordReset.ts`, and `scripts/reset-password.ts` is the command-line wrapper.
+
+When LS-150 ships, remove the sign-in note and keep the script for support.
+
+---
+
 ## Current status
 
 - **Authentication/authorization in progress.** better-auth is being wired up; `userId` scoping on `Location` and `Project` is being enforced. Until complete, do not treat the app as multi-tenant-safe.
