@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Alert, Box, Button, Stack, TextField, Typography } from "@mui/material";
 import { signIn } from "@/lib/auth-client";
 import { SignInSchema } from "@/schemas/authSchema";
+import { PASSWORD_HELP_CONTACT } from "@/lib/alphaSupport";
 
 type FieldName = "email" | "password";
 type FieldErrors = Partial<Record<FieldName, string>>;
@@ -124,6 +125,16 @@ export default function SignInPage() {
                 Don&apos;t have an account? {" "}
                 <Link href="/sign-up" data-testid="signin-signup-link">Sign up</Link>
             </Typography>
+
+            {/* Alpha only (LS-204): remove when self-service reset (LS-150) ships */}
+            <Box component="aside" aria-labelledby="signin-forgot-password-title" sx={{ mt: 2 }} data-testid="signin-forgot-password-note">
+                <Typography variant="body2" align="center" fontWeight={600} id="signin-forgot-password-title">
+                    Forgot your password?
+                </Typography>
+                <Typography variant="body2" align="center" color="text.secondary">
+                    {PASSWORD_HELP_CONTACT}
+                </Typography>
+            </Box>
         </Box>
     );
 }
