@@ -28,8 +28,8 @@ type DomainServices = {
     sceneService: typeof import('@/services/sceneService')
 }
 
-// Not domain services: infrastructure adapters, pure scoring maths, and the Result plumbing itself
-const EXEMPT = ['geocodingService', 'scoringService', 'serviceResult', 'visionService']
+// Not domain services: infrastructure adapters, pure scoring maths and text parsing, and the Result plumbing itself
+const EXEMPT = ['geocodingService', 'sceneHeadingParser', 'scoringService', 'serviceResult', 'visionService']
 
 const CHECKED: Record<keyof DomainServices, true> = {
     analyticsService: true,
