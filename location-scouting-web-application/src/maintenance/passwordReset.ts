@@ -107,7 +107,7 @@ export async function resetPassword(
         await ctx.internalAdapter.updatePassword(user.id, await ctx.password.hash(password))
         await ctx.internalAdapter.deleteUserSessions(user.id)
 
-        logger.info(`Reset the password for user ${user.id} and signed out their sessions`)
+        // No log line here: the caller confirms, and the CLI keeps stdout for the generated password alone
         return ok({
             userId: user.id,
             email: user.email,
